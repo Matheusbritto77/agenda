@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\BlockedTimeSlot;
+use App\Models\BusinessHour;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
@@ -51,6 +52,7 @@ class PublicBookingController extends Controller
                 'payment_enabled' => $context['paymentEnabled'],
                 'payment_gateway' => $context['paymentGateway'],
                 'branding' => $context['branding'],
+                'company_profile' => $context['companyProfile'],
             ]);
         }
 
@@ -65,6 +67,7 @@ class PublicBookingController extends Controller
             'paymentEnabled' => $context['paymentEnabled'],
             'paymentGateway' => $context['paymentGateway'],
             'branding' => $context['branding'],
+            'companyProfile' => $context['companyProfile'],
             'company' => [
                 'id' => $context['company']->id,
                 'name' => $context['company']->name,
@@ -94,6 +97,7 @@ class PublicBookingController extends Controller
                 'payment_enabled' => $context['paymentEnabled'],
                 'payment_gateway' => $context['paymentGateway'],
                 'branding' => $context['branding'],
+                'company_profile' => $context['companyProfile'],
                 'company' => [
                     'id' => $context['company']->id,
                     'name' => $context['company']->name,
@@ -118,6 +122,7 @@ class PublicBookingController extends Controller
             'paymentEnabled' => $context['paymentEnabled'],
             'paymentGateway' => $context['paymentGateway'],
             'branding' => $context['branding'],
+            'companyProfile' => $context['companyProfile'],
             'company' => [
                 'id' => $context['company']->id,
                 'name' => $context['company']->name,
@@ -168,7 +173,145 @@ class PublicBookingController extends Controller
             'paymentEnabled' => $paymentEnabled,
             'paymentGateway' => $paymentGateway,
             'branding' => $branding,
+            'companyProfile' => $this->presentCompanyProfile($company, $services, $teamMembers, $branding, $isOwnerPage, $selectedProfessional),
         ];
+    }
+
+    private function presentCompanyProfile(
+        User $company,
+        Collection $services,
+        Collection $teamMembers,
+        $branding,
+        bool $isOwnerPage,
+        User|TeamMember|null $selectedProfessional
+    ): array {
+        $settings = is_array($branding?->settings) ? $branding->settings : [];
+        $hours = BusinessHour::query()
+            ->where('user_id', $company->id)
+            ->orderBy('day_of_week')
+            ->orderBy('opens_at')
+            ->get();
+
+        $now = Carbon::now();
+        $todayHours = $hours
+            ->where('day_of_week', $now->dayOfWeek)
+            ->where('is_active', true);
+
+        $isOpenNow = $todayHours->contains(fn (BusinessHour $hour): bool => $this->businessHourContainsCurrentTime($hour, $now));
+        $hoursSummary = $this->presentBusinessHoursSummary($hours);
+        $servicesForProfile = $services
+            ->take(6)
+            ->map(fn (Service $service): array => [
+                'id' => $service->id,
+                'name' => $service->name,
+                'description' => $service->description,
+                'duration_minutes' => (int) $service->duration_minutes,
+                'formatted_price' => $service->formatted_price,
+                'image_url' => $service->image_url,
+            ])
+            ->values();
+
+        return [
+            'is_company_page' => $isOwnerPage && $selectedProfessional === null,
+            'business_name' => $settings['business_name'] ?? $company->name,
+            'tagline' => $settings['tagline'] ?? null,
+            'description' => $settings['about'] ?? $settings['description'] ?? $settings['tagline'] ?? null,
+            'logo_url' => $branding?->logo_url,
+            'banner_url' => $branding?->banner_url,
+            'status' => [
+                'is_open_now' => $isOpenNow,
+                'label' => $isOpenNow ? 'Aberto agora' : 'Fechado agora',
+                'checked_at' => $now->format('H:i'),
+                'today_summary' => $hoursSummary[$now->dayOfWeek]['summary'] ?? 'Horário não informado',
+            ],
+            'hours_summary' => array_values($hoursSummary),
+            'services_count' => $services->count(),
+            'services_preview' => $servicesForProfile,
+            'professionals_count' => $teamMembers->count(),
+            'contact' => [
+                'whatsapp_number' => $settings['whatsapp_number'] ?? null,
+                'instagram_handle' => $settings['instagram_handle'] ?? null,
+            ],
+        ];
+    }
+
+    private function businessHourContainsCurrentTime(BusinessHour $hour, Carbon $now): bool
+    {
+        if (! $hour->is_active || empty($hour->opens_at) || empty($hour->closes_at)) {
+            return false;
+        }
+
+        $open = Carbon::parse($now->toDateString() . ' ' . $hour->opens_at);
+        $close = Carbon::parse($now->toDateString() . ' ' . $hour->closes_at);
+
+        if ($close->lessThanOrEqualTo($open)) {
+            $close->addDay();
+        }
+
+        if (! $now->betweenIncluded($open, $close)) {
+            return false;
+        }
+
+        if (! empty($hour->break_opens_at) && ! empty($hour->break_closes_at)) {
+            $breakOpen = Carbon::parse($now->toDateString() . ' ' . $hour->break_opens_at);
+            $breakClose = Carbon::parse($now->toDateString() . ' ' . $hour->break_closes_at);
+
+            if ($breakClose->lessThanOrEqualTo($breakOpen)) {
+                $breakClose->addDay();
+            }
+
+            return ! $now->betweenIncluded($breakOpen, $breakClose);
+        }
+
+        return true;
+    }
+
+    private function presentBusinessHoursSummary(Collection $hours): array
+    {
+        $labels = [
+            0 => 'Domingo',
+            1 => 'Segunda',
+            2 => 'Terca',
+            3 => 'Quarta',
+            4 => 'Quinta',
+            5 => 'Sexta',
+            6 => 'Sabado',
+        ];
+
+        return collect($labels)
+            ->mapWithKeys(function (string $label, int $day) use ($hours): array {
+                $ranges = $hours
+                    ->where('day_of_week', $day)
+                    ->where('is_active', true)
+                    ->map(fn (BusinessHour $hour): string => $this->formatHourRange($hour))
+                    ->filter()
+                    ->values();
+
+                return [
+                    $day => [
+                        'day' => $label,
+                        'is_open' => $ranges->isNotEmpty(),
+                        'ranges' => $ranges->all(),
+                        'summary' => $ranges->isNotEmpty() ? $ranges->join(', ') : 'Fechado',
+                    ],
+                ];
+            })
+            ->all();
+    }
+
+    private function formatHourRange(BusinessHour $hour): ?string
+    {
+        if (empty($hour->opens_at) || empty($hour->closes_at)) {
+            return null;
+        }
+
+        $range = substr((string) $hour->opens_at, 0, 5) . ' - ' . substr((string) $hour->closes_at, 0, 5);
+
+        if (! empty($hour->break_opens_at) && ! empty($hour->break_closes_at)) {
+            $range .= ' (pausa ' . substr((string) $hour->break_opens_at, 0, 5) . ' - ' . substr((string) $hour->break_closes_at, 0, 5) . ')';
+        }
+
+        return $range;
     }
 
     private function publicTeamMembersForTenant(User $company): Collection

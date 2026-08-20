@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\TeamMember;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -59,6 +62,62 @@ class ProfileTest extends TestCase
             ->assertRedirect('/profile');
 
         $this->assertNotNull($user->refresh()->email_verified_at);
+    }
+
+    public function test_profile_avatar_can_be_uploaded(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->post('/profile', [
+                'name' => 'Test User',
+                'email' => $user->email,
+                'avatar' => UploadedFile::fake()->image('profile.jpg', 256, 256),
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertNotNull($user->refresh()->avatar_url);
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $user->avatar_url));
+    }
+
+    public function test_member_profile_update_syncs_the_team_member_record(): void
+    {
+        $owner = User::factory()->create();
+        $memberUser = User::factory()->create([
+            'parent_id' => $owner->id,
+            'email' => 'old.member@example.com',
+        ]);
+        $teamMember = TeamMember::create([
+            'user_id' => $owner->id,
+            'name' => 'Old Member',
+            'email' => 'old.member@example.com',
+            'job_title' => 'Barbeiro',
+            'is_active' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($memberUser)
+            ->patch('/profile', [
+                'name' => 'New Member',
+                'email' => 'new.member@example.com',
+                'avatar_url' => 'https://cdn.example.com/avatar.jpg',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $this->assertDatabaseHas('team_members', [
+            'id' => $teamMember->id,
+            'name' => 'New Member',
+            'email' => 'new.member@example.com',
+            'avatar_url' => 'https://cdn.example.com/avatar.jpg',
+        ]);
     }
 
     public function test_user_can_delete_their_account(): void

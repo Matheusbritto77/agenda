@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\TeamMember;
+use App\Support\RoleCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProfileController extends Controller
@@ -16,9 +19,30 @@ class ProfileController extends Controller
      */
     public function edit(Request $request)
     {
+        $user = $request->user();
+        $tenant = $user->parent ?? $user;
+        $teamMember = $this->teamMemberForUser($user);
+        $roleId = $teamMember?->role_id ?? ($user->parent_id ? 'professional' : 'admin');
+        $permissions = $this->permissionModulesForUser($user);
+
         return Inertia::render('Profile/Edit', [
-            'user' => $request->user(),
+            'user' => $user,
             'status' => session('status'),
+            'teamMember' => $teamMember,
+            'accountContext' => [
+                'is_owner' => $user->parent_id === null,
+                'role_id' => $roleId,
+                'role_name' => RoleCatalog::titleFor($roleId),
+                'company_name' => $tenant->name,
+                'company_email' => $tenant->email,
+                'public_booking_url' => $user->parent_id ? ($teamMember?->publicBookingUrl() ?? $tenant->publicBookingUrl()) : $user->publicBookingUrl(),
+                'active_domain_type' => $user->active_domain_type,
+                'subdomain' => $user->subdomain,
+                'custom_domain' => $user->custom_domain,
+                'must_reset_password' => (bool) $user->must_reset_password,
+                'avatar_url' => $user->avatar_url ?? $teamMember?->avatar_url,
+            ],
+            'permissionModules' => $permissions,
         ]);
     }
 
@@ -27,15 +51,32 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
+        $oldEmail = $user->email;
+        $avatarUrl = $user->avatar_url;
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($request->hasFile('avatar')) {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $avatarUrl = Storage::url($path);
+        } elseif (array_key_exists('avatar_url', $validated)) {
+            $avatarUrl = $validated['avatar_url'] ?: null;
         }
 
-        $request->user()->save();
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'avatar_url' => $avatarUrl,
+        ]);
 
-        return Redirect::away(route('profile.edit'));
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+        $this->syncTeamMemberProfile($user, $oldEmail, $avatarUrl);
+
+        return Redirect::away(route('profile.edit'))->with('status', 'profile-updated');
     }
 
     /**
@@ -57,5 +98,140 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::away('/');
+    }
+
+    private function teamMemberForUser($user): ?TeamMember
+    {
+        if (! $user?->parent_id) {
+            return null;
+        }
+
+        return TeamMember::query()
+            ->where('user_id', $user->parent_id)
+            ->where('email', $user->email)
+            ->first();
+    }
+
+    private function syncTeamMemberProfile($user, string $oldEmail, ?string $avatarUrl): void
+    {
+        if (! $user->parent_id) {
+            return;
+        }
+
+        $teamMember = TeamMember::query()
+            ->where('user_id', $user->parent_id)
+            ->where('email', $oldEmail)
+            ->first();
+
+        if (! $teamMember) {
+            return;
+        }
+
+        $teamMember->update([
+            'name' => $user->name,
+            'email' => $user->email,
+            'avatar_url' => $avatarUrl,
+        ]);
+    }
+
+    private function permissionModulesForUser($user): array
+    {
+        $modules = [
+            'appointments' => [
+                'title' => 'Agendamentos & Clientes',
+                'icon' => 'fa-regular fa-calendar-check',
+                'permissions' => [
+                    'appointments.view' => 'Visualizar agendamentos',
+                    'appointments.create' => 'Criar agendamentos',
+                    'appointments.edit' => 'Editar status e horários',
+                    'appointments.cancel' => 'Cancelar agendamentos',
+                    'appointments.view_all' => 'Ver agenda de toda a equipe',
+                ],
+            ],
+            'services' => [
+                'title' => 'Serviços & Valores',
+                'icon' => 'fa-solid fa-scissors',
+                'permissions' => [
+                    'services.view' => 'Visualizar serviços',
+                    'services.create' => 'Criar serviços',
+                    'services.edit' => 'Editar serviços',
+                    'services.delete' => 'Remover serviços',
+                    'services.prices' => 'Alterar preços',
+                ],
+            ],
+            'schedules' => [
+                'title' => 'Horários & Bloqueios',
+                'icon' => 'fa-regular fa-clock',
+                'permissions' => [
+                    'schedules.view' => 'Visualizar horários',
+                    'schedules.manage' => 'Gerenciar expediente',
+                    'schedules.breaks' => 'Editar intervalos',
+                    'schedules.blocks' => 'Gerenciar bloqueios',
+                ],
+            ],
+            'team' => [
+                'title' => 'Time & Profissionais',
+                'icon' => 'fa-solid fa-users',
+                'permissions' => [
+                    'team.view' => 'Visualizar equipe',
+                    'team.create' => 'Cadastrar profissionais',
+                    'team.edit' => 'Editar equipe',
+                    'team.delete' => 'Remover profissionais',
+                ],
+            ],
+            'reports' => [
+                'title' => 'Relatórios',
+                'icon' => 'fa-solid fa-chart-line',
+                'permissions' => [
+                    'reports.view' => 'Visualizar métricas',
+                    'reports.revenue' => 'Visualizar faturamento',
+                    'reports.export' => 'Exportar dados',
+                ],
+            ],
+            'integrations' => [
+                'title' => 'Integrações',
+                'icon' => 'fa-solid fa-puzzle-piece',
+                'permissions' => [
+                    'integrations.view' => 'Visualizar integrações',
+                    'integrations.manage' => 'Gerenciar integrações',
+                ],
+            ],
+            'branding' => [
+                'title' => 'Personalização',
+                'icon' => 'fa-solid fa-palette',
+                'permissions' => [
+                    'branding.view' => 'Visualizar identidade visual',
+                    'branding.manage' => 'Gerenciar identidade visual',
+                ],
+            ],
+            'settings' => [
+                'title' => 'Configurações',
+                'icon' => 'fa-solid fa-gear',
+                'permissions' => [
+                    'settings.domain' => 'Gerenciar domínio',
+                    'settings.roles' => 'Gerenciar cargos e permissões',
+                ],
+            ],
+        ];
+
+        return collect($modules)
+            ->map(function (array $module) use ($user): array {
+                $module['permissions'] = collect($module['permissions'])
+                    ->map(fn (string $label, string $key): array => [
+                        'key' => $key,
+                        'label' => $label,
+                        'granted' => $user->hasPermission($key),
+                    ])
+                    ->values()
+                    ->all();
+
+                $module['granted_count'] = collect($module['permissions'])
+                    ->where('granted', true)
+                    ->count();
+
+                return $module;
+            })
+            ->values()
+            ->all();
     }
 }

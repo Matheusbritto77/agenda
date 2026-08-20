@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'parent_id', 'role_title', 'must_reset_password', 'subdomain', 'custom_domain', 'active_domain_type', 'role_permissions'])]
+#[Fillable(['name', 'email', 'avatar_url', 'password', 'parent_id', 'role_title', 'must_reset_password', 'subdomain', 'custom_domain', 'active_domain_type', 'role_permissions'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -72,6 +72,27 @@ class User extends Authenticatable
         }
 
         return $url . '/' . ltrim($path, '/');
+    }
+
+    public function getAvatarUrlAttribute(?string $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return $value;
+        }
+
+        if (str_starts_with($value, 'storage/')) {
+            return '/' . $value;
+        }
+
+        return '/storage/' . ltrim($value, '/');
     }
 
     public function hasPermission(string $permission): bool

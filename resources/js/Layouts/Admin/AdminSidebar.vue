@@ -62,6 +62,8 @@ const navItems = computed(() => {
         items.push({ name: 'Cargos & Permissões', icon: 'fa-solid fa-user-shield', route: 'admin.roles.index', pattern: 'admin.roles.*' });
     }
 
+    items.push({ name: 'Minha Conta', icon: 'fa-regular fa-user', route: 'profile.edit', pattern: 'profile.*' });
+
     return items;
 });
 
@@ -69,6 +71,8 @@ const userInitials = computed(() => {
     const name = user.value?.name || 'A';
     return name.substring(0, 2).toUpperCase();
 });
+
+const userAvatarUrl = computed(() => user.value?.avatar_url || null);
 
 const publicBookingUrl = computed(() => {
     return page.props.publicBookingUrl || '/';
@@ -151,8 +155,9 @@ const submitLogout = () => {
         <div class="p-4 border-t" style="border-color: var(--border); background-color: var(--background-subtle);">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-700 text-white flex items-center justify-center font-bold shrink-0">
-                        {{ userInitials }}
+                    <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-700 text-white flex items-center justify-center font-bold shrink-0">
+                        <img v-if="userAvatarUrl" :src="userAvatarUrl" :alt="user?.name || 'Usuário'" class="w-full h-full object-cover" />
+                        <span v-else>{{ userInitials }}</span>
                     </div>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold truncate">{{ user?.name || 'Administrador' }}</p>

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import BookingStepperNav from './Booking/BookingStepperNav.vue';
+import BookingCompanyProfileStep from './Booking/BookingCompanyProfileStep.vue';
 import BookingProfessionalStep from './Booking/BookingProfessionalStep.vue';
 import BookingServiceStep from './Booking/BookingServiceStep.vue';
 import BookingDateTimeStep from './Booking/BookingDateTimeStep.vue';
@@ -60,6 +61,10 @@ const props = defineProps({
         type: Object,
         default: null,
     },
+    companyProfile: {
+        type: Object,
+        default: null,
+    },
 });
 
 const businessDisplayName = computed(() => {
@@ -74,14 +79,20 @@ const showProfessionalStep = computed(() => {
     return props.hasTeam && !props.selectedProfessional;
 });
 
+const shouldShowCompanyProfile = computed(() => {
+    return Boolean(props.companyProfile?.is_company_page);
+});
+
 const stepType = {
+    company: 0,
     professional: 1,
     service: 2,
     datetime: 3,
     confirm: 4,
 };
 
-const currentStep = ref(showProfessionalStep.value ? stepType.professional : stepType.service);
+const firstBookingStep = computed(() => showProfessionalStep.value ? stepType.professional : stepType.service);
+const currentStep = ref(shouldShowCompanyProfile.value ? stepType.company : firstBookingStep.value);
 const chosenProfessionalId = ref(props.selectedProfessional?.id || null);
 const selectedServiceId = ref(null);
 const selectedService = ref(null);
@@ -194,6 +205,10 @@ const selectProfessional = (pro) => {
     chosenProfessionalId.value = pro.id;
     bookingForm.professional_id = pro.id;
     currentStep.value = stepType.service;
+};
+
+const startBooking = () => {
+    currentStep.value = firstBookingStep.value;
 };
 
 const selectService = (svc) => {
@@ -340,6 +355,14 @@ onMounted(() => {
         <Head :title="pageTitle" />
 
         <div class="max-w-[960px] w-full mx-auto px-3 sm:px-4 py-4 space-y-6">
+            <BookingCompanyProfileStep
+                v-if="currentStep === stepType.company && shouldShowCompanyProfile"
+                :company-profile="companyProfile"
+                :show-professional-step="showProfessionalStep"
+                @start-booking="startBooking"
+            />
+
+            <template v-else>
             <!-- Cover Banner Header -->
             <div v-if="branding?.banner_url" class="mb-6 rounded-3xl overflow-hidden shadow-lg border border-slate-200/50 relative h-40 sm:h-56 w-full">
                 <img :src="branding.banner_url" class="w-full h-full object-cover" :alt="businessDisplayName" />
@@ -439,6 +462,7 @@ onMounted(() => {
                     @submit-booking="submitBooking"
                 />
             </div>
+            </template>
         </div>
 
         <!-- PIX Payment Modal -->

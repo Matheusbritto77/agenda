@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\BrandingSetting;
 use App\Models\BusinessHour;
 use App\Models\Service;
 use App\Models\TeamMember;
@@ -80,6 +81,50 @@ class PublicBookingEndpointsTest extends TestCase
             ->component('Client/Booking')
             ->has('services', 1)
             ->where('services.0.name', 'Serviço Ativo')
+        );
+    }
+
+    public function test_company_subdomain_receives_company_profile_before_booking_steps(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-20 10:00:00'));
+
+        Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte Premium',
+            'description' => 'Corte com acabamento',
+            'price' => 90,
+            'duration_minutes' => 45,
+            'is_active' => true,
+        ]);
+
+        BrandingSetting::create([
+            'user_id' => $this->tenant->id,
+            'logo_path' => 'https://cdn.example.com/logo.jpg',
+            'settings' => [
+                'business_name' => 'Studio Agendae',
+                'tagline' => 'Atendimento com hora marcada',
+                'banner_path' => 'https://cdn.example.com/banner.jpg',
+                'whatsapp_number' => '11999999999',
+            ],
+        ]);
+
+        $response = $this->get('http://studio.agendae.app/');
+
+        Carbon::setTestNow();
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Client/Booking')
+            ->where('companyProfile.is_company_page', true)
+            ->where('companyProfile.business_name', 'Studio Agendae')
+            ->where('companyProfile.description', 'Atendimento com hora marcada')
+            ->where('companyProfile.logo_url', 'https://cdn.example.com/logo.jpg')
+            ->where('companyProfile.banner_url', 'https://cdn.example.com/banner.jpg')
+            ->where('companyProfile.status.is_open_now', true)
+            ->where('companyProfile.status.checked_at', '10:00')
+            ->where('companyProfile.services_count', 1)
+            ->has('companyProfile.hours_summary', 7)
+            ->has('companyProfile.services_preview', 1)
         );
     }
 
@@ -444,6 +489,7 @@ class PublicBookingEndpointsTest extends TestCase
             ->component('Client/Booking')
             ->has('services', 1)
             ->where('services.0.name', 'Corte Moderno')
+            ->where('companyProfile.is_company_page', false)
         );
     }
 }
