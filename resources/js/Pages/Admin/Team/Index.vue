@@ -186,7 +186,10 @@ const submitCreate = () => {
 
 const submitEdit = () => {
     if (!editingMember.value) return;
-    editForm.put(route('admin.team.update', editingMember.value.id), {
+    editForm.transform((data) => ({
+        ...data,
+        _method: 'PUT',
+    })).post(route('admin.team.update', editingMember.value.id), {
         onSuccess: () => { closeEditModal(); },
         preserveScroll: true,
     });

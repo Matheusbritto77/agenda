@@ -54,7 +54,7 @@ class Service extends Model
             return $this->image_path;
         }
 
-        return Storage::disk('public')->url($this->image_path);
+        return '/storage/' . ltrim($this->image_path, '/');
     }
 
     public function scopeForTenant(Builder $query, int $tenantId): Builder

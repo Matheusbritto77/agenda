@@ -55,6 +55,26 @@ class TeamMember extends Model
         return $query->where('is_active', true);
     }
 
+    public function getAvatarUrlAttribute(?string $value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/storage/')) {
+            return $value;
+        }
+        if (str_starts_with($value, 'storage/')) {
+            return '/' . $value;
+        }
+
+        return '/storage/' . ltrim($value, '/');
+    }
+
     public function getRoleNameAttribute(): string
     {
         return RoleCatalog::titleFor($this->role_id);

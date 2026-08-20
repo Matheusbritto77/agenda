@@ -43,7 +43,7 @@ class BrandingSetting extends Model
             return $this->logo_path;
         }
 
-        return Storage::disk('public')->url($this->logo_path);
+        return '/storage/' . ltrim($this->logo_path, '/');
     }
 
     public function getBannerUrlAttribute(): ?string
@@ -57,6 +57,6 @@ class BrandingSetting extends Model
             return $bannerPath;
         }
 
-        return Storage::disk('public')->url($bannerPath);
+        return '/storage/' . ltrim($bannerPath, '/');
     }
 }
