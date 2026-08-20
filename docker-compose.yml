@@ -9,8 +9,6 @@ services:
     volumes:
       - sqlite_data:/var/www/html/database
       - storage_data:/var/www/html/storage
-    networks:
-      - easypanel
     environment:
       - APP_ENV=${APP_ENV:-production}
       - APP_DEBUG=${APP_DEBUG:-false}
@@ -22,10 +20,6 @@ services:
       - "traefik.http.routers.agendae.rule=Host(`renttool.store`) || HostRegexp(`{subdomain:[a-z0-9-]+}.renttool.store`)"
       - "traefik.http.services.agendae.loadbalancer.server.port=80"
     restart: unless-stopped
-
-networks:
-  easypanel:
-    external: true
 
 volumes:
   sqlite_data:
