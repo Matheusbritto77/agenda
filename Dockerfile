@@ -1,12 +1,3 @@
-# Stage 1: Build frontend assets
-FROM node:20-alpine AS node-builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# Stage 2: App deployment
 FROM php:8.4-apache
 
 # Install system dependencies
@@ -19,8 +10,13 @@ RUN apt-get update && apt-get install -y \
     git \
     sqlite3 \
     libsqlite3-dev \
+    curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo pdo_mysql pdo_sqlite zip bcmath opcache pcntl
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -42,11 +38,11 @@ COPY . .
 # Copy environment file if it doesn't exist
 RUN cp -n .env.example .env || true
 
-# Copy compiled assets from Stage 1
-COPY --from=node-builder /app/public/build /var/www/html/public/build
-
-# Install Composer dependencies
+# Install PHP dependencies (creates vendor/ needed for Ziggy in Vite build)
 RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Install JS dependencies and compile assets
+RUN npm ci && npm run build && rm -rf node_modules
 
 # Create SQLite database file if it doesn't exist
 RUN mkdir -p database && touch database/database.sqlite
