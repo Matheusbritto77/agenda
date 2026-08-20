@@ -146,6 +146,34 @@ onMounted(() => {
                     <a href="#planos" @click="mobileMenuOpen = false" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900">Planos & Preços</a>
                     <a href="#faq" @click="mobileMenuOpen = false" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900">FAQ</a>
                 </nav>
+                <div class="border-t border-slate-150 dark:border-slate-800/80 pt-3 flex flex-col gap-2">
+                    <a
+                        v-if="$page.props.auth?.user"
+                        :href="route('admin.dashboard')"
+                        class="w-full text-center px-4 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-600/20"
+                        @click="mobileMenuOpen = false"
+                    >
+                        <i class="fa-solid fa-chart-pie mr-1"></i>
+                        Acessar Painel
+                    </a>
+                    <template v-else>
+                        <a
+                            href="/login"
+                            class="w-full text-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+                            @click="mobileMenuOpen = false"
+                        >
+                            Acessar Painel
+                        </a>
+                        <a
+                            v-if="canRegister"
+                            href="/register"
+                            class="w-full text-center px-4 py-2.5 rounded-xl font-extrabold text-xs bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 text-white shadow-md shadow-indigo-600/10"
+                            @click="mobileMenuOpen = false"
+                        >
+                            Criar Minha Conta Grátis
+                        </a>
+                    </template>
+                </div>
             </div>
         </header>
 
