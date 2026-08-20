@@ -13,6 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'must.reset.password' => \App\Http\Middleware\EnsurePasswordReset::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
