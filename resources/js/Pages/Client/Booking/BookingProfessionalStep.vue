@@ -47,9 +47,9 @@ const getInitials = (name) => (name || 'A').substring(0, 2).toUpperCase();
                 @click="$emit('select-professional', pro)"
                 :class="[
                     'card p-4 rounded-2xl border flex items-center gap-3.5 cursor-pointer transition-all hover:scale-102 shadow-sm',
-                    chosenProfessionalId === pro.id ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-800'
+                    chosenProfessionalId === pro.id ? '' : 'border-slate-200 dark:border-slate-800'
                 ]"
-                :style="chosenProfessionalId === pro.id ? { borderColor: 'var(--primary)' } : {}"
+                :style="chosenProfessionalId === pro.id ? { borderColor: 'var(--primary)', backgroundColor: 'var(--primary-light)', boxShadow: '0 0 0 2px var(--primary-light)' } : {}"
             >
                 <div class="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md">
                     <img v-if="pro.avatar_url" :src="pro.avatar_url" :alt="pro.name" class="w-full h-full object-cover" />
@@ -57,9 +57,9 @@ const getInitials = (name) => (name || 'A').substring(0, 2).toUpperCase();
                 </div>
                 <div class="min-w-0 flex-1">
                     <h4 class="font-extrabold text-sm truncate" style="color: var(--text-heading);">{{ pro.name }}</h4>
-                    <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold truncate">{{ pro.job_title || 'Especialista' }}</p>
+                    <p class="text-xs font-semibold truncate" :style="{ color: 'var(--primary)' }">{{ pro.job_title || 'Especialista' }}</p>
                 </div>
-                <i :class="['fa-solid text-sm', chosenProfessionalId === pro.id ? 'fa-circle-check text-indigo-600 dark:text-indigo-400' : 'fa-circle text-slate-300 dark:text-slate-700']"></i>
+                <i :class="['fa-solid text-sm', chosenProfessionalId === pro.id ? 'fa-circle-check' : 'fa-circle text-slate-300 dark:text-slate-700']" :style="chosenProfessionalId === pro.id ? { color: 'var(--primary)' } : {}"></i>
             </div>
         </div>
     </div>

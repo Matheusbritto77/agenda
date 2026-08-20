@@ -47,14 +47,14 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 @click="$emit('select-service', svc)"
                 :class="[
                     'card p-4 rounded-2xl border flex items-center justify-between gap-3 cursor-pointer transition-all hover:scale-102 shadow-sm',
-                    selectedServiceId === svc.id ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-800'
+                    selectedServiceId === svc.id ? '' : 'border-slate-200 dark:border-slate-800'
                 ]"
-                :style="selectedServiceId === svc.id ? { borderColor: 'var(--primary)' } : {}"
+                :style="selectedServiceId === svc.id ? { borderColor: 'var(--primary)', backgroundColor: 'var(--primary-light)', boxShadow: '0 0 0 2px var(--primary-light)' } : {}"
             >
                 <div class="flex items-center gap-3.5 min-w-0">
                     <div class="w-12 h-12 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
                         <img v-if="svc.image_url" :src="svc.image_url" :alt="svc.name" class="w-full h-full object-cover" />
-                        <i v-else class="fa-solid fa-scissors text-indigo-500 text-base"></i>
+                        <i v-else class="fa-solid fa-scissors text-base" :style="{ color: 'var(--primary)' }"></i>
                     </div>
                     <div class="min-w-0">
                         <h4 class="font-extrabold text-sm truncate" style="color: var(--text-heading);">{{ svc.name }}</h4>
@@ -70,7 +70,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                     <span class="text-sm font-black block" :style="{ color: 'var(--primary)' }">
                         R$ {{ formatCurrency(svc.price) }}
                     </span>
-                    <i :class="['fa-solid text-xs mt-1 block', selectedServiceId === svc.id ? 'fa-circle-check text-indigo-600 dark:text-indigo-400' : 'fa-circle text-slate-300 dark:text-slate-700']"></i>
+                    <i :class="['fa-solid text-xs mt-1 block', selectedServiceId === svc.id ? 'fa-circle-check' : 'fa-circle text-slate-300 dark:text-slate-700']" :style="selectedServiceId === svc.id ? { color: 'var(--primary)' } : {}"></i>
                 </div>
             </div>
         </div>

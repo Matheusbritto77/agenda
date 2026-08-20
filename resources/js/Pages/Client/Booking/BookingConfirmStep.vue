@@ -39,8 +39,8 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
 <template>
     <div class="space-y-6">
         <!-- Summary Box -->
-        <div class="card p-5 sm:p-6 bg-gradient-to-tr from-indigo-500/5 to-cyan-500/5 border-indigo-500/20 shadow-sm space-y-4">
-            <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+        <div class="card p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 space-y-4" :style="{ backgroundColor: 'var(--primary-light)' }">
+            <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider" :style="{ color: 'var(--primary)' }">
                 <i class="fa-solid fa-clipboard-list"></i>
                 <span>Resumo da sua Reserva</span>
             </div>
@@ -48,7 +48,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
                 <div v-if="activeProfessional" class="space-y-0.5">
                     <span class="text-[10px] font-bold uppercase text-slate-400">Profissional</span>
-                    <p class="font-extrabold text-indigo-600 dark:text-indigo-400">{{ activeProfessional.name }}</p>
+                    <p class="font-extrabold" :style="{ color: 'var(--primary)' }">{{ activeProfessional.name }}</p>
                 </div>
 
                 <div class="space-y-0.5">
@@ -154,7 +154,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                     <button
                         type="submit"
                         :disabled="bookingForm.processing"
-                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
+                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-md"
                     >
                         <i v-if="bookingForm.processing" class="fa-solid fa-spinner fa-spin text-xs mr-1"></i>
                         <i v-else :class="['fa-solid text-xs mr-1', paymentEnabled ? 'fa-wallet' : 'fa-calendar-check']"></i>

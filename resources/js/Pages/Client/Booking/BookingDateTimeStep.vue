@@ -77,10 +77,13 @@ const formatDateLong = (dateStr) => {
                         'aspect-square rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center transition-all relative',
                         d.otherMonth ? 'opacity-20 cursor-not-allowed' : '',
                         d.disabled ? 'opacity-30 cursor-not-allowed line-through' : 'hover:scale-105',
-                        d.isToday && !d.selected ? 'border border-indigo-500 font-black' : '',
-                        d.selected ? 'bg-indigo-600 text-white font-black shadow-lg shadow-indigo-600/30 scale-105 z-10' : 'bg-slate-50 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300'
+                        d.isToday && !d.selected ? 'border font-black' : '',
+                        d.selected ? 'text-white font-black scale-105 z-10' : 'bg-slate-50 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300'
                     ]"
-                    :style="d.selected ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="[
+                        d.selected ? { backgroundColor: 'var(--primary)', boxShadow: '0 4px 12px var(--primary-light)' } : {},
+                        d.isToday && !d.selected ? { borderColor: 'var(--primary)' } : {}
+                    ]"
                 >
                     {{ d.day }}
                 </button>
@@ -122,9 +125,9 @@ const formatDateLong = (dateStr) => {
                     @click="$emit('select-time', slot.time || slot)"
                     :class="[
                         'py-2.5 px-2 rounded-xl text-xs font-black text-center transition-all hover:scale-105 cursor-pointer',
-                        selectedTime === (slot.time || slot) ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200'
+                        selectedTime === (slot.time || slot) ? 'text-white shadow-md' : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200'
                     ]"
-                    :style="selectedTime === (slot.time || slot) ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="selectedTime === (slot.time || slot) ? { backgroundColor: 'var(--primary)', boxShadow: '0 4px 12px var(--primary-light)' } : {}"
                 >
                     {{ slot.time || slot }}
                 </button>

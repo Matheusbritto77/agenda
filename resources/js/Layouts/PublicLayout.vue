@@ -120,7 +120,7 @@ onMounted(() => {
                 <!-- Brand / Logo Area -->
                 <Link :href="route('booking.index')" class="flex items-center gap-3 group transition-transform hover:opacity-95">
                     
-                    <!-- 1. Custom User Logo (Without Agendae name) -->
+                    <!-- 1. Custom User Logo (Without text name to prevent crowding) -->
                     <template v-if="hasCustomLogo">
                         <div class="h-10 sm:h-12 max-w-[200px] sm:max-w-[260px] flex items-center justify-center overflow-hidden">
                             <img
@@ -129,21 +129,18 @@ onMounted(() => {
                                 class="h-full w-auto max-h-10 sm:max-h-12 object-contain"
                             />
                         </div>
-                        <span v-if="businessDisplayName" class="hidden sm:inline-block font-extrabold text-base sm:text-lg tracking-tight truncate max-w-[220px]" style="color: var(--text-heading, #0f172a);">
-                            {{ businessDisplayName }}
-                        </span>
                     </template>
-
-                    <!-- 2. Default System Logo (With Agendae name) -->
+ 
+                    <!-- 2. Text Brand with System Icon fallback -->
                     <template v-else>
                         <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-accent-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform duration-300">
                             <i class="fa-solid fa-calendar-check text-base sm:text-lg"></i>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <span class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-brand-600 to-cyan-500 bg-clip-text text-transparent">
-                                Agendae
+                                {{ businessDisplayName || 'Agendae' }}
                             </span>
-                            <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
+                            <span v-if="!businessDisplayName" class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
                                 Online
                             </span>
                         </div>

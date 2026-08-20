@@ -39,7 +39,7 @@ defineEmits(['go-to-step']);
             <!-- Connecting Line Background -->
             <div class="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800 -z-0 rounded-full"></div>
 
-            <!-- Step: Professional (if applicable) -->
+                   <!-- Step: Professional (if applicable) -->
             <div
                 v-if="showProfessionalStep"
                 class="flex flex-col items-center gap-1.5 relative z-10 cursor-pointer group"
@@ -48,10 +48,12 @@ defineEmits(['go-to-step']);
                 <div
                     :class="[
                         'w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs sm:text-sm transition-all shadow-md',
-                        currentStep === stepType.professional ? 'ring-4 ring-indigo-500/20 scale-110' : '',
-                        chosenProfessionalId ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                        chosenProfessionalId ? 'text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                     ]"
-                    :style="chosenProfessionalId ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="[
+                        chosenProfessionalId ? { backgroundColor: 'var(--primary)' } : {},
+                        currentStep === stepType.professional ? { boxShadow: '0 0 0 4px var(--primary-light)' } : {}
+                    ]"
                 >
                     <i v-if="chosenProfessionalId && currentStep > stepType.professional" class="fa-solid fa-check text-xs"></i>
                     <span v-else>1</span>
@@ -69,10 +71,12 @@ defineEmits(['go-to-step']);
                 <div
                     :class="[
                         'w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs sm:text-sm transition-all shadow-md',
-                        currentStep === stepType.service ? 'ring-4 ring-indigo-500/20 scale-110' : '',
-                        selectedServiceId ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                        selectedServiceId ? 'text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                     ]"
-                    :style="selectedServiceId ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="[
+                        selectedServiceId ? { backgroundColor: 'var(--primary)' } : {},
+                        currentStep === stepType.service ? { boxShadow: '0 0 0 4px var(--primary-light)' } : {}
+                    ]"
                 >
                     <i v-if="selectedServiceId && currentStep > stepType.service" class="fa-solid fa-check text-xs"></i>
                     <span v-else>{{ showProfessionalStep ? '2' : '1' }}</span>
@@ -90,10 +94,12 @@ defineEmits(['go-to-step']);
                 <div
                     :class="[
                         'w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs sm:text-sm transition-all shadow-md',
-                        currentStep === stepType.datetime ? 'ring-4 ring-indigo-500/20 scale-110' : '',
-                        (selectedDate && selectedTime) ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                        (selectedDate && selectedTime) ? 'text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                     ]"
-                    :style="(selectedDate && selectedTime) ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="[
+                        (selectedDate && selectedTime) ? { backgroundColor: 'var(--primary)' } : {},
+                        currentStep === stepType.datetime ? { boxShadow: '0 0 0 4px var(--primary-light)' } : {}
+                    ]"
                 >
                     <i v-if="(selectedDate && selectedTime) && currentStep > stepType.datetime" class="fa-solid fa-check text-xs"></i>
                     <span v-else>{{ showProfessionalStep ? '3' : '2' }}</span>
@@ -111,9 +117,12 @@ defineEmits(['go-to-step']);
                 <div
                     :class="[
                         'w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-xs sm:text-sm transition-all shadow-md',
-                        currentStep === stepType.confirm ? 'ring-4 ring-indigo-500/20 scale-110 bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                        currentStep === stepType.confirm ? 'text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
                     ]"
-                    :style="currentStep === stepType.confirm ? { backgroundColor: 'var(--primary)' } : {}"
+                    :style="[
+                        currentStep === stepType.confirm ? { backgroundColor: 'var(--primary)' } : {},
+                        currentStep === stepType.confirm ? { boxShadow: '0 0 0 4px var(--primary-light)' } : {}
+                    ]"
                 >
                     <span>{{ showProfessionalStep ? '4' : '3' }}</span>
                 </div>
