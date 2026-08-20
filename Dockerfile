@@ -1,3 +1,12 @@
+# Stage 1: Build frontend assets
+FROM node:20-alpine AS node-builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: App deployment
 FROM php:8.4-apache
 
 # Install system dependencies
@@ -32,6 +41,9 @@ COPY . .
 
 # Copy environment file if it doesn't exist
 RUN cp -n .env.example .env || true
+
+# Copy compiled assets from Stage 1
+COPY --from=node-builder /app/public/build /var/www/html/public/build
 
 # Install Composer dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
