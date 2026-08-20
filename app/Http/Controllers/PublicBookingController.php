@@ -343,7 +343,7 @@ class PublicBookingController extends Controller
                 ]);
             }
 
-            $payNow = $request->boolean('pay_now');
+            $payNow = $request->boolean('pay_now') || $request->input('payment_method') === 'pix';
 
             $appointment = Appointment::create([
                 'service_id' => $service->id,

@@ -112,7 +112,7 @@ const bookingForm = useForm({
     client_email: '',
     client_phone: '',
     notes: '',
-    payment_method: 'in_person',
+    pay_now: false,
 });
 
 const filteredProfessionals = computed(() => {
@@ -239,7 +239,7 @@ const fetchSlots = (dateStr) => {
 };
 
 const submitBooking = (withPayment) => {
-    bookingForm.payment_method = withPayment ? 'pix' : 'in_person';
+    bookingForm.pay_now = !!withPayment;
     submitNotice.value = '';
     bookingForm.clearErrors();
     bookingForm.post(route('booking.store'), {
