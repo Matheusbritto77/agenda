@@ -98,6 +98,8 @@ const isPaying = ref(false);
 const paymentLoading = ref(false);
 const paymentDetails = ref(null);
 const paymentStatus = ref('pending');
+const submitNotice = ref('');
+const submitNoticeType = ref('success');
 let paymentPollInterval = null;
 
 const bookingForm = useForm({
@@ -238,17 +240,41 @@ const fetchSlots = (dateStr) => {
 
 const submitBooking = (withPayment) => {
     bookingForm.payment_method = withPayment ? 'pix' : 'in_person';
+    submitNotice.value = '';
+    bookingForm.clearErrors();
     bookingForm.post(route('booking.store'), {
         preserveScroll: true,
-        onSuccess: (resp) => {
-            if (withPayment && resp.props.paymentDetails) {
-                paymentDetails.value = resp.props.paymentDetails;
+        onSuccess: (page) => {
+            submitNoticeType.value = 'success';
+            submitNotice.value = page?.props?.flash?.success || 'Seu agendamento foi enviado com sucesso.';
+
+            if (withPayment && page?.props?.paymentDetails) {
+                paymentDetails.value = page.props.paymentDetails;
                 isPaying.value = true;
-                pollPaymentStatus(resp.props.paymentDetails.payment_id);
+                pollPaymentStatus(page.props.paymentDetails.payment_id);
             }
+        },
+        onError: (errors) => {
+            submitNoticeType.value = 'error';
+            submitNotice.value =
+                errors?.appointment_time ||
+                errors?.service_id ||
+                errors?.client_name ||
+                errors?.customer_name ||
+                errors?.client_email ||
+                errors?.client_phone ||
+                page.props.flash?.error ||
+                'Não foi possível concluir o agendamento. Verifique os dados informados e tente novamente.';
         },
     });
 };
+
+const flashMessage = computed(() => page.props.flash?.success || page.props.flash?.error || page.props.flash?.warning || '');
+const flashType = computed(() => {
+    if (page.props.flash?.error) return 'error';
+    if (page.props.flash?.warning) return 'warning';
+    return 'success';
+});
 
 const pollPaymentStatus = (paymentId) => {
     if (!paymentId) return;
@@ -318,6 +344,18 @@ onMounted(() => {
 
             <!-- Steps Components -->
             <div class="space-y-6">
+                <div
+                    v-if="submitNotice || flashMessage"
+                    class="rounded-2xl border px-4 py-3 text-sm font-semibold"
+                    :class="(submitNoticeType === 'error' || flashType === 'error')
+                        ? 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                        : (submitNoticeType === 'warning' || flashType === 'warning')
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'"
+                >
+                    {{ submitNotice || flashMessage }}
+                </div>
+
                 <!-- Step 1: Professional -->
                 <BookingProfessionalStep
                     v-if="currentStep === stepType.professional && showProfessionalStep"

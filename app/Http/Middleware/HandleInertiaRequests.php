@@ -73,6 +73,11 @@ class HandleInertiaRequests extends Middleware
                 'role' => $userRole,
                 'permissions' => $userPermissions,
             ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+            ],
             'publicBookingUrl' => $user ? $user->publicBookingUrl() : null,
         ];
     }
