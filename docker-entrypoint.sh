@@ -6,6 +6,9 @@ if ! grep -q "APP_KEY=base64" .env; then
     php artisan key:generate --force
 fi
 
+# Regenerate package manifests at runtime, when the real environment is available.
+php artisan package:discover --ansi
+
 # Run database migrations
 php artisan migrate --force
 

@@ -38,8 +38,9 @@ COPY . .
 # Copy environment file if it doesn't exist
 RUN cp -n .env.example .env || true
 
-# Install PHP dependencies (creates vendor/ needed for Ziggy in Vite build)
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies without running Laravel bootstrap scripts during build.
+# The app environment is fully available at container start, not at image build time.
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Install JS dependencies and compile assets
 RUN npm ci && npm run build && rm -rf node_modules
