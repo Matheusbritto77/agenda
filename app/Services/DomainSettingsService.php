@@ -74,8 +74,14 @@ class DomainSettingsService
             return false;
         }
 
-        return $host === "{$subdomain}.agendae.app"
-            || str_starts_with($host, "{$subdomain}.");
+        $baseDomain = strtolower(trim((string) config('app.domain', '')));
+
+        if ($baseDomain !== '') {
+            return $host === "{$subdomain}.{$baseDomain}"
+                || str_starts_with($host, "{$subdomain}.");
+        }
+
+        return str_starts_with($host, "{$subdomain}.");
     }
 
     /**
