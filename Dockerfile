@@ -45,8 +45,9 @@ RUN npm ci && npm run build && rm -rf node_modules
 # Create SQLite database file if it doesn't exist
 RUN mkdir -p database && touch database/database.sqlite
 
-# Set directory permissions for Laravel
-RUN chown -R www-data:www-data /var/www/html \
+# Run storage link and set directory permissions for Laravel
+RUN php artisan storage:link --force \
+    && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
     && chmod -R 775 /var/www/html/bootstrap/cache
 
