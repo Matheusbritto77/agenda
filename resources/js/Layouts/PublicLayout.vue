@@ -1,6 +1,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
-import { computed, watch } from 'vue';
+import { computed, watch, onMounted } from 'vue';
 
 const props = defineProps({
     title: {
@@ -84,6 +84,11 @@ const currentYear = new Date().getFullYear();
 watch(() => props.title, (newTitle) => {
     document.title = newTitle;
 }, { immediate: true });
+
+onMounted(() => {
+    document.documentElement.classList.remove('dark');
+    document.documentElement.setAttribute('data-theme', 'light');
+});
 </script>
 
 <template>
@@ -216,3 +221,48 @@ watch(() => props.title, (newTitle) => {
         </footer>
     </div>
 </template>
+
+<style>
+.card {
+    background-color: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius, 1rem);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+.form-control {
+    background-color: var(--background, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-sm, 0.625rem);
+    color: var(--text, #0f172a);
+    width: 100%;
+    padding: 0.75rem 1rem;
+    transition: all 0.3s ease;
+}
+.form-control:focus {
+    border-color: var(--primary, #6366f1);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-light, rgba(99, 102, 241, 0.12));
+}
+.btn {
+    border-radius: var(--radius-sm, 0.625rem);
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+.btn-primary {
+    background: var(--primary-gradient, linear-gradient(135deg, #6366f1 0%, #4f46e5 100%));
+    color: #ffffff;
+}
+.btn-primary:hover {
+    opacity: 0.95;
+}
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border, #e2e8f0);
+    color: var(--text, #0f172a);
+}
+.btn-outline:hover {
+    background: var(--background-subtle, #f8fafc);
+}
+</style>

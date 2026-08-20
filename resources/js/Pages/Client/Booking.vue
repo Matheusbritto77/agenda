@@ -221,7 +221,7 @@ const goToStep = (step) => {
 
 const fetchSlots = (dateStr) => {
     slotsLoading.value = true;
-    const url = route('public.slots');
+    const url = route('booking.slots');
     fetch(`${url}?date=${dateStr}&service_id=${selectedServiceId.value || ''}&professional_id=${chosenProfessionalId.value || ''}`)
         .then(res => res.json())
         .then(data => {
@@ -236,7 +236,7 @@ const fetchSlots = (dateStr) => {
 
 const submitBooking = (withPayment) => {
     bookingForm.payment_method = withPayment ? 'pix' : 'in_person';
-    bookingForm.post(route('public.booking.store'), {
+    bookingForm.post(route('booking.store'), {
         preserveScroll: true,
         onSuccess: (resp) => {
             if (withPayment && resp.props.paymentDetails) {
@@ -252,7 +252,7 @@ const pollPaymentStatus = (paymentId) => {
     if (!paymentId) return;
     clearInterval(paymentPollInterval);
     paymentPollInterval = setInterval(() => {
-        fetch(route('public.payment.status', paymentId))
+        fetch(route('payment.status', paymentId))
             .then(r => r.json())
             .then(d => {
                 paymentStatus.value = d.status;
