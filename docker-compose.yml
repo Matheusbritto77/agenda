@@ -15,6 +15,10 @@ services:
       - APP_URL=http://localhost:8080
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/var/www/html/database/database.sqlite
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agendae.rule=Host(`renttool.store`) || HostRegexp(`{subdomain:[a-z0-9-]+}.renttool.store`)"
+      - "traefik.http.services.agendae.loadbalancer.server.port=80"
     restart: unless-stopped
 
 volumes:
