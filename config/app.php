@@ -52,10 +52,22 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => (static function (): string {
+        $url = trim((string) env('APP_URL', 'http://localhost'));
+
+        if ($url === '') {
+            return 'http://localhost';
+        }
+
+        if (! preg_match('#^https?://#i', $url)) {
+            $url = 'http://' . ltrim($url, '/');
+        }
+
+        return rtrim($url, '/');
+    })(),
     'domain' => env(
         'APP_DOMAIN',
-        parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?: 'localhost'
+        parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'localhost'
     ),
 
     /*
