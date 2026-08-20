@@ -11,6 +11,7 @@ use App\Services\BookingAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -308,12 +309,26 @@ class PublicBookingController extends Controller
 
     public function store(Request $request, BookingAvailabilityService $availabilityService)
     {
+        Log::info('PublicBookingController::store: Start processing booking', [
+            'host' => $request->getHost(),
+            'method' => $request->method(),
+            'input' => $request->except(['password', 'password_confirmation']),
+        ]);
+
         try {
             $tenant = $this->resolveTenant($request);
             $company = $tenant->parent ?? $tenant;
             $selectedProfessional = $this->resolveSelectedProfessional($request, $tenant, $company);
             $schedulingUser = $selectedProfessional instanceof User ? $selectedProfessional : $tenant;
             $request->merge($this->normalizeBookingInput($request));
+
+            Log::info('PublicBookingController::store: Tenant and context resolved', [
+                'tenant_id' => $tenant->id,
+                'company_id' => $company->id,
+                'scheduling_user_id' => $schedulingUser->id,
+                'selected_professional_id' => $selectedProfessional?->id,
+                'selected_professional_type' => $selectedProfessional ? get_class($selectedProfessional) : null,
+            ]);
 
             $validated = $request->validate([
                 'service_id' => [
@@ -337,7 +352,17 @@ class PublicBookingController extends Controller
 
             $service = $this->publicServicesQuery($company)->findOrFail($validated['service_id']);
 
-            if (! $availabilityService->isSlotAvailable($service, $validated['appointment_date'], $validated['appointment_time'], $selectedProfessional)) {
+            $isAvailable = $availabilityService->isSlotAvailable($service, $validated['appointment_date'], $validated['appointment_time'], $selectedProfessional);
+
+            Log::info('PublicBookingController::store: Slot availability check', [
+                'service_id' => $service->id,
+                'service_name' => $service->name,
+                'date' => $validated['appointment_date'],
+                'time' => $validated['appointment_time'],
+                'is_available' => $isAvailable,
+            ]);
+
+            if (! $isAvailable) {
                 throw ValidationException::withMessages([
                     'appointment_time' => 'O horário selecionado não está mais disponível.',
                 ]);
@@ -357,6 +382,15 @@ class PublicBookingController extends Controller
                 'payment_status' => $payNow ? 'pending' : 'none',
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $schedulingUser->id,
+            ]);
+
+            Log::info('PublicBookingController::store: Appointment successfully created', [
+                'appointment_id' => $appointment->id,
+                'client_name' => $appointment->client_name,
+                'date' => $appointment->appointment_date,
+                'time' => $appointment->appointment_time,
+                'user_id' => $appointment->user_id,
+                'team_member_id' => $appointment->team_member_id,
             ]);
 
             $message = sprintf(
@@ -385,12 +419,26 @@ class PublicBookingController extends Controller
                 ])
                 ->with('success', $message);
         } catch (ValidationException $e) {
+            Log::warning('PublicBookingController::store: ValidationException', [
+                'host' => $request->getHost(),
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+            ]);
+
             if ($request->expectsJson()) {
                 return $this->jsonValidationError($request, $e);
             }
 
             throw $e;
         } catch (Throwable $e) {
+            Log::error('PublicBookingController::store: Throwable error', [
+                'host' => $request->getHost(),
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'input' => $request->all(),
+            ]);
+
             $this->reportThrowable($e);
 
             if ($request->expectsJson()) {
@@ -419,6 +467,16 @@ class PublicBookingController extends Controller
             $service = $this->resolveServiceFromRequest($request, $company);
             $date = $this->resolveDateFromRequest($request);
             $slots = $availabilityService->slotsFor($service, $date->toDateString(), $selectedProfessional)['slots'];
+
+            Log::info('PublicBookingController::availableSlots: Slots fetched', [
+                'host' => $request->getHost(),
+                'tenant_id' => $tenant->id,
+                'service_id' => $service->id,
+                'date' => $date->toDateString(),
+                'professional_id' => $selectedProfessional?->id,
+                'slots_count' => count($slots),
+            ]);
+
             $blockedSlots = BlockedTimeSlot::query()
                 ->active()
                 ->where('user_id', $schedulingUser->id)
@@ -447,12 +505,26 @@ class PublicBookingController extends Controller
                 'blocked_dates' => $availabilityService->slotsFor($service, $date->toDateString(), $selectedProfessional)['blocked_dates'],
             ]);
         } catch (ValidationException $e) {
+            Log::warning('PublicBookingController::availableSlots: ValidationException', [
+                'host' => $request->getHost(),
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+            ]);
+
             if ($request->expectsJson()) {
                 return $this->jsonValidationError($request, $e);
             }
 
             throw $e;
         } catch (Throwable $e) {
+            Log::error('PublicBookingController::availableSlots: Throwable error', [
+                'host' => $request->getHost(),
+                'error_message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'input' => $request->all(),
+            ]);
+
             $this->reportThrowable($e);
 
             return $this->jsonError($request, 'Não foi possível carregar os horários disponíveis.');

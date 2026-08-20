@@ -10,6 +10,7 @@ use App\Models\TeamMember;
 use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Log;
 
 class BookingAvailabilityService
 {
@@ -304,7 +305,12 @@ class BookingAvailabilityService
     private function businessHoursForContext(?int $tenantId, User|TeamMember|null $professional = null)
     {
         if ($professional instanceof TeamMember && is_array($professional->business_hours) && $professional->business_hours !== []) {
-            return collect($professional->business_hours);
+            return collect($professional->business_hours)->map(function ($item) use ($tenantId) {
+                if ($item instanceof BusinessHour) {
+                    return $item;
+                }
+                return new BusinessHour((array) $item + ['user_id' => $tenantId]);
+            });
         }
 
         if ($tenantId === null) {

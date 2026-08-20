@@ -8,6 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class ResolvePublicBookingTenant
@@ -22,8 +23,24 @@ class ResolvePublicBookingTenant
             if ($this->shouldAllowLandingPage($request)) {
                 return $this->toSymfonyResponse($next($request), $request);
             }
+
+            Log::warning('ResolvePublicBookingTenant: Tenant not found for host', [
+                'host' => $request->getHost(),
+                'path' => $request->path(),
+                'url' => $request->fullUrl(),
+            ]);
+
             abort(404, 'Estabelecimento não encontrado.');
         }
+
+        Log::info('ResolvePublicBookingTenant: Tenant resolved successfully', [
+            'host' => $request->getHost(),
+            'path' => $request->path(),
+            'tenant_id' => $tenant->id,
+            'tenant_name' => $tenant->name,
+            'tenant_subdomain' => $tenant->subdomain,
+            'selected_professional' => $request->attributes->get('selectedProfessional')?->name,
+        ]);
 
         $request->attributes->set('bookingTenant', $tenant);
         app()->instance('bookingTenant', $tenant);
