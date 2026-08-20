@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\RoleCatalog;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -56,32 +57,17 @@ class TeamMember extends Model
 
     public function getRoleNameAttribute(): string
     {
-        return match ($this->role_id) {
-            'admin' => 'Administrador',
-            'manager' => 'Gerente',
-            'receptionist' => 'Recepcionista',
-            default => 'Profissional / Especialista',
-        };
+        return RoleCatalog::titleFor($this->role_id);
     }
 
     public function getRoleBadgeColorAttribute(): string
     {
-        return match ($this->role_id) {
-            'admin' => 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
-            'manager' => 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-            'receptionist' => 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-            default => 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-        };
+        return RoleCatalog::badgeColorFor($this->role_id);
     }
 
     public function getRoleIconAttribute(): string
     {
-        return match ($this->role_id) {
-            'admin' => 'fa-solid fa-shield-halved',
-            'manager' => 'fa-solid fa-user-tie',
-            'receptionist' => 'fa-solid fa-headset',
-            default => 'fa-solid fa-user-check',
-        };
+        return RoleCatalog::iconFor($this->role_id);
     }
 
     public function publicBookingUrl(string $path = '/'): string

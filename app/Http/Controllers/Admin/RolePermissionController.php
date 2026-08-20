@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\TeamMember;
 use App\Models\User;
+use App\Support\RoleCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -38,32 +39,7 @@ class RolePermissionController extends Controller
             ->latest()
             ->get();
 
-        $roles = [
-            'admin' => [
-                'name' => 'Administrador',
-                'description' => 'Acesso total a todas as funcionalidades, configurações, métricas financeiras e gerenciamento de equipe.',
-                'badge_color' => 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
-                'icon' => 'fa-solid fa-shield-halved',
-            ],
-            'manager' => [
-                'name' => 'Gerente',
-                'description' => 'Gerencia agendamentos, serviços, horários de expediente, clientes e profissionais do estabelecimento.',
-                'badge_color' => 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
-                'icon' => 'fa-solid fa-user-tie',
-            ],
-            'professional' => [
-                'name' => 'Profissional / Especialista',
-                'description' => 'Visualiza e gerencia exclusivamente sua própria agenda de atendimentos e horários.',
-                'badge_color' => 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-                'icon' => 'fa-solid fa-user-check',
-            ],
-            'receptionist' => [
-                'name' => 'Recepcionista / Atendente',
-                'description' => 'Cria, reagenda e confirma horários de clientes para qualquer profissional do estabelecimento.',
-                'badge_color' => 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-                'icon' => 'fa-solid fa-headset',
-            ],
-        ];
+        $roles = RoleCatalog::all();
 
         $permissionModules = [
             'appointments' => [
@@ -238,7 +214,7 @@ class RolePermissionController extends Controller
         abort_unless((int) $teamMember->user_id === (int) $tenantId, 404);
 
         $validated = Validator::make($request->all(), [
-            'role_id' => ['required', 'string', 'in:admin,manager,professional,receptionist'],
+            'role_id' => ['required', 'string', 'in:' . implode(',', RoleCatalog::ids())],
         ])->validate();
 
         $teamMember->update([

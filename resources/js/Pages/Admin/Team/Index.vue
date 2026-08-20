@@ -14,6 +14,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    roles: {
+        type: Object,
+        default: () => ({}),
+    },
     services: {
         type: Array,
         default: () => [],
@@ -269,6 +273,7 @@ onMounted(() => {
             :show="showCreateModal"
             :is-editing="false"
             :form="createForm"
+            :roles="roles"
             :services="services"
             :avatar-preview="createAvatarPreview"
             :app-domain="appDomain"
@@ -282,6 +287,7 @@ onMounted(() => {
             :show="showEditModal"
             :is-editing="true"
             :form="editForm"
+            :roles="roles"
             :services="services"
             :avatar-preview="editAvatarPreview"
             :app-domain="appDomain"

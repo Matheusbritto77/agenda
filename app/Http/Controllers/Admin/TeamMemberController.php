@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
+use App\Support\RoleCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -23,12 +24,7 @@ class TeamMemberController extends Controller
      */
     private function roleIdToTitle(string $roleId): string
     {
-        return match ($roleId) {
-            'admin' => 'Administrador',
-            'manager' => 'Gerente',
-            'receptionist' => 'Recepcionista / Atendente',
-            default => 'Profissional / Especialista',
-        };
+        return RoleCatalog::titleFor($roleId);
     }
 
     /**
@@ -124,10 +120,15 @@ class TeamMemberController extends Controller
             return response()->json([
                 'team_members' => $teamMembers,
                 'services' => $services,
+                'roles' => RoleCatalog::all(),
             ]);
         }
 
-        return Inertia::render('Admin/Team/Index', compact('teamMembers', 'services'));
+        return Inertia::render('Admin/Team/Index', [
+            'teamMembers' => $teamMembers,
+            'services' => $services,
+            'roles' => RoleCatalog::all(),
+        ]);
     }
 
     public function store(Request $request)
@@ -139,7 +140,7 @@ class TeamMemberController extends Controller
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:admin,manager,professional,receptionist'],
+                'role_id' => ['nullable', 'string', 'in:' . implode(',', RoleCatalog::ids())],
                 'email' => [
                     'nullable',
                     'email',
@@ -252,7 +253,7 @@ class TeamMemberController extends Controller
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:admin,manager,professional,receptionist'],
+                'role_id' => ['nullable', 'string', 'in:' . implode(',', RoleCatalog::ids())],
                 'email' => ['nullable', 'email', 'max:255'],
                 'phone' => ['nullable', 'string', 'max:50'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],

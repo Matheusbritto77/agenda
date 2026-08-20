@@ -14,6 +14,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    roles: {
+        type: Object,
+        default: () => ({}),
+    },
     services: {
         type: Array,
         default: () => [],
@@ -127,6 +131,21 @@ const isServiceSelected = (svcId) => {
                             <div class="form-group mb-0">
                                 <label class="form-label text-xs">Cargo / Especialidade</label>
                                 <input type="text" v-model="form.job_title" class="form-control text-xs sm:text-sm rounded-xl" placeholder="Ex: Barbeiro Master, Manicure" />
+                            </div>
+                            <div class="form-group mb-0">
+                                <label class="form-label text-xs">Role de Acesso *</label>
+                                <select v-model="form.role_id" class="form-control text-xs sm:text-sm rounded-xl" required>
+                                    <option
+                                        v-for="(role, key) in roles"
+                                        :key="key"
+                                        :value="key"
+                                    >
+                                        {{ role.name }}
+                                    </option>
+                                </select>
+                                <p class="text-[11px] text-slate-400 mt-1">
+                                    Define o nível de acesso desse membro no painel e sincroniza com o usuário vinculado.
+                                </p>
                             </div>
                             <div class="form-group mb-0">
                                 <label class="form-label text-xs">Telefone / WhatsApp</label>
