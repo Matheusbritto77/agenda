@@ -1,0 +1,151 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Appointment;
+use App\Models\Service;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class DashboardController extends Controller
+{
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        if ($user->parent_id) {
+            $tenantId = (int) $user->parent_id;
+            $teamMember = \App\Models\TeamMember::where('user_id', $tenantId)
+                ->where('email', $user->email)
+                ->first();
+        } else {
+            $tenantId = (int) $user->id;
+            $teamMember = null;
+        }
+
+        $selectedDate = $request->get('date', now()->format('Y-m-d'));
+        $parsedDate = Carbon::parse($selectedDate);
+        $startOfWeek = $parsedDate->copy()->startOfWeek(Carbon::SUNDAY);
+        $endOfWeek = $parsedDate->copy()->endOfWeek(Carbon::SATURDAY);
+
+        $appointments = collect();
+        $weekAppointments = collect();
+
+        // Enforce appointments.view permission
+        if ($user->hasPermission('appointments.view')) {
+            $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all');
+
+            $appointmentsQuery = Appointment::with('service')
+                ->where('appointments.user_id', $tenantId)
+                ->where('appointment_date', $selectedDate)
+                ->orderBy('appointment_time', 'asc');
+
+            if (! $showAll && $teamMember) {
+                $appointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+            }
+
+            $appointments = $appointmentsQuery->get();
+
+            $weekAppointmentsQuery = Appointment::with('service')
+                ->where('appointments.user_id', $tenantId)
+                ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                ->orderBy('appointment_date', 'asc')
+                ->orderBy('appointment_time', 'asc');
+
+            if (! $showAll && $teamMember) {
+                $weekAppointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+            }
+
+            $weekAppointments = $weekAppointmentsQuery->get();
+        }
+
+        $stats = [
+            'today_total' => 0,
+            'confirmed_total' => 0,
+            'completed_total' => 0,
+            'total_appointments' => 0,
+            'week_total' => 0,
+        ];
+
+        // Enforce reports.view permission
+        if ($user->hasPermission('reports.view')) {
+            $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all');
+
+            if (! $showAll && $teamMember) {
+                $stats = [
+                    'today_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('appointments.team_member_id', $teamMember->id)
+                        ->whereDate('appointment_date', now()->format('Y-m-d'))
+                        ->count(),
+                    'confirmed_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('appointments.team_member_id', $teamMember->id)
+                        ->where('status', 'confirmed')
+                        ->count(),
+                    'completed_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('appointments.team_member_id', $teamMember->id)
+                        ->where('status', 'completed')
+                        ->count(),
+                    'total_appointments' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('appointments.team_member_id', $teamMember->id)
+                        ->count(),
+                    'week_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('appointments.team_member_id', $teamMember->id)
+                        ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                        ->count(),
+                ];
+            } else {
+                $stats = [
+                    'today_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->whereDate('appointment_date', now()->format('Y-m-d'))
+                        ->count(),
+                    'confirmed_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('status', 'confirmed')
+                        ->count(),
+                    'completed_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->where('status', 'completed')
+                        ->count(),
+                    'total_appointments' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->count(),
+                    'week_total' => Appointment::query()
+                        ->where('appointments.user_id', $tenantId)
+                        ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                        ->count(),
+                ];
+            }
+        }
+
+        return Inertia::render('Admin/Dashboard', [
+            'appointments' => $appointments,
+            'weekAppointments' => $weekAppointments,
+            'selectedDate' => $selectedDate,
+            'stats' => $stats,
+            'startOfWeek' => $startOfWeek->toDateString(),
+            'endOfWeek' => $endOfWeek->toDateString(),
+            'teamMember' => $teamMember,
+        ]);
+    }
+
+    public function cancelAppointment($id)
+    {
+        $user = auth()->user();
+        if (! $user || ! $user->hasPermission('appointments.cancel')) {
+            abort(403, 'Você não tem permissão para realizar esta ação.');
+        }
+
+        $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
+        $appointment = Appointment::query()->where('appointments.user_id', $tenantId)->findOrFail($id);
+        $appointment->update(['status' => 'cancelled']);
+
+        return back()->with('success', 'Agendamento cancelado com sucesso.');
+    }
+}

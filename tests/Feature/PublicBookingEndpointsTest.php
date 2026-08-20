@@ -1,0 +1,400 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Appointment;
+use App\Models\BusinessHour;
+use App\Models\Service;
+use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
+use Tests\TestCase;
+use Inertia\Testing\AssertableInertia as Assert;
+
+class PublicBookingEndpointsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $tenant;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'app.domain' => 'agendae.app',
+            'app.url' => 'https://agendae.app',
+        ]);
+
+        $this->tenant = User::factory()->create([
+            'subdomain' => 'studio',
+            'custom_domain' => null,
+            'active_domain_type' => 'subdomain',
+        ]);
+
+        foreach (range(0, 6) as $dayOfWeek) {
+            BusinessHour::create([
+                'user_id' => $this->tenant->id,
+                'day_of_week' => $dayOfWeek,
+                'opens_at' => '08:00:00',
+                'closes_at' => '18:00:00',
+                'label' => 'Agenda Base',
+                'slot_duration_minutes' => 30,
+                'is_active' => true,
+            ]);
+        }
+    }
+
+    public function test_index_shows_only_active_services(): void
+    {
+        config([
+            'app.domain' => 'agendae.app',
+            'app.url' => 'https://agendae.app',
+        ]);
+
+        $activeService = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Serviço Ativo',
+            'description' => 'Visível na tela',
+            'price' => 50,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Serviço Inativo',
+            'description' => 'Não deve aparecer',
+            'price' => 40,
+            'duration_minutes' => 30,
+            'is_active' => false,
+        ]);
+
+        $response = $this->get('http://studio.agendae.app/');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Client/Booking')
+            ->has('services', 1)
+            ->where('services.0.name', 'Serviço Ativo')
+        );
+    }
+
+    public function test_index_renders_service_image_when_image_url_is_present(): void
+    {
+        config([
+            'app.domain' => 'agendae.app',
+            'app.url' => 'https://agendae.app',
+        ]);
+
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Serviço com Imagem',
+            'description' => 'Imagem pública',
+            'price' => 75,
+            'duration_minutes' => 45,
+            'is_active' => true,
+            'image_path' => 'https://cdn.example.com/service-image.jpg',
+        ]);
+
+        $response = $this->get('http://studio.agendae.app/');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Client/Booking')
+            ->has('services', 1)
+            ->where('services.0.name', 'Serviço com Imagem')
+            ->where('services.0.image_url', 'https://cdn.example.com/service-image.jpg')
+        );
+        $response->assertSee('https:\/\/cdn.example.com\/service-image.jpg', false);
+    }
+
+    public function test_admin_can_create_service_with_uploaded_image(): void
+    {
+        $this->configurePublicDisk();
+
+        $admin = User::factory()->create();
+        $image = UploadedFile::fake()->image('service.jpg', 1200, 800);
+
+        $response = $this->actingAs($admin)->post('/admin/services', [
+            'name' => 'Serviço com Upload',
+            'description' => 'Imagem enviada pelo admin',
+            'price' => 90,
+            'duration_minutes' => 60,
+            'image_file' => $image,
+        ]);
+
+        $response->assertRedirect(route('admin.services.index'));
+
+        $service = Service::query()->where('name', 'Serviço com Upload')->firstOrFail();
+
+        $this->assertNotEmpty($service->image_path);
+        $this->assertStringStartsWith('services/', $service->image_path);
+        Storage::disk('public')->assertExists($service->image_path);
+        $this->assertStringContainsString('/storage/', $service->image_url ?? '');
+    }
+
+    public function test_admin_can_replace_a_service_uploaded_image(): void
+    {
+        $this->configurePublicDisk();
+
+        $admin = User::factory()->create();
+        $existingPath = UploadedFile::fake()->image('old-service.jpg')->store('services', 'public');
+
+        $service = Service::create([
+            'user_id' => $admin->id,
+            'name' => 'Serviço Atualizável',
+            'description' => 'Imagem antiga',
+            'price' => 110,
+            'duration_minutes' => 45,
+            'is_active' => true,
+            'image_path' => $existingPath,
+        ]);
+
+        $response = $this->actingAs($admin)->put('/admin/services/' . $service->id, [
+            'name' => 'Serviço Atualizável',
+            'description' => 'Imagem nova enviada',
+            'price' => 110,
+            'duration_minutes' => 45,
+            'image_file' => UploadedFile::fake()->image('new-service.jpg', 900, 600),
+        ]);
+
+        $response->assertRedirect(route('admin.services.index'));
+
+        $service->refresh();
+
+        Storage::disk('public')->assertMissing($existingPath);
+        $this->assertNotEmpty($service->image_path);
+        $this->assertNotSame($existingPath, $service->image_path);
+        Storage::disk('public')->assertExists($service->image_path);
+    }
+
+    public function test_admin_cannot_submit_image_file_and_image_url_together_when_creating_service(): void
+    {
+        $admin = User::factory()->create();
+
+        $response = $this->actingAs($admin)->from('/admin/services/create')->post('/admin/services', [
+            'name' => 'Serviço com Conflito',
+            'description' => 'Tentativa inválida',
+            'price' => 95,
+            'duration_minutes' => 30,
+            'image_url' => 'https://cdn.example.com/service.jpg',
+            'image_file' => UploadedFile::fake()->image('service.jpg'),
+        ]);
+
+        $response->assertSessionHasErrors(['image_file']);
+        $this->assertDatabaseMissing('services', [
+            'name' => 'Serviço com Conflito',
+        ]);
+    }
+
+    public function test_available_slots_endpoint_excludes_occupied_times(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Barba',
+            'description' => null,
+            'price' => 35,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        Appointment::create([
+            'user_id' => $this->tenant->id,
+            'service_id' => $service->id,
+            'client_name' => 'João',
+            'client_email' => 'joao@example.com',
+            'client_phone' => '11999990000',
+            'appointment_date' => '2026-08-20',
+            'appointment_time' => '10:00',
+            'status' => 'confirmed',
+            'notes' => null,
+        ]);
+
+        $response = $this->getJson('http://studio.agendae.app/available-slots?service_id=' . $service->id . '&date=2026-08-20');
+
+        $response->assertOk();
+        $response->assertJsonPath('service_id', $service->id);
+        $response->assertJsonPath('date', '2026-08-20');
+
+        $slots = $response->json('slots');
+
+        $this->assertContains('09:00', $slots);
+        $this->assertNotContains('10:00', $slots);
+    }
+
+    public function test_api_available_slots_endpoint_is_consistent(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte',
+            'description' => null,
+            'price' => 50,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson('http://studio.agendae.app/api/services/' . $service->id . '/slots?date=2026-08-21');
+
+        $response->assertOk();
+        $response->assertJsonFragment([
+            'service_id' => $service->id,
+            'date' => '2026-08-21',
+        ]);
+    }
+
+    public function test_booking_endpoint_creates_appointment_and_flashes_success(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Combo',
+            'description' => null,
+            'price' => 80,
+            'duration_minutes' => 60,
+            'is_active' => true,
+        ]);
+
+        $response = $this->post('http://studio.agendae.app/booking', [
+            'service_id' => $service->id,
+            'appointment_date' => '2026-08-22',
+            'appointment_time' => '14:00',
+            'client_name' => 'Maria Silva',
+            'client_email' => 'maria@example.com',
+            'client_phone' => '11988887777',
+            'notes' => 'Primeira visita',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('booking_success');
+
+        $this->assertDatabaseHas('appointments', [
+            'service_id' => $service->id,
+            'client_name' => 'Maria Silva',
+            'client_email' => 'maria@example.com',
+            'client_phone' => '11988887777',
+            'appointment_date' => '2026-08-22',
+            'appointment_time' => '14:00',
+            'status' => 'confirmed',
+            'notes' => 'Primeira visita',
+        ]);
+    }
+
+    public function test_booking_endpoint_rejects_an_occupied_time_slot(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte',
+            'description' => null,
+            'price' => 50,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'service_id' => $service->id,
+            'appointment_date' => '2026-08-23',
+            'appointment_time' => '10:00',
+            'client_name' => 'Cliente 1',
+            'client_email' => 'cliente1@example.com',
+            'client_phone' => '11911112222',
+        ];
+
+        $first = $this->post('http://studio.agendae.app/booking', $payload);
+        $first->assertRedirect();
+
+        $second = $this->post('http://studio.agendae.app/booking', [
+            'service_id' => $service->id,
+            'appointment_date' => '2026-08-23',
+            'appointment_time' => '10:00',
+            'client_name' => 'Cliente 2',
+            'client_email' => 'cliente2@example.com',
+            'client_phone' => '11933334444',
+        ]);
+
+        $second->assertSessionHasErrors(['appointment_time']);
+        $this->assertSame(1, Appointment::query()->count());
+    }
+
+    private function configurePublicDisk(): string
+    {
+        $root = sys_get_temp_dir() . '/agendae-public-' . uniqid('', true);
+
+        if (! is_dir($root)) {
+            mkdir($root, 0777, true);
+        }
+
+        config([
+            'filesystems.disks.public.root' => $root,
+        ]);
+
+        return $root;
+    }
+
+    public function test_api_booking_endpoint_also_creates_appointment(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Limpeza',
+            'description' => null,
+            'price' => 120,
+            'duration_minutes' => 60,
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson('http://studio.agendae.app/api/appointments', [
+            'service_id' => $service->id,
+            'appointment_date' => '2026-08-24',
+            'appointment_time' => '11:00',
+            'client_name' => 'Ana',
+            'client_email' => 'ana@example.com',
+            'client_phone' => '11955556666',
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('customer_name', 'Ana');
+        $this->assertDatabaseHas('appointments', [
+            'service_id' => $service->id,
+            'client_name' => 'Ana',
+            'appointment_date' => '2026-08-24',
+            'appointment_time' => '11:00',
+        ]);
+    }
+
+    public function test_index_shows_company_services_on_team_member_subdomain(): void
+    {
+        config([
+            'app.domain' => 'agendae.app',
+            'app.url' => 'https://agendae.app',
+        ]);
+
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte Moderno',
+            'description' => 'Serviço da empresa',
+            'price' => 50,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        // Create a TeamMember with its own subdomain
+        \App\Models\TeamMember::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Carlos Barbeiro',
+            'job_title' => 'Especialista',
+            'subdomain' => 'carlos',
+            'services' => [$service->id],
+            'is_active' => true,
+        ]);
+
+        $response = $this->get('http://carlos.agendae.app/');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Client/Booking')
+            ->has('services', 1)
+            ->where('services.0.name', 'Corte Moderno')
+        );
+    }
+}
