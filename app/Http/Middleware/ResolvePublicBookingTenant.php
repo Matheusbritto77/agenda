@@ -47,8 +47,8 @@ class ResolvePublicBookingTenant
     private function resolveTenant(Request $request): ?User
     {
         $host = strtolower($request->getHost());
-        $baseDomain = strtolower((string) config('app.domain', 'localhost'));
         $appUrlHost = strtolower((string) (parse_url((string) config('app.url', ''), PHP_URL_HOST) ?: ''));
+        $baseDomain = $appUrlHost ?: strtolower((string) config('app.domain', 'localhost'));
 
         if ($this->isLocalHost($host)) {
             return $this->resolveLocalTenant($request, $host);

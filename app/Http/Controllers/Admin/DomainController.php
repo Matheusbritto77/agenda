@@ -99,7 +99,8 @@ class DomainController extends Controller
 
     private function currentDomainSettings(?User $user): array
     {
-        $baseDomain = (string) config('app.domain', 'localhost');
+        $appUrlHost = (string) parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST);
+        $baseDomain = $appUrlHost ?: (string) config('app.domain', 'localhost');
         $scheme = parse_url((string) config('app.url', 'http://localhost'), PHP_URL_SCHEME) ?: 'http';
         $port = parse_url((string) config('app.url', 'http://localhost'), PHP_URL_PORT);
 
