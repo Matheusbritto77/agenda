@@ -181,7 +181,23 @@ class BookingAvailabilityService
             $appointmentsQuery->where('appointments.user_id', $tenantId)
                 ->where('appointments.team_member_id', $professional->id);
         } elseif ($professional instanceof User) {
-            $appointmentsQuery->where('appointments.user_id', $professional->id);
+            $teamMemberId = $professional->parent_id
+                ? TeamMember::query()
+                    ->where('user_id', $tenantId)
+                    ->where('email', $professional->email)
+                    ->value('id')
+                : null;
+
+            $appointmentsQuery->where(function ($query) use ($professional, $tenantId, $teamMemberId): void {
+                $query->where('appointments.user_id', $professional->id);
+
+                if ($teamMemberId !== null) {
+                    $query->orWhere(function ($query) use ($tenantId, $teamMemberId): void {
+                        $query->where('appointments.user_id', $tenantId)
+                            ->where('appointments.team_member_id', $teamMemberId);
+                    });
+                }
+            });
         } else {
             $appointmentsQuery->where(function ($query) use ($tenantId): void {
                 $query->where('appointments.user_id', $tenantId)

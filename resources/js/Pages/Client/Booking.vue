@@ -100,11 +100,12 @@ const paymentDetails = ref(null);
 const paymentStatus = ref('pending');
 const submitNotice = ref('');
 const submitNoticeType = ref('success');
+const showSuccessModal = ref(false);
+const confirmedBooking = ref(null);
 let paymentPollInterval = null;
 
 const bookingForm = useForm({
     professional_id: props.selectedProfessional?.id || null,
-    team_member_id: props.selectedProfessional?.id || null,
     service_id: '',
     appointment_date: '',
     appointment_time: '',
@@ -192,7 +193,6 @@ const nextMonth = () => {
 const selectProfessional = (pro) => {
     chosenProfessionalId.value = pro.id;
     bookingForm.professional_id = pro.id;
-    bookingForm.team_member_id = pro.id;
     currentStep.value = stepType.service;
 };
 
@@ -226,7 +226,12 @@ const goToStep = (step) => {
 const fetchSlots = (dateStr) => {
     slotsLoading.value = true;
     const url = route('booking.slots');
-    fetch(`${url}?date=${dateStr}&service_id=${selectedServiceId.value || ''}&professional_id=${chosenProfessionalId.value || ''}`)
+    const cacheBuster = Date.now();
+
+    return fetch(
+        `${url}?date=${encodeURIComponent(dateStr)}&service_id=${encodeURIComponent(selectedServiceId.value || '')}&professional_id=${encodeURIComponent(chosenProfessionalId.value || '')}&_=${cacheBuster}`,
+        { cache: 'no-store' }
+    )
         .then(res => res.json())
         .then(data => {
             availableSlots.value = data.slots || [];
@@ -244,14 +249,30 @@ const submitBooking = (withPayment) => {
     bookingForm.clearErrors();
     bookingForm.post(route('booking.store'), {
         preserveScroll: true,
-        onSuccess: (page) => {
+        onSuccess: async (page) => {
             submitNoticeType.value = 'success';
             submitNotice.value = page?.props?.flash?.success || 'Seu agendamento foi enviado com sucesso.';
+            confirmedBooking.value = {
+                customerName: bookingForm.client_name,
+                serviceName: selectedService.value?.name || 'Serviço',
+                date: selectedDate.value,
+                time: selectedTime.value,
+                message: submitNotice.value,
+            };
 
             if (withPayment && page?.props?.paymentDetails) {
                 paymentDetails.value = page.props.paymentDetails;
                 isPaying.value = true;
                 pollPaymentStatus(page.props.paymentDetails.payment_id);
+            } else {
+                showSuccessModal.value = true;
+            }
+
+            if (selectedDate.value) {
+                selectedTime.value = '';
+                bookingForm.appointment_time = '';
+                await fetchSlots(selectedDate.value);
+                currentStep.value = stepType.datetime;
             }
         },
         onError: (errors) => {
@@ -266,6 +287,21 @@ const submitBooking = (withPayment) => {
                 page.props.flash?.error ||
                 'Não foi possível concluir o agendamento. Verifique os dados informados e tente novamente.';
         },
+    });
+};
+
+const closeSuccessModal = () => {
+    showSuccessModal.value = false;
+};
+
+const formatConfirmedDate = (dateStr) => {
+    if (!dateStr) return '';
+
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
     });
 };
 
@@ -415,5 +451,61 @@ onMounted(() => {
             @close="isPaying = false"
             @fallback-store="isPaying = false"
         />
+
+        <Teleport to="body">
+            <div
+                v-if="showSuccessModal && confirmedBooking"
+                class="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
+                @click.self="closeSuccessModal"
+            >
+                <div class="liquid-glass-card w-full max-w-md p-6 sm:p-7 space-y-5 text-center relative" @click.stop>
+                    <button
+                        type="button"
+                        @click="closeSuccessModal"
+                        class="absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                        aria-label="Fechar"
+                    >
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+
+                    <div class="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-black tracking-tight" style="color: var(--text-heading);">
+                            Agendamento confirmado
+                        </h2>
+                        <p class="text-sm text-slate-500 leading-relaxed">
+                            Tudo certo, {{ confirmedBooking.customerName }}. Seu horário foi reservado com sucesso.
+                        </p>
+                    </div>
+
+                    <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left space-y-2">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Serviço</span>
+                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right">{{ confirmedBooking.serviceName }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Data</span>
+                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right capitalize">{{ formatConfirmedDate(confirmedBooking.date) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Horário</span>
+                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right">{{ confirmedBooking.time }}</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="closeSuccessModal"
+                        class="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md cursor-pointer"
+                    >
+                        <i class="fa-solid fa-check"></i>
+                        <span>Entendi</span>
+                    </button>
+                </div>
+            </div>
+        </Teleport>
     </PublicLayout>
 </template>

@@ -335,10 +335,7 @@ class PublicBookingController extends Controller
                     'required',
                     Rule::exists('services', 'id')->where(fn ($query) => $query->where('services.user_id', $company->id)),
                 ],
-                'team_member_id' => [
-                    'nullable',
-                    Rule::exists('team_members', 'id')->where(fn ($query) => $query->where('team_members.user_id', $company->id)),
-                ],
+                'team_member_id' => ['nullable', 'integer'],
                 'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
                 'appointment_time' => ['required', 'date_format:H:i'],
                 'client_name' => ['required_without:customer_name', 'nullable', 'string', 'max:255'],
@@ -369,10 +366,11 @@ class PublicBookingController extends Controller
             }
 
             $payNow = $request->boolean('pay_now') || $request->input('payment_method') === 'pix';
+            $resolvedTeamMemberId = $this->resolveAppointmentTeamMemberId($selectedProfessional, $company, $validated);
 
             $appointment = Appointment::create([
                 'service_id' => $service->id,
-                'team_member_id' => $validated['team_member_id'] ?? ($selectedProfessional instanceof TeamMember ? $selectedProfessional->id : null),
+                'team_member_id' => $resolvedTeamMemberId,
                 'client_name' => $validated['client_name'] ?? $validated['customer_name'],
                 'client_email' => $validated['client_email'] ?? $validated['customer_email'],
                 'client_phone' => $validated['client_phone'] ?? $validated['customer_phone'],
@@ -381,7 +379,7 @@ class PublicBookingController extends Controller
                 'status' => 'confirmed',
                 'payment_status' => $payNow ? 'pending' : 'none',
                 'notes' => $validated['notes'] ?? null,
-                'user_id' => $schedulingUser->id,
+                'user_id' => $company->id,
             ]);
 
             Log::info('PublicBookingController::store: Appointment successfully created', [
@@ -401,10 +399,16 @@ class PublicBookingController extends Controller
             );
 
             if ($request->expectsJson()) {
+                $availabilityService->clearCache();
+
                 return response()->json([
                     'message' => $message,
                     'appointment' => $appointment->load('service'),
-                    'available_slots' => $availabilityService->slotsFor($service, $validated['appointment_date'])['slots'],
+                    'available_slots' => $availabilityService->slotsFor(
+                        $service,
+                        $validated['appointment_date'],
+                        $selectedProfessional
+                    )['slots'],
                     'customer_name' => $appointment->client_name,
                 ], 201);
             }
@@ -454,6 +458,28 @@ class PublicBookingController extends Controller
         return $this->store($request, $availabilityService);
     }
 
+    private function resolveAppointmentTeamMemberId(User|TeamMember|null $selectedProfessional, User $company, array $validated): ?int
+    {
+        if ($selectedProfessional instanceof TeamMember) {
+            return $selectedProfessional->id;
+        }
+
+        if ($selectedProfessional instanceof User && $selectedProfessional->parent_id) {
+            return TeamMember::query()
+                ->where('user_id', $company->id)
+                ->where('email', $selectedProfessional->email)
+                ->value('id');
+        }
+
+        if (! empty($validated['team_member_id'])) {
+            return TeamMember::query()
+                ->where('user_id', $company->id)
+                ->find($validated['team_member_id'])?->id;
+        }
+
+        return null;
+    }
+
     public function availableSlots(
         Request $request,
         BookingAvailabilityService $availabilityService
@@ -466,6 +492,7 @@ class PublicBookingController extends Controller
             $schedulingUser = $selectedProfessional instanceof User ? $selectedProfessional : $tenant;
             $service = $this->resolveServiceFromRequest($request, $company);
             $date = $this->resolveDateFromRequest($request);
+            $availabilityService->clearCache();
             $slots = $availabilityService->slotsFor($service, $date->toDateString(), $selectedProfessional)['slots'];
 
             Log::info('PublicBookingController::availableSlots: Slots fetched', [

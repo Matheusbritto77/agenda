@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Service;
+use App\Models\TeamMember;
 use App\Services\BookingAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;

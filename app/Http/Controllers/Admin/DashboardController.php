@@ -77,16 +77,18 @@ class DashboardController extends Controller
                     'today_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
                         ->where('appointments.team_member_id', $teamMember->id)
-                        ->whereDate('appointment_date', now()->format('Y-m-d'))
+                        ->whereDate('appointment_date', $selectedDate)
                         ->count(),
                     'confirmed_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
                         ->where('appointments.team_member_id', $teamMember->id)
+                        ->whereDate('appointment_date', $selectedDate)
                         ->where('status', 'confirmed')
                         ->count(),
                     'completed_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
                         ->where('appointments.team_member_id', $teamMember->id)
+                        ->whereDate('appointment_date', $selectedDate)
                         ->where('status', 'completed')
                         ->count(),
                     'total_appointments' => Appointment::query()
@@ -103,14 +105,16 @@ class DashboardController extends Controller
                 $stats = [
                     'today_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
-                        ->whereDate('appointment_date', now()->format('Y-m-d'))
+                        ->whereDate('appointment_date', $selectedDate)
                         ->count(),
                     'confirmed_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
+                        ->whereDate('appointment_date', $selectedDate)
                         ->where('status', 'confirmed')
                         ->count(),
                     'completed_total' => Appointment::query()
                         ->where('appointments.user_id', $tenantId)
+                        ->whereDate('appointment_date', $selectedDate)
                         ->where('status', 'completed')
                         ->count(),
                     'total_appointments' => Appointment::query()

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Appointment;
 use App\Models\BusinessHour;
 use App\Models\Service;
+use App\Models\TeamMember;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -360,6 +361,54 @@ class PublicBookingEndpointsTest extends TestCase
             'appointment_date' => '2026-08-24',
             'appointment_time' => '11:00',
         ]);
+    }
+
+    public function test_booking_on_team_member_subdomain_is_visible_in_company_agenda(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte Moderno',
+            'description' => null,
+            'price' => 50,
+            'duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        $member = TeamMember::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Carlos Barbeiro',
+            'job_title' => 'Especialista',
+            'subdomain' => 'carlos',
+            'services' => [$service->id],
+            'is_active' => true,
+        ]);
+
+        $response = $this->post('http://carlos.agendae.app/booking', [
+            'service_id' => $service->id,
+            'appointment_date' => '2026-08-25',
+            'appointment_time' => '09:00',
+            'client_name' => 'Cliente Carlos',
+            'client_email' => 'cliente.carlos@example.com',
+            'client_phone' => '11944443333',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('appointments', [
+            'user_id' => $this->tenant->id,
+            'team_member_id' => $member->id,
+            'service_id' => $service->id,
+            'client_name' => 'Cliente Carlos',
+            'appointment_date' => '2026-08-25',
+            'appointment_time' => '09:00',
+        ]);
+
+        $adminResponse = $this->actingAs($this->tenant)->get(route('admin.appointments.index'));
+
+        $adminResponse->assertInertia(fn (Assert $page) => $page
+            ->has('appointments', 1)
+            ->where('appointments.0.client_name', 'Cliente Carlos')
+        );
     }
 
     public function test_index_shows_company_services_on_team_member_subdomain(): void
