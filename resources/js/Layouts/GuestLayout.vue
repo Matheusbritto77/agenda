@@ -2,6 +2,13 @@
 import { Link } from '@inertiajs/vue3';
 import { ref, onMounted } from 'vue';
 
+const props = defineProps({
+    maxWidthClass: {
+        type: String,
+        default: 'max-w-md',
+    },
+});
+
 const isDark = ref(true);
 
 const toggleTheme = () => {
@@ -73,7 +80,7 @@ onMounted(() => {
 
         <!-- Main Card Centerpiece Full Page -->
         <main class="flex-1 flex items-center justify-center px-4 py-8 sm:py-12 z-10 w-full">
-            <div class="w-full max-w-md relative">
+            <div :class="['w-full relative', maxWidthClass]">
                 <div
                     class="relative backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl shadow-indigo-500/10 rounded-3xl p-6 sm:p-8 transition-all duration-300"
                 >
