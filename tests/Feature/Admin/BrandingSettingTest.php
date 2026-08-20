@@ -54,6 +54,10 @@ class BrandingSettingTest extends TestCase
             'top_menu_color' => '#ffffff',
             'background_color' => '#f8fafc',
             'primary_color' => '#10b981',
+            'business_name' => 'Barbearia Don Corleone',
+            'tagline' => 'Os melhores especialistas da cidade',
+            'whatsapp_number' => '11999998888',
+            'whatsapp_button_enabled' => true,
             'logo_file' => $logo,
         ]);
 
@@ -65,8 +69,38 @@ class BrandingSettingTest extends TestCase
         $this->assertEquals('#f8fafc', $branding->background_color);
         $this->assertEquals('#10b981', $branding->primary_color);
         $this->assertNotNull($branding->logo_path);
+        $this->assertEquals('Barbearia Don Corleone', $branding->settings['business_name']);
+        $this->assertEquals('11999998888', $branding->settings['whatsapp_number']);
+        $this->assertTrue($branding->settings['whatsapp_button_enabled']);
         
         Storage::disk('public')->assertExists($branding->logo_path);
+    }
+
+    public function test_owner_can_upload_and_delete_banner(): void
+    {
+        Storage::fake('public');
+
+        $banner = UploadedFile::fake()->image('banner.jpg');
+
+        $response = $this->actingAs($this->owner)->post(route('admin.branding.update'), [
+            'banner_file' => $banner,
+        ]);
+
+        $response->assertRedirect();
+
+        $branding = BrandingSetting::where('user_id', $this->owner->id)->first();
+        $this->assertNotNull($branding->settings['banner_path']);
+        Storage::disk('public')->assertExists($branding->settings['banner_path']);
+
+        // Delete banner
+        $response = $this->actingAs($this->owner)->post(route('admin.branding.update'), [
+            'delete_banner' => true,
+        ]);
+
+        $response->assertRedirect();
+
+        $branding->refresh();
+        $this->assertNull($branding->settings['banner_path']);
     }
 
     public function test_public_booking_page_receives_branding_data(): void
@@ -79,6 +113,10 @@ class BrandingSettingTest extends TestCase
             'background_color' => '#0f172a',
             'primary_color' => '#3b82f6',
             'logo_path' => 'branding/mock-logo.png',
+            'settings' => [
+                'business_name' => 'Studio Hair VIP',
+                'tagline' => 'Excelência e estilo para você',
+            ],
         ]);
 
         $response = $this->get('http://testcompany.localhost/');
@@ -88,7 +126,8 @@ class BrandingSettingTest extends TestCase
             $page->where('branding.top_menu_color', '#22c55e')
                  ->where('branding.background_color', '#0f172a')
                  ->where('branding.primary_color', '#3b82f6')
-                 ->where('branding.logo_url', $branding->logo_url);
+                 ->where('branding.logo_url', $branding->logo_url)
+                 ->where('branding.settings.business_name', 'Studio Hair VIP');
         });
     }
 }

@@ -25,6 +25,7 @@ class BrandingSetting extends Model
 
     protected $appends = [
         'logo_url',
+        'banner_url',
     ];
 
     public function user(): BelongsTo
@@ -43,5 +44,19 @@ class BrandingSetting extends Model
         }
 
         return Storage::disk('public')->url($this->logo_path);
+    }
+
+    public function getBannerUrlAttribute(): ?string
+    {
+        $bannerPath = $this->settings['banner_path'] ?? null;
+        if (empty($bannerPath)) {
+            return null;
+        }
+
+        if (filter_var($bannerPath, FILTER_VALIDATE_URL)) {
+            return $bannerPath;
+        }
+
+        return Storage::disk('public')->url($bannerPath);
     }
 }

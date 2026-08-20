@@ -64,6 +64,16 @@ class PublicBookingController extends Controller
             'paymentEnabled' => $context['paymentEnabled'],
             'paymentGateway' => $context['paymentGateway'],
             'branding' => $context['branding'],
+            'company' => [
+                'id' => $context['company']->id,
+                'name' => $context['company']->name,
+                'email' => $context['company']->email,
+            ],
+            'tenant' => [
+                'id' => $context['tenant']->id,
+                'name' => $context['tenant']->name,
+                'email' => $context['tenant']->email,
+            ],
         ]);
     }
 
@@ -83,6 +93,16 @@ class PublicBookingController extends Controller
                 'payment_enabled' => $context['paymentEnabled'],
                 'payment_gateway' => $context['paymentGateway'],
                 'branding' => $context['branding'],
+                'company' => [
+                    'id' => $context['company']->id,
+                    'name' => $context['company']->name,
+                    'email' => $context['company']->email,
+                ],
+                'tenant' => [
+                    'id' => $context['tenant']->id,
+                    'name' => $context['tenant']->name,
+                    'email' => $context['tenant']->email,
+                ],
             ]);
         }
 
@@ -97,6 +117,16 @@ class PublicBookingController extends Controller
             'paymentEnabled' => $context['paymentEnabled'],
             'paymentGateway' => $context['paymentGateway'],
             'branding' => $context['branding'],
+            'company' => [
+                'id' => $context['company']->id,
+                'name' => $context['company']->name,
+                'email' => $context['company']->email,
+            ],
+            'tenant' => [
+                'id' => $context['tenant']->id,
+                'name' => $context['tenant']->name,
+                'email' => $context['tenant']->email,
+            ],
         ]);
     }
 
