@@ -190,9 +190,9 @@ onMounted(() => {
             <div class="absolute -bottom-32 -right-32 w-[28rem] h-[22rem] bg-cyan-500/12 dark:bg-cyan-500/18 rounded-full blur-[72px] opacity-90"></div>
         </div>
 
-        <div v-if="sidebarOpen" @click="closeSidebar" class="fixed inset-0 z-40 bg-slate-900/55 dark:bg-slate-950/65 backdrop-blur-xl md:hidden transition-opacity"></div>
-
         <div class="relative z-10 min-h-screen flex flex-col md:flex-row w-full">
+            <div v-if="sidebarOpen" @click="closeSidebar" class="fixed inset-0 z-40 bg-slate-900/55 dark:bg-slate-950/65 backdrop-blur-xl md:hidden transition-opacity"></div>
+
             <aside
                 :class="[
                     'fixed inset-y-0 left-0 z-50 w-72 border-r flex flex-col transition-transform duration-300 ease-in-out md:static md:z-auto shrink-0 shadow-2xl md:shadow-none',

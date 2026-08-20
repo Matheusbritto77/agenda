@@ -2,7 +2,7 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const form = useForm({
     name: '',
@@ -28,10 +28,105 @@ const slugify = (text) => {
         .replace(/-+$/, '');
 };
 
-const subdomainPreview = computed(() => {
+const generatedSubdomain = computed(() => {
     const slug = slugify(form.name);
+    return slug;
+});
+
+const subdomainPreview = computed(() => {
+    const slug = generatedSubdomain.value;
     return slug || 'seu-estabelecimento';
 });
+
+const previewSubdomain = ref(subdomainPreview.value);
+const availability = ref({
+    state: 'idle',
+    message: '',
+    suggested: subdomainPreview.value,
+});
+
+let availabilityTimeout = null;
+let availabilityRequestId = 0;
+
+const checkSubdomainAvailability = async (subdomain) => {
+    const normalized = slugify(subdomain);
+
+    if (!normalized) {
+        previewSubdomain.value = subdomainPreview.value;
+        availability.value = {
+            state: 'idle',
+            message: '',
+            suggested: subdomainPreview.value,
+        };
+        return;
+    }
+
+    const requestId = ++availabilityRequestId;
+    availability.value = {
+        state: 'checking',
+        message: 'Verificando disponibilidade...',
+        suggested: normalized,
+    };
+
+    try {
+        const response = await fetch(`/api/subdomains/availability?subdomain=${encodeURIComponent(normalized)}`, {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        const payload = await response.json();
+
+        if (requestId !== availabilityRequestId) {
+            return;
+        }
+
+        const suggested = payload.suggested_subdomain || normalized;
+
+        previewSubdomain.value = suggested;
+        availability.value = {
+            state: payload.available ? 'available' : 'taken',
+            message: payload.available
+                ? 'Disponível agora'
+                : `Já existe. Vamos sugerir ${suggested}`,
+            suggested,
+        };
+    } catch {
+        if (requestId !== availabilityRequestId) {
+            return;
+        }
+
+        previewSubdomain.value = normalized;
+        availability.value = {
+            state: 'error',
+            message: 'Não foi possível verificar agora.',
+            suggested: normalized,
+        };
+    }
+};
+
+watch(
+    generatedSubdomain,
+    (value) => {
+        clearTimeout(availabilityTimeout);
+
+        if (!value) {
+            previewSubdomain.value = 'seu-estabelecimento';
+            availability.value = {
+                state: 'idle',
+                message: '',
+                suggested: 'seu-estabelecimento',
+            };
+            return;
+        }
+
+        previewSubdomain.value = value;
+        availabilityTimeout = setTimeout(() => {
+            checkSubdomainAvailability(value);
+        }, 300);
+    },
+    { immediate: true }
+);
 
 const submit = () => {
     form.post(route('register'), {
@@ -106,10 +201,26 @@ const submit = () => {
                             </svg>
                             <span>Link Exclusivo do seu Agendamento:</span>
                         </span>
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Disponível"></span>
+                        <span
+                            class="w-2 h-2 rounded-full animate-pulse"
+                            :class="availability.state === 'taken'
+                                ? 'bg-rose-500'
+                                : availability.state === 'available'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-amber-500'"
+                            :title="availability.message || 'Verificando'"
+                        ></span>
                     </div>
                     <div class="font-mono text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                        https://<span class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ subdomainPreview }}</span>.agendae.app
+                        https://<span class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ previewSubdomain }}</span>.agendae.app
+                    </div>
+                    <div class="text-[11px] font-semibold"
+                         :class="availability.state === 'taken'
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : availability.state === 'available'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-slate-500 dark:text-slate-400'">
+                        {{ availability.message || 'O sistema vai sugerir um subdomínio disponível automaticamente.' }}
                     </div>
                 </div>
 

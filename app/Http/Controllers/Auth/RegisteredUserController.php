@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BusinessHour;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\SubdomainAvailabilityService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -35,7 +36,7 @@ class RegisteredUserController extends Controller
      *
      * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse|JsonResponse
+    public function store(Request $request, SubdomainAvailabilityService $subdomainAvailability): RedirectResponse|JsonResponse
     {
         try {
             $request->merge([
@@ -49,13 +50,13 @@ class RegisteredUserController extends Controller
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
             ]);
 
-            $user = DB::transaction(function () use ($request): User {
+            $user = DB::transaction(function () use ($request, $subdomainAvailability): User {
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'must_reset_password' => false,
-                    'subdomain' => $this->generateUniqueSubdomain($request->name, $request->email),
+                    'subdomain' => $this->generateUniqueSubdomain($request->name, $request->email, $subdomainAvailability),
                     'custom_domain' => null,
                     'active_domain_type' => 'subdomain',
                 ]);
@@ -94,7 +95,7 @@ class RegisteredUserController extends Controller
         }
     }
 
-    private function generateUniqueSubdomain(string $name, string $email): string
+    private function generateUniqueSubdomain(string $name, string $email, SubdomainAvailabilityService $subdomainAvailability): string
     {
         $base = Str::slug($name, '-');
 
@@ -110,7 +111,7 @@ class RegisteredUserController extends Controller
         $candidate = $base;
         $suffix = 2;
 
-        while (User::query()->where('subdomain', $candidate)->exists()) {
+        while (! $subdomainAvailability->isAvailable($candidate)) {
             $candidate = Str::limit($base, max(1, 63 - strlen((string) $suffix) - 1), '') . '-' . $suffix;
             $suffix++;
         }

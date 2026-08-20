@@ -27,13 +27,111 @@ const form = useForm({
 });
 
 const baseDomain = computed(() => props.domainSettings.base_domain || 'localhost');
+const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
 
+const livePreviewSubdomain = ref((form.subdomain || 'suaempresa').toLowerCase().replace(/[^a-z0-9-]/g, ''));
 const livePreviewUrl = computed(() => {
-    const sub = (form.subdomain || 'suaempresa').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const sub = livePreviewSubdomain.value || 'suaempresa';
     const scheme = window.location.protocol.replace(':', '');
     const port = window.location.port ? `:${window.location.port}` : '';
     return `${scheme}://${sub}.${baseDomain.value}${port}`;
 });
+
+const subdomainAvailability = ref({
+    state: 'idle',
+    message: '',
+    suggested: livePreviewSubdomain.value,
+});
+
+let availabilityTimeout = null;
+let availabilityRequestId = 0;
+
+const normalizeSubdomain = (value) => (value || '')
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+
+const checkSubdomainAvailability = async (value) => {
+    const normalized = normalizeSubdomain(value);
+
+    if (!normalized) {
+        livePreviewSubdomain.value = 'suaempresa';
+        subdomainAvailability.value = {
+            state: 'idle',
+            message: '',
+            suggested: 'suaempresa',
+        };
+        return;
+    }
+
+    const requestId = ++availabilityRequestId;
+    subdomainAvailability.value = {
+        state: 'checking',
+        message: 'Verificando disponibilidade...',
+        suggested: normalized,
+    };
+
+    try {
+        const params = new URLSearchParams({
+            subdomain: normalized,
+        });
+
+        if (currentUserId.value) {
+            params.set('ignore_user_id', String(currentUserId.value));
+        }
+
+        const response = await fetch(`/api/subdomains/availability?${params.toString()}`, {
+            headers: {
+                Accept: 'application/json',
+            },
+        });
+
+        const payload = await response.json();
+
+        if (requestId !== availabilityRequestId) {
+            return;
+        }
+
+        const suggested = payload.suggested_subdomain || normalized;
+        livePreviewSubdomain.value = suggested;
+        subdomainAvailability.value = {
+            state: payload.available ? 'available' : 'taken',
+            message: payload.available ? 'Disponível' : `Já existe. Sugestão: ${suggested}`,
+            suggested,
+        };
+    } catch {
+        if (requestId !== availabilityRequestId) {
+            return;
+        }
+
+        livePreviewSubdomain.value = normalized;
+        subdomainAvailability.value = {
+            state: 'error',
+            message: 'Não foi possível verificar agora.',
+            suggested: normalized,
+        };
+    }
+};
+
+watch(
+    () => form.subdomain,
+    (value) => {
+        clearTimeout(availabilityTimeout);
+
+        const normalized = normalizeSubdomain(value);
+        livePreviewSubdomain.value = normalized || 'suaempresa';
+
+        availabilityTimeout = setTimeout(() => {
+            checkSubdomainAvailability(normalized);
+        }, 300);
+    },
+    { immediate: true }
+);
 
 const selectDomainType = (type) => {
     form.active_domain_type = type;
@@ -125,12 +223,27 @@ const successMessage = computed(() => page.props.flash?.success);
                                         type="text"
                                         id="subdomain"
                                         v-model="form.subdomain"
-                                        class="block w-full py-2.5 px-3 text-xs sm:text-sm rounded-l-xl rounded-r-none border border-r-0 border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                                        class="block w-full py-2.5 px-3 text-xs sm:text-sm rounded-l-xl rounded-r-none border border-r-0 bg-slate-100/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                                        :class="subdomainAvailability.state === 'taken'
+                                            ? 'border-rose-400 dark:border-rose-500'
+                                            : subdomainAvailability.state === 'available'
+                                                ? 'border-emerald-400 dark:border-emerald-500'
+                                                : 'border-slate-300 dark:border-slate-700'"
                                         placeholder="suaempresa"
                                     >
                                     <span class="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold border border-slate-300 dark:border-slate-700 rounded-r-xl shrink-0">.{{ baseDomain }}</span>
                                 </div>
                                 <span class="text-[11px] opacity-70 mt-1 block">Apenas letras, números e hífens.</span>
+                                <p
+                                    class="mt-1 text-[11px] font-semibold"
+                                    :class="subdomainAvailability.state === 'taken'
+                                        ? 'text-rose-600 dark:text-rose-400'
+                                        : subdomainAvailability.state === 'available'
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-slate-500 dark:text-slate-400'"
+                                >
+                                    {{ subdomainAvailability.message || 'Digite para verificar a disponibilidade em tempo real.' }}
+                                </p>
                                 <p v-if="form.errors.subdomain" class="text-rose-500 text-xs font-medium mt-1">{{ form.errors.subdomain }}</p>
                             </div>
 

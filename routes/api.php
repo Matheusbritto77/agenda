@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\Admin\AppointmentController;
+use App\Http\Controllers\Api\SubdomainAvailabilityController;
 use App\Http\Middleware\ResolvePublicBookingTenant;
 
 // Public API Endpoints
@@ -17,3 +18,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/events', [AppointmentController::class, 'events']);
     Route::patch('/admin/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus']);
 });
+
+Route::get('/subdomains/availability', SubdomainAvailabilityController::class)->name('api.subdomains.availability');
