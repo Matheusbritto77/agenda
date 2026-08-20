@@ -42,6 +42,10 @@ class AppointmentController extends Controller
                 'required',
                 Rule::exists('services', 'id')->where(fn ($query) => $query->where('services.user_id', $tenantId)),
             ],
+            'team_member_id' => [
+                'nullable',
+                Rule::exists('team_members', 'id')->where(fn ($query) => $query->where('team_members.user_id', $tenantId)),
+            ],
             'client_name' => 'required|string|max:255',
             'client_email' => 'required|email|max:255',
             'client_phone' => 'required|string|max:50',

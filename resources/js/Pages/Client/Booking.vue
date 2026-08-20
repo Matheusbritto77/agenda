@@ -102,6 +102,7 @@ let paymentPollInterval = null;
 
 const bookingForm = useForm({
     professional_id: props.selectedProfessional?.id || null,
+    team_member_id: props.selectedProfessional?.id || null,
     service_id: '',
     appointment_date: '',
     appointment_time: '',
@@ -189,6 +190,7 @@ const nextMonth = () => {
 const selectProfessional = (pro) => {
     chosenProfessionalId.value = pro.id;
     bookingForm.professional_id = pro.id;
+    bookingForm.team_member_id = pro.id;
     currentStep.value = stepType.service;
 };
 

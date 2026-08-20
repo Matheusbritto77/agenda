@@ -40,6 +40,10 @@ class AdminAppointmentController extends Controller
                     'integer',
                     Rule::exists('services', 'id')->where(fn ($query) => $query->where('services.user_id', $tenantId)),
                 ],
+                'team_member_id' => [
+                    'nullable',
+                    Rule::exists('team_members', 'id')->where(fn ($query) => $query->where('team_members.user_id', $tenantId)),
+                ],
                 'appointment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
                 'appointment_time' => ['required', 'date_format:H:i'],
                 'status' => ['required', Rule::in(['pending', 'confirmed'])],
@@ -51,7 +55,11 @@ class AdminAppointmentController extends Controller
                 ->where('is_active', true)
                 ->findOrFail($validated['service_id']);
 
-            if (! $availabilityService->isSlotAvailable($service, $validated['appointment_date'], $validated['appointment_time'])) {
+            $teamMember = ! empty($validated['team_member_id'])
+                ? TeamMember::query()->where('user_id', $tenantId)->find($validated['team_member_id'])
+                : null;
+
+            if (! $availabilityService->isSlotAvailable($service, $validated['appointment_date'], $validated['appointment_time'], $teamMember)) {
                 throw ValidationException::withMessages([
                     'appointment_time' => 'O horário selecionado não está mais disponível.',
                 ]);
@@ -59,6 +67,7 @@ class AdminAppointmentController extends Controller
 
             $appointment = Appointment::create([
                 'service_id' => $service->id,
+                'team_member_id' => $validated['team_member_id'] ?? null,
                 'client_name' => $validated['client_name'],
                 'client_email' => $validated['client_email'] ?? null,
                 'client_phone' => $validated['client_phone'] ?? null,
