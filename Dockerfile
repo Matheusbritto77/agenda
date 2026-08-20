@@ -35,9 +35,6 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Copy environment file if it doesn't exist
-RUN cp -n .env.example .env || true
-
 # Install PHP dependencies without running Laravel bootstrap scripts during build.
 # The app environment is fully available at container start, not at image build time.
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
