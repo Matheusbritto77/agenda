@@ -219,8 +219,13 @@ class RolePermissionEnforcementTest extends TestCase
         $response->assertStatus(200);
 
         // Apenas o agendamento de Carlos deve ser retornado
-        $appointments = $response->viewData('page')['props']['appointments'];
+        $props = $response->viewData('page')['props'];
+        $appointments = $props['appointments'];
         $this->assertCount(1, $appointments);
         $this->assertEquals($appointment1->id, $appointments[0]['id']);
+        $this->assertSame(1, $props['stats']['today_total']);
+        $this->assertSame(1, $props['stats']['confirmed_total']);
+        $this->assertSame(1, $props['stats']['week_total']);
+        $this->assertSame(1, $props['stats']['total_appointments']);
     }
 }

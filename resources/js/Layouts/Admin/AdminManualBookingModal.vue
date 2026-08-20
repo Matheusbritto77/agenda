@@ -49,7 +49,7 @@ const handleBackdropClick = (event) => {
             class="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
             @click="handleBackdropClick"
         >
-            <div class="liquid-glass-card w-full max-w-2xl p-6 sm:p-7 space-y-5 relative" @click.stop>
+            <div class="liquid-glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-5 relative" @click.stop>
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-brand-600/30">
@@ -65,9 +65,9 @@ const handleBackdropClick = (event) => {
                     </button>
                 </div>
 
-                <form @submit.prevent="submitBooking" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="form-group md:col-span-2 mb-0">
+                <form @submit.prevent="submitBooking" class="space-y-5">
+                    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_180px] gap-4">
+                        <div class="form-group mb-0">
                             <label class="form-label text-xs" for="modal_service_id">Selecione o Serviço *</label>
                             <select
                                 id="modal_service_id"
@@ -87,6 +87,21 @@ const handleBackdropClick = (event) => {
                         </div>
 
                         <div class="form-group mb-0">
+                            <label class="form-label text-xs" for="modal_status">Status Inicial *</label>
+                            <select
+                                id="modal_status"
+                                v-model="bookingForm.status"
+                                class="form-control text-xs sm:text-sm rounded-xl"
+                                required
+                            >
+                                <option value="confirmed">Confirmado</option>
+                                <option value="pending">Pendente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.8fr)] xl:grid-cols-[minmax(0,1fr)_minmax(240px,0.85fr)_minmax(180px,0.65fr)] gap-4">
+                        <div class="form-group mb-0">
                             <label class="form-label text-xs" for="modal_client_name">Nome Completo do Cliente *</label>
                             <input
                                 type="text"
@@ -94,18 +109,6 @@ const handleBackdropClick = (event) => {
                                 v-model="bookingForm.client_name"
                                 class="form-control text-xs sm:text-sm rounded-xl"
                                 placeholder="Ex: João da Silva"
-                                required
-                            >
-                        </div>
-
-                        <div class="form-group mb-0">
-                            <label class="form-label text-xs" for="modal_client_email">E-mail do Cliente *</label>
-                            <input
-                                type="email"
-                                id="modal_client_email"
-                                v-model="bookingForm.client_email"
-                                class="form-control text-xs sm:text-sm rounded-xl"
-                                placeholder="cliente@email.com"
                                 required
                             >
                         </div>
@@ -122,20 +125,20 @@ const handleBackdropClick = (event) => {
                             >
                         </div>
 
-                        <div class="form-group mb-0">
-                            <label class="form-label text-xs" for="modal_status">Status Inicial *</label>
-                            <select
-                                id="modal_status"
-                                v-model="bookingForm.status"
+                        <div class="form-group mb-0 md:col-span-2 xl:col-span-1">
+                            <label class="form-label text-xs" for="modal_client_email">E-mail do Cliente *</label>
+                            <input
+                                type="email"
+                                id="modal_client_email"
+                                v-model="bookingForm.client_email"
                                 class="form-control text-xs sm:text-sm rounded-xl"
+                                placeholder="cliente@email.com"
                                 required
                             >
-                                <option value="confirmed">Confirmado</option>
-                                <option value="pending">Pendente</option>
-                                <option value="completed">Concluído</option>
-                            </select>
                         </div>
+                    </div>
 
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="form-group mb-0">
                             <label class="form-label text-xs" for="modal_appointment_date">Data do Agendamento *</label>
                             <input
@@ -157,30 +160,30 @@ const handleBackdropClick = (event) => {
                                 required
                             >
                         </div>
-
-                        <div class="form-group md:col-span-2 mb-0">
-                            <label class="form-label text-xs" for="modal_notes">Observações Adicionais</label>
-                            <textarea
-                                id="modal_notes"
-                                v-model="bookingForm.notes"
-                                class="form-control text-xs sm:text-sm rounded-xl"
-                                rows="2"
-                                placeholder="Ex: Cliente preferiu atendimento especial"
-                            ></textarea>
-                        </div>
                     </div>
 
-                    <div class="pt-4 border-t flex items-center justify-end gap-3" style="border-color: var(--border);">
+                    <div class="form-group mb-0">
+                        <label class="form-label text-xs" for="modal_notes">Observações Adicionais</label>
+                        <textarea
+                            id="modal_notes"
+                            v-model="bookingForm.notes"
+                            class="form-control text-xs sm:text-sm rounded-xl resize-none"
+                            rows="2"
+                            placeholder="Ex: Cliente preferiu atendimento especial"
+                        ></textarea>
+                    </div>
+
+                    <div class="pt-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3" style="border-color: var(--border);">
                         <button
                             type="button"
                             @click="$emit('close')"
-                            class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl"
+                            class="btn btn-outline w-full sm:w-auto py-2.5 px-4 text-xs font-bold rounded-xl"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            class="btn btn-primary py-2.5 px-5 text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
+                            class="btn btn-primary w-full sm:w-auto py-2.5 px-5 text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
                             :disabled="bookingForm.processing"
                         >
                             <i class="fa-solid fa-check text-xs"></i>

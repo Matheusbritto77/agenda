@@ -41,8 +41,12 @@ class DashboardController extends Controller
                 ->where('appointment_date', $selectedDate)
                 ->orderBy('appointment_time', 'asc');
 
-            if (! $showAll && $teamMember) {
-                $appointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+            if (! $showAll) {
+                if ($teamMember) {
+                    $appointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+                } else {
+                    $appointmentsQuery->whereNull('appointments.id');
+                }
             }
 
             $appointments = $appointmentsQuery->get();
@@ -53,8 +57,12 @@ class DashboardController extends Controller
                 ->orderBy('appointment_date', 'asc')
                 ->orderBy('appointment_time', 'asc');
 
-            if (! $showAll && $teamMember) {
-                $weekAppointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+            if (! $showAll) {
+                if ($teamMember) {
+                    $weekAppointmentsQuery->where('appointments.team_member_id', $teamMember->id);
+                } else {
+                    $weekAppointmentsQuery->whereNull('appointments.id');
+                }
             }
 
             $weekAppointments = $weekAppointmentsQuery->get();
@@ -68,64 +76,43 @@ class DashboardController extends Controller
             'week_total' => 0,
         ];
 
-        // Enforce reports.view permission
-        if ($user->hasPermission('reports.view')) {
+        // Appointment KPI cards should match the visible agenda scope.
+        if ($user->hasPermission('appointments.view') || $user->hasPermission('reports.view')) {
             $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all');
 
-            if (! $showAll && $teamMember) {
-                $stats = [
-                    'today_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->where('appointments.team_member_id', $teamMember->id)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->count(),
-                    'confirmed_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->where('appointments.team_member_id', $teamMember->id)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->where('status', 'confirmed')
-                        ->count(),
-                    'completed_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->where('appointments.team_member_id', $teamMember->id)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->where('status', 'completed')
-                        ->count(),
-                    'total_appointments' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->where('appointments.team_member_id', $teamMember->id)
-                        ->count(),
-                    'week_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->where('appointments.team_member_id', $teamMember->id)
-                        ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
-                        ->count(),
-                ];
-            } else {
-                $stats = [
-                    'today_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->count(),
-                    'confirmed_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->where('status', 'confirmed')
-                        ->count(),
-                    'completed_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->whereDate('appointment_date', $selectedDate)
-                        ->where('status', 'completed')
-                        ->count(),
-                    'total_appointments' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->count(),
-                    'week_total' => Appointment::query()
-                        ->where('appointments.user_id', $tenantId)
-                        ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
-                        ->count(),
-                ];
-            }
+            $scopedAppointments = function () use ($tenantId, $showAll, $teamMember) {
+                $query = Appointment::query()
+                    ->where('appointments.user_id', $tenantId);
+
+                if (! $showAll) {
+                    if ($teamMember) {
+                        $query->where('appointments.team_member_id', $teamMember->id);
+                    } else {
+                        $query->whereNull('appointments.id');
+                    }
+                }
+
+                return $query;
+            };
+
+            $stats = [
+                'today_total' => $scopedAppointments()
+                    ->whereDate('appointment_date', $selectedDate)
+                    ->count(),
+                'confirmed_total' => $scopedAppointments()
+                    ->whereDate('appointment_date', $selectedDate)
+                    ->where('status', 'confirmed')
+                    ->count(),
+                'completed_total' => $scopedAppointments()
+                    ->whereDate('appointment_date', $selectedDate)
+                    ->where('status', 'completed')
+                    ->count(),
+                'total_appointments' => $scopedAppointments()
+                    ->count(),
+                'week_total' => $scopedAppointments()
+                    ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
+                    ->count(),
+            ];
         }
 
         return Inertia::render('Admin/Dashboard', [
