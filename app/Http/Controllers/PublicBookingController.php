@@ -215,9 +215,15 @@ class PublicBookingController extends Controller
             'is_company_page' => $isOwnerPage && $selectedProfessional === null,
             'business_name' => $settings['business_name'] ?? $company->name,
             'tagline' => $settings['tagline'] ?? null,
-            'description' => $settings['about'] ?? $settings['description'] ?? $settings['tagline'] ?? null,
+            'description' => $settings['company_profile_description'] ?? $settings['about'] ?? $settings['description'] ?? $settings['tagline'] ?? null,
+            'cta_label' => $settings['company_profile_cta_label'] ?? 'Agendar agora',
             'logo_url' => $branding?->logo_url,
             'banner_url' => $branding?->banner_url,
+            'display' => [
+                'show_hours' => $settings['company_profile_show_hours'] ?? true,
+                'show_services' => $settings['company_profile_show_services'] ?? true,
+                'show_professionals' => $settings['company_profile_show_professionals'] ?? true,
+            ],
             'status' => [
                 'is_open_now' => $isOpenNow,
                 'label' => $isOpenNow ? 'Aberto agora' : 'Fechado agora',

@@ -5,6 +5,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import BrandingIdentityTab from './Components/BrandingIdentityTab.vue';
 import BrandingColorsTab from './Components/BrandingColorsTab.vue';
 import BrandingContactTab from './Components/BrandingContactTab.vue';
+import BrandingCompanyProfileTab from './Components/BrandingCompanyProfileTab.vue';
 import BrandingLivePreview from './Components/BrandingLivePreview.vue';
 
 const props = defineProps({
@@ -24,7 +25,7 @@ const defaultColors = {
     button_text_color: '#ffffff',
 };
 
-const activeTab = ref('identity'); // 'identity', 'colors', 'contact'
+const activeTab = ref('identity');
 
 const form = useForm({
     top_menu_color: props.branding?.top_menu_color || defaultColors.top_menu_color,
@@ -36,6 +37,11 @@ const form = useForm({
     button_text_color: props.branding?.settings?.button_text_color || defaultColors.button_text_color,
     business_name: props.branding?.settings?.business_name || '',
     tagline: props.branding?.settings?.tagline || '',
+    company_profile_description: props.branding?.settings?.company_profile_description || '',
+    company_profile_cta_label: props.branding?.settings?.company_profile_cta_label || 'Agendar agora',
+    company_profile_show_hours: props.branding?.settings?.company_profile_show_hours ?? true,
+    company_profile_show_services: props.branding?.settings?.company_profile_show_services ?? true,
+    company_profile_show_professionals: props.branding?.settings?.company_profile_show_professionals ?? true,
     whatsapp_number: props.branding?.settings?.whatsapp_number || '',
     whatsapp_button_enabled: props.branding?.settings?.whatsapp_button_enabled ?? true,
     instagram_handle: props.branding?.settings?.instagram_handle || '',
@@ -96,6 +102,10 @@ const resetToDefault = () => {
     form.text_color = defaultColors.text_color;
     form.button_text_color = defaultColors.button_text_color;
     form.border_radius = 'rounded-2xl';
+    form.company_profile_cta_label = 'Agendar agora';
+    form.company_profile_show_hours = true;
+    form.company_profile_show_services = true;
+    form.company_profile_show_professionals = true;
 };
 
 const submit = () => {
@@ -135,7 +145,7 @@ const submit = () => {
                 <div class="lg:col-span-6 xl:col-span-7 space-y-6">
                     <div class="card p-5 sm:p-7 space-y-6 shadow-sm">
                         <!-- Navigation Tabs Header -->
-                        <div class="flex items-center gap-2 border-b pb-4" style="border-color: var(--border);">
+                        <div class="flex items-center gap-2 border-b pb-4 flex-wrap" style="border-color: var(--border);">
                             <button
                                 type="button"
                                 @click="activeTab = 'identity'"
@@ -177,6 +187,20 @@ const submit = () => {
                                 <i class="fa-solid fa-comments text-xs"></i>
                                 <span>3. Contato & Rodapé</span>
                             </button>
+
+                            <button
+                                type="button"
+                                @click="activeTab = 'company-profile'"
+                                :class="[
+                                    'px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2',
+                                    activeTab === 'company-profile'
+                                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                ]"
+                            >
+                                <i class="fa-solid fa-building-user text-xs"></i>
+                                <span>4. Perfil da Empresa</span>
+                            </button>
                         </div>
 
                         <form @submit.prevent="submit" class="space-y-6">
@@ -198,6 +222,11 @@ const submit = () => {
 
                             <BrandingContactTab
                                 v-show="activeTab === 'contact'"
+                                :form="form"
+                            />
+
+                            <BrandingCompanyProfileTab
+                                v-show="activeTab === 'company-profile'"
                                 :form="form"
                             />
 

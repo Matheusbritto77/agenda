@@ -56,6 +56,11 @@ class BrandingSettingTest extends TestCase
             'primary_color' => '#10b981',
             'business_name' => 'Barbearia Don Corleone',
             'tagline' => 'Os melhores especialistas da cidade',
+            'company_profile_description' => 'Barbearia tradicional com atendimento por hora marcada.',
+            'company_profile_cta_label' => 'Ver horarios',
+            'company_profile_show_hours' => true,
+            'company_profile_show_services' => false,
+            'company_profile_show_professionals' => true,
             'whatsapp_number' => '11999998888',
             'whatsapp_button_enabled' => true,
             'logo_file' => $logo,
@@ -70,6 +75,11 @@ class BrandingSettingTest extends TestCase
         $this->assertEquals('#10b981', $branding->primary_color);
         $this->assertNotNull($branding->logo_path);
         $this->assertEquals('Barbearia Don Corleone', $branding->settings['business_name']);
+        $this->assertEquals('Barbearia tradicional com atendimento por hora marcada.', $branding->settings['company_profile_description']);
+        $this->assertEquals('Ver horarios', $branding->settings['company_profile_cta_label']);
+        $this->assertTrue($branding->settings['company_profile_show_hours']);
+        $this->assertFalse($branding->settings['company_profile_show_services']);
+        $this->assertTrue($branding->settings['company_profile_show_professionals']);
         $this->assertEquals('11999998888', $branding->settings['whatsapp_number']);
         $this->assertTrue($branding->settings['whatsapp_button_enabled']);
         
@@ -116,6 +126,11 @@ class BrandingSettingTest extends TestCase
             'settings' => [
                 'business_name' => 'Studio Hair VIP',
                 'tagline' => 'Excelência e estilo para você',
+                'company_profile_description' => 'Atendimento personalizado no centro.',
+                'company_profile_cta_label' => 'Comecar',
+                'company_profile_show_hours' => false,
+                'company_profile_show_services' => true,
+                'company_profile_show_professionals' => false,
             ],
         ]);
 
@@ -127,7 +142,12 @@ class BrandingSettingTest extends TestCase
                  ->where('branding.background_color', '#0f172a')
                  ->where('branding.primary_color', '#3b82f6')
                  ->where('branding.logo_url', $branding->logo_url)
-                 ->where('branding.settings.business_name', 'Studio Hair VIP');
+                 ->where('branding.settings.business_name', 'Studio Hair VIP')
+                 ->where('companyProfile.description', 'Atendimento personalizado no centro.')
+                 ->where('companyProfile.cta_label', 'Comecar')
+                 ->where('companyProfile.display.show_hours', false)
+                 ->where('companyProfile.display.show_services', true)
+                 ->where('companyProfile.display.show_professionals', false);
         });
     }
 }

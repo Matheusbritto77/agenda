@@ -24,6 +24,12 @@ const statusClasses = computed(() => {
 
 const primaryServices = computed(() => props.companyProfile.services_preview || []);
 const hours = computed(() => props.companyProfile.hours_summary || []);
+const display = computed(() => props.companyProfile.display || {
+    show_hours: true,
+    show_services: true,
+    show_professionals: true,
+});
+const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora');
 </script>
 
 <template>
@@ -78,14 +84,14 @@ const hours = computed(() => props.companyProfile.hours_summary || []);
                             class="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black bg-white text-slate-950 hover:bg-slate-100 transition-all shadow-lg shrink-0"
                         >
                             <i class="fa-solid fa-calendar-check"></i>
-                            <span>Agendar agora</span>
+                            <span>{{ ctaLabel }}</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             <div class="grid gap-0 border-t border-slate-200 dark:border-slate-800 md:grid-cols-3">
-                <div class="p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+                <div v-if="display.show_hours" class="p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
                     <div class="flex items-start gap-3">
                         <div class="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200">
                             <i class="fa-solid fa-clock"></i>
@@ -102,7 +108,7 @@ const hours = computed(() => props.companyProfile.hours_summary || []);
                     </div>
                 </div>
 
-                <div class="p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+                <div v-if="display.show_services" class="p-5 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
                     <div class="flex items-start gap-3">
                         <div class="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200">
                             <i class="fa-solid fa-scissors"></i>
@@ -119,7 +125,7 @@ const hours = computed(() => props.companyProfile.hours_summary || []);
                     </div>
                 </div>
 
-                <div class="p-5">
+                <div v-if="display.show_professionals" class="p-5">
                     <div class="flex items-start gap-3">
                         <div class="h-10 w-10 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-200">
                             <i class="fa-solid fa-user-group"></i>
@@ -139,7 +145,7 @@ const hours = computed(() => props.companyProfile.hours_summary || []);
         </div>
 
         <div class="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-            <section class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-sm">
+            <section v-if="display.show_services" class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-sm">
                 <div class="flex items-center justify-between gap-3 mb-4">
                     <div>
                         <h2 class="text-base font-black text-slate-900 dark:text-white">Servicos em destaque</h2>
@@ -179,7 +185,7 @@ const hours = computed(() => props.companyProfile.hours_summary || []);
                 </p>
             </section>
 
-            <section class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-sm">
+            <section v-if="display.show_hours" class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-white dark:bg-slate-950 p-5 shadow-sm">
                 <h2 class="text-base font-black text-slate-900 dark:text-white mb-4">Resumo de horario</h2>
 
                 <div class="space-y-2">

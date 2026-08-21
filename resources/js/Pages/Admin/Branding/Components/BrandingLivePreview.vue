@@ -101,6 +101,42 @@ defineProps({
                 </div>
 
                 <!-- Stepper Mockup -->
+                <div
+                    class="p-3.5 rounded-2xl border border-slate-200/60 shadow-xs space-y-2"
+                    :style="{
+                        backgroundColor: form.card_bg_color,
+                        borderColor: form.primary_color + '35'
+                    }"
+                >
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-black uppercase tracking-wider opacity-65" :style="{ color: form.text_color }">
+                            Perfil da empresa
+                        </span>
+                        <span class="text-[8px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-bold">
+                            Aberto agora
+                        </span>
+                    </div>
+                    <p class="text-xs font-black leading-tight" :style="{ color: form.text_color }">
+                        {{ form.business_name || 'Agendamento Online' }}
+                    </p>
+                    <p class="text-[10px] opacity-70 leading-tight line-clamp-2" :style="{ color: form.text_color }">
+                        {{ form.company_profile_description || form.tagline || 'Confira os servicos, horarios e profissionais disponiveis antes de agendar.' }}
+                    </p>
+                    <div class="flex items-center gap-1.5 pt-1">
+                        <span v-if="form.company_profile_show_hours" class="text-[8px] px-1.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold">Horarios</span>
+                        <span v-if="form.company_profile_show_services" class="text-[8px] px-1.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold">Servicos</span>
+                        <span v-if="form.company_profile_show_professionals" class="text-[8px] px-1.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-bold">Equipe</span>
+                    </div>
+                    <div
+                        class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl font-bold text-[10px] text-white shadow-md"
+                        :style="{ backgroundColor: form.primary_color }"
+                    >
+                        <span>{{ form.company_profile_cta_label || 'Agendar agora' }}</span>
+                        <i class="fa-solid fa-arrow-right text-[8px]"></i>
+                    </div>
+                </div>
+
+                <!-- Stepper Mockup -->
                 <div class="grid grid-cols-3 gap-1.5">
                     <div
                         class="h-9 rounded-xl border border-slate-200/50 flex items-center justify-center gap-1 shadow-xs p-1"
