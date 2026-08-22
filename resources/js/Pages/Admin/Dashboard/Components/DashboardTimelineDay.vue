@@ -29,7 +29,7 @@ const statusLabel = (status) => {
 
 <template>
     <div class="card p-4 sm:p-6 space-y-4 shadow-sm">
-        <div class="space-y-3">
+        <div class="space-y-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1.5 overscroll-contain">
             <div
                 v-for="item in timelineHours"
                 :key="item.hour"

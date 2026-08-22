@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import ServiceCard from './Components/ServiceCard.vue';
@@ -158,6 +158,7 @@ const submitDelete = () => {
 };
 
 onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             showCreateModal.value = false;
@@ -166,6 +167,10 @@ onMounted(() => {
             document.body.classList.remove('overflow-hidden');
         }
     });
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
 });
 </script>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 
@@ -122,6 +122,14 @@ const submitDelete = () => {
         errorBag: 'userDeletion',
     });
 };
+
+onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
+});
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import AppointmentFilters from './Components/AppointmentFilters.vue';
@@ -113,6 +113,7 @@ const submitStatusChange = (newStatus) => {
 };
 
 onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
     const savedView = localStorage.getItem('agendae_appointments_view') || 'table';
     activeView.value = savedView;
 
@@ -121,6 +122,10 @@ onMounted(() => {
             closeDetailModal();
         }
     });
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
 });
 </script>
 

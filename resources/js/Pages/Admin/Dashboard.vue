@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import DashboardKpis from './Dashboard/Components/DashboardKpis.vue';
@@ -240,6 +240,7 @@ const submitStatusChange = (newStatus) => {
 };
 
 onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
     const savedView = localStorage.getItem('agendae_admin_view');
     if (savedView === 'day' || savedView === 'week') {
         activeView.value = savedView;
@@ -250,6 +251,10 @@ onMounted(() => {
             closeModal();
         }
     });
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
 });
 </script>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import AdminSidebar from './Admin/AdminSidebar.vue';
 import AdminHeader from './Admin/AdminHeader.vue';
@@ -36,7 +36,6 @@ const applyTheme = (theme) => {
 
 const openManualBookingModal = () => {
     showManualBookingModal.value = true;
-    document.body.classList.add('overflow-hidden');
 };
 
 const closeManualBookingModal = () => {
@@ -45,6 +44,7 @@ const closeManualBookingModal = () => {
 };
 
 onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
     const savedTheme = localStorage.getItem('agendae_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     isDarkMode.value = savedTheme === 'dark';
     applyTheme(savedTheme);
@@ -62,6 +62,10 @@ onMounted(() => {
             document.body.classList.remove('overflow-hidden');
         }
     });
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
 });
 </script>
 

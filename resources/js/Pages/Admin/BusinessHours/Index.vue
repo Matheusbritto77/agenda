@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import WeeklyScheduleTable from './Components/WeeklyScheduleTable.vue';
@@ -235,6 +235,7 @@ const submitDeleteBlock = () => {
 };
 
 onMounted(() => {
+    document.body.classList.remove('overflow-hidden');
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             showCreateBusinessHourModal.value = false;
@@ -246,6 +247,10 @@ onMounted(() => {
             document.body.classList.remove('overflow-hidden');
         }
     });
+});
+
+onUnmounted(() => {
+    document.body.classList.remove('overflow-hidden');
 });
 </script>
 
