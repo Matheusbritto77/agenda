@@ -52,7 +52,7 @@ const handleBackdropClick = (event) => {
             <div class="liquid-glass-card w-full max-w-4xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-5 relative" @click.stop>
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-brand-600/30">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-600/30">
                             <i class="fa-solid fa-calendar-plus"></i>
                         </div>
                         <div>

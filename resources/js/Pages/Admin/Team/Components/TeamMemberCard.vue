@@ -55,7 +55,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 <div class="space-y-3">
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-md">
+                            <div class="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-md">
                                 <img v-if="member.avatar_url" :src="member.avatar_url" :alt="member.name" class="w-full h-full object-cover" />
                                 <span v-else>{{ getInitials(member.name) }}</span>
                             </div>

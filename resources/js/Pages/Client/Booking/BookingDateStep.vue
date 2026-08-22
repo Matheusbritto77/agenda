@@ -12,38 +12,21 @@ defineProps({
         type: String,
         default: '',
     },
-    selectedTime: {
-        type: String,
-        default: '',
-    },
-    availableSlots: {
-        type: Array,
-        default: () => [],
-    },
-    slotsLoading: {
-        type: Boolean,
-        default: false,
-    },
     canPrevMonth: {
         type: Boolean,
         default: false,
     },
     title: {
         type: String,
-        default: 'Escolha Data e Horário',
+        default: 'Escolha a Data',
     },
     subtitle: {
         type: String,
-        default: 'Selecione o melhor dia e horário disponível',
+        default: 'Selecione o melhor dia para seu atendimento',
     },
 });
 
-const emit = defineEmits(['prev-month', 'next-month', 'select-date', 'select-time']);
-
-const formatDateLong = (dateStr) => {
-    if (!dateStr) return '';
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
-};
+defineEmits(['prev-month', 'next-month', 'select-date', 'prev-step']);
 </script>
 
 <template>
@@ -71,12 +54,15 @@ const formatDateLong = (dateStr) => {
                         borderColor: 'var(--border)',
                         color: 'var(--text)'
                     }"
+                    title="Mês anterior"
                 >
                     <i class="fa-solid fa-chevron-left"></i>
                 </button>
+
                 <h3 class="text-base font-extrabold capitalize" :style="{ color: 'var(--text-heading)' }">
                     {{ monthTitle }}
                 </h3>
+
                 <button
                     type="button"
                     @click="$emit('next-month')"
@@ -86,6 +72,7 @@ const formatDateLong = (dateStr) => {
                         borderColor: 'var(--border)',
                         color: 'var(--text)'
                     }"
+                    title="Próximo mês"
                 >
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>
@@ -124,58 +111,20 @@ const formatDateLong = (dateStr) => {
                     {{ d.day }}
                 </button>
             </div>
-        </div>
 
-        <!-- Available Time Slots -->
-        <div class="card shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-                <h4 class="text-sm font-extrabold flex items-center gap-2" :style="{ color: 'var(--text-heading)' }">
-                    <i class="fa-regular fa-clock" :style="{ color: 'var(--primary)' }"></i>
-                    <span>Horários Disponíveis</span>
-                </h4>
-                <span v-if="selectedDate" class="text-xs font-semibold px-2.5 py-0.5 rounded-full" :style="{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }">
-                    {{ formatDateLong(selectedDate) }}
-                </span>
-            </div>
-
-            <div v-if="!selectedDate" class="text-center py-8 opacity-60" :style="{ color: 'var(--text-muted)' }">
-                <i class="fa-regular fa-hand-pointer text-2xl mb-2 block animate-bounce" :style="{ color: 'var(--primary)' }"></i>
-                <p class="font-bold text-xs">Selecione uma data no calendário acima</p>
-            </div>
-
-            <div v-else-if="slotsLoading" class="text-center py-8">
-                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block" :style="{ color: 'var(--primary)' }"></i>
-                <p class="text-xs opacity-60" :style="{ color: 'var(--text-muted)' }">Carregando horários livres...</p>
-            </div>
-
-            <div v-else-if="availableSlots.length === 0" class="text-center py-8 opacity-60" :style="{ color: 'var(--text-muted)' }">
-                <i class="fa-solid fa-calendar-xmark text-2xl mb-2 block text-rose-500"></i>
-                <p class="font-bold text-xs">Nenhum horário disponível para esta data.</p>
-            </div>
-
-            <div v-else class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <div class="pt-3 border-t flex items-center justify-between" :style="{ borderColor: 'var(--border, #e2e8f0)' }">
                 <button
-                    v-for="slot in availableSlots"
-                    :key="slot.time || slot"
                     type="button"
-                    @click="$emit('select-time', slot.time || slot)"
-                    :class="[
-                        'py-2.5 px-2 rounded-xl text-xs font-black text-center transition-all hover:scale-105 cursor-pointer',
-                        selectedTime === (slot.time || slot) ? 'shadow-md scale-105' : 'border'
-                    ]"
-                    :style="selectedTime === (slot.time || slot) ? {
-                        backgroundColor: 'var(--primary)',
-                        color: 'var(--btn-text, #ffffff)',
-                        borderColor: 'var(--primary)',
-                        boxShadow: '0 4px 12px var(--primary-light)'
-                    } : {
-                        backgroundColor: 'var(--surface)',
-                        color: 'var(--text)',
-                        borderColor: 'var(--border)'
-                    }"
+                    @click="$emit('prev-step')"
+                    class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl cursor-pointer"
                 >
-                    {{ slot.time || slot }}
+                    <i class="fa-solid fa-arrow-left text-xs mr-1"></i>
+                    Voltar aos Serviços
                 </button>
+
+                <span class="text-xs opacity-60" :style="{ color: 'var(--text-muted)' }">
+                    Clique em um dia para ver os horários
+                </span>
             </div>
         </div>
     </div>

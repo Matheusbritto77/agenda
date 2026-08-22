@@ -37,21 +37,19 @@ defineProps({
         </div>
 
         <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold block" for="company_profile_cta_label">Texto do botao principal</label>
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-indigo-500">
-                    <i class="fa-solid fa-calendar-check text-sm"></i>
-                </div>
-                <input
-                    type="text"
-                    id="company_profile_cta_label"
-                    v-model="form.company_profile_cta_label"
-                    maxlength="40"
-                    class="form-control pl-10 text-xs sm:text-sm rounded-xl"
-                    placeholder="Agendar agora"
-                />
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Use um comando curto, por exemplo: Agendar agora, Ver horarios ou Comecar agendamento.</p>
+            <label class="form-label text-xs font-bold block" for="company_profile_cta_label">
+                <i class="fa-solid fa-calendar-check text-indigo-500 mr-1.5"></i>
+                Texto do botão principal
+            </label>
+            <input
+                type="text"
+                id="company_profile_cta_label"
+                v-model="form.company_profile_cta_label"
+                maxlength="40"
+                class="form-control text-xs sm:text-sm rounded-xl"
+                placeholder="Agendar agora"
+            />
+            <p class="text-[11px] text-slate-400 mt-1">Use um comando curto, por exemplo: Agendar agora, Ver horários ou Começar agendamento.</p>
         </div>
 
         <div class="space-y-3">

@@ -22,38 +22,49 @@ const customStyles = computed(() => {
     const b = props.branding || {};
     const s = b.settings || {};
 
-    if (b.background_color) {
-        styles['--background'] = b.background_color;
-        styles['--background-subtle'] = b.background_color;
-    }
+    const primary = b.primary_color || '#6366f1';
+    const secondary = b.secondary_color || primary;
+    const bg = b.background_color || '#f8fafc';
+    const cardBg = s.card_bg_color || '#ffffff';
+    const text = s.text_color || '#0f172a';
+    const btnText = s.button_text_color || '#ffffff';
+    const topMenu = b.top_menu_color || '#ffffff';
 
-    if (b.top_menu_color) {
-        styles['--surface-header'] = b.top_menu_color;
-    }
+    styles['--primary'] = primary;
+    styles['--primary-hover'] = secondary;
+    styles['--primary-gradient'] = `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`;
+    styles['--primary-light'] = `${primary}1a`;
+    styles['--background'] = bg;
+    styles['--background-subtle'] = bg;
+    styles['--surface'] = cardBg;
+    styles['--surface-header'] = topMenu;
+    styles['--text'] = text;
+    styles['--text-heading'] = text;
+    styles['--text-muted'] = `${text}99`;
+    styles['--btn-text'] = btnText;
+    styles['--border'] = s.card_bg_color && s.card_bg_color !== '#ffffff' ? `${text}22` : '#e2e8f0';
 
-    if (s.card_bg_color) {
-        styles['--surface'] = s.card_bg_color;
-    }
-
-    if (s.text_color) {
-        styles['--text'] = s.text_color;
-        styles['--text-heading'] = s.text_color;
-    }
-
-    if (b.primary_color) {
-        styles['--primary'] = b.primary_color;
-        styles['--primary-hover'] = b.primary_color;
-        styles['--primary-gradient'] = `linear-gradient(135deg, ${b.primary_color} 0%, ${b.primary_color}dd 100%)`;
-        styles['--primary-light'] = `${b.primary_color}18`;
-    }
-
-    if (s.border_radius) {
-        if (s.border_radius === 'rounded-sm') styles['--radius'] = '0.375rem';
-        else if (s.border_radius === 'rounded-lg') styles['--radius'] = '0.5rem';
-        else if (s.border_radius === 'rounded-xl') styles['--radius'] = '0.75rem';
-        else if (s.border_radius === 'rounded-2xl') styles['--radius'] = '1rem';
-        else if (s.border_radius === 'rounded-3xl') styles['--radius'] = '1.5rem';
-        else if (s.border_radius === 'rounded-full') styles['--radius'] = '9999px';
+    if (s.border_radius === 'rounded-sm') {
+        styles['--radius'] = '0.375rem';
+        styles['--radius-sm'] = '0.25rem';
+    } else if (s.border_radius === 'rounded-lg') {
+        styles['--radius'] = '0.5rem';
+        styles['--radius-sm'] = '0.375rem';
+    } else if (s.border_radius === 'rounded-xl') {
+        styles['--radius'] = '0.75rem';
+        styles['--radius-sm'] = '0.5rem';
+    } else if (s.border_radius === 'rounded-2xl') {
+        styles['--radius'] = '1rem';
+        styles['--radius-sm'] = '0.75rem';
+    } else if (s.border_radius === 'rounded-3xl') {
+        styles['--radius'] = '1.5rem';
+        styles['--radius-sm'] = '1rem';
+    } else if (s.border_radius === 'rounded-full') {
+        styles['--radius'] = '9999px';
+        styles['--radius-sm'] = '9999px';
+    } else {
+        styles['--radius'] = '1rem';
+        styles['--radius-sm'] = '0.75rem';
     }
 
     return styles;
@@ -93,7 +104,7 @@ onMounted(() => {
 
 <template>
     <div
-        class="min-h-screen flex flex-col justify-between font-sans antialiased text-slate-800 selection:bg-brand-500 selection:text-white"
+        class="min-h-screen flex flex-col justify-between font-sans antialiased selection:bg-brand-500 selection:text-white"
         :style="{
             'background-color': 'var(--background, #f8fafc)',
             'color': 'var(--text, #0f172a)',
@@ -103,8 +114,8 @@ onMounted(() => {
     >
         <!-- Background Ambient Glow Meshes -->
         <div class="fixed inset-0 z-[-1] pointer-events-none overflow-hidden">
-            <div class="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[720px] h-[460px] rounded-full" style="background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%); filter: blur(60px);"></div>
-            <div class="absolute -bottom-[8%] -right-[6%] w-[520px] h-[420px] rounded-full" style="background: radial-gradient(circle, rgba(6, 182, 212, 0.10) 0%, rgba(6, 182, 212, 0) 70%); filter: blur(60px);"></div>
+            <div class="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[720px] h-[460px] rounded-full" :style="{ background: `radial-gradient(circle, var(--primary-light, rgba(99, 102, 241, 0.12)) 0%, transparent 70%)`, filter: 'blur(60px)' }"></div>
+            <div class="absolute -bottom-[8%] -right-[6%] w-[520px] h-[420px] rounded-full" :style="{ background: `radial-gradient(circle, var(--primary-light, rgba(6, 182, 212, 0.10)) 0%, transparent 70%)`, filter: 'blur(60px)' }"></div>
         </div>
 
         <!-- Sticky Header Navigation -->
@@ -120,7 +131,7 @@ onMounted(() => {
                 <!-- Brand / Logo Area -->
                 <Link :href="route('booking.index')" class="flex items-center gap-3 group transition-transform hover:opacity-95">
                     
-                    <!-- 1. Custom User Logo (Without text name to prevent crowding) -->
+                    <!-- 1. Custom User Logo -->
                     <template v-if="hasCustomLogo">
                         <div class="h-10 sm:h-12 max-w-[200px] sm:max-w-[260px] flex items-center justify-center overflow-hidden">
                             <img
@@ -133,14 +144,20 @@ onMounted(() => {
  
                     <!-- 2. Text Brand with System Icon fallback -->
                     <template v-else>
-                        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-accent-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform duration-300">
+                        <div
+                            class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300"
+                            :style="{
+                                background: 'var(--primary-gradient, linear-gradient(135deg, #6366f1 0%, #4f46e5 100%))',
+                                color: 'var(--btn-text, #ffffff)'
+                            }"
+                        >
                             <i class="fa-solid fa-calendar-check text-base sm:text-lg"></i>
                         </div>
                         <div class="flex items-center gap-1.5">
-                            <span class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-indigo-600 via-brand-600 to-cyan-500 bg-clip-text text-transparent">
+                            <span class="text-xl sm:text-2xl font-black tracking-tight" :style="{ color: 'var(--text-heading, #0f172a)' }">
                                 {{ businessDisplayName || 'Agendae' }}
                             </span>
-                            <span v-if="!businessDisplayName" class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-200">
+                            <span v-if="!businessDisplayName" class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider" :style="{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }">
                                 Online
                             </span>
                         </div>
@@ -154,7 +171,12 @@ onMounted(() => {
                         :href="'https://instagram.com/' + branding.settings.instagram_handle.replace('@', '')"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 flex items-center justify-center text-slate-700 hover:text-pink-600 transition-all shadow-sm"
+                        class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center transition-all shadow-sm"
+                        :style="{
+                            backgroundColor: 'var(--surface, #ffffff)',
+                            borderColor: 'var(--border, #e2e8f0)',
+                            color: 'var(--text, #0f172a)'
+                        }"
                         title="Instagram"
                     >
                         <i class="fa-brands fa-instagram text-base"></i>
@@ -165,10 +187,15 @@ onMounted(() => {
                         :href="whatsappUrl"
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-all shadow-sm"
+                        class="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+                        :style="{
+                            backgroundColor: 'var(--primary-light, #ecfdf5)',
+                            borderColor: 'var(--primary, #10b981)',
+                            color: 'var(--primary, #059669)'
+                        }"
                         title="Falar no WhatsApp"
                     >
-                        <i class="fa-brands fa-whatsapp text-sm text-emerald-600"></i>
+                        <i class="fa-brands fa-whatsapp text-sm"></i>
                         <span>WhatsApp</span>
                     </a>
                 </div>
@@ -180,36 +207,27 @@ onMounted(() => {
             <slot />
         </main>
 
-        <!-- Floating WhatsApp Widget Button -->
-        <a
-            v-if="whatsappUrl && branding?.settings?.whatsapp_button_enabled"
-            :href="whatsappUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 hover:scale-105 transition-all duration-300 group cursor-pointer"
-            title="Dúvidas? Fale conosco no WhatsApp"
-        >
-            <i class="fa-brands fa-whatsapp text-2xl animate-bounce"></i>
-            <span class="text-xs font-extrabold hidden sm:inline">Dúvidas? Fale Conosco</span>
-        </a>
-
         <!-- Footer -->
         <footer
-            class="mt-auto shrink-0 border-t py-6 text-center text-xs text-slate-500 bg-white/80 backdrop-blur-md transition-colors"
-            style="border-color: var(--border, rgba(226, 232, 240, 0.8));"
+            class="mt-auto shrink-0 border-t py-6 text-center text-xs backdrop-blur-md transition-colors"
+            :style="{
+                backgroundColor: 'var(--surface-header, rgba(255, 255, 255, 0.8))',
+                borderColor: 'var(--border, rgba(226, 232, 240, 0.8))',
+                color: 'var(--text-muted, #64748b)'
+            }"
         >
             <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <p>
+                <p :style="{ color: 'var(--text-muted, #64748b)' }">
                     <template v-if="branding?.settings?.footer_text">
                         {{ branding.settings.footer_text }}
                     </template>
                     <template v-else>
-                        &copy; {{ currentYear }} <strong>{{ businessDisplayName || 'Agendae' }}</strong>. Todos os direitos reservados.
+                        &copy; {{ currentYear }} <strong :style="{ color: 'var(--text-heading, #0f172a)' }">{{ businessDisplayName || 'Agendae' }}</strong>. Todos os direitos reservados.
                     </template>
                 </p>
                 <div class="flex items-center gap-4 text-xs font-semibold">
-                    <Link :href="route('booking.index')" class="hover:text-indigo-600 transition-colors">Agendamento</Link>
-                    <Link :href="route('admin.dashboard')" class="text-indigo-600 hover:underline flex items-center gap-1">
+                    <Link :href="route('booking.index')" class="hover:underline transition-colors" :style="{ color: 'var(--primary)' }">Agendamento</Link>
+                    <Link :href="route('admin.dashboard')" class="hover:underline flex items-center gap-1" :style="{ color: 'var(--primary)' }">
                         <span>Painel Administrativo</span>
                         <i class="fa-solid fa-arrow-right text-[10px]"></i>
                     </Link>
@@ -221,45 +239,50 @@ onMounted(() => {
 
 <style>
 .card {
-    background-color: var(--surface, #ffffff);
-    border: 1px solid var(--border, #e2e8f0);
-    border-radius: var(--radius, 1rem);
+    background-color: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: var(--radius, 1rem) !important;
+    color: var(--text, #0f172a);
     padding: 1.5rem;
     transition: all 0.3s ease;
 }
 .form-control {
-    background-color: var(--background, #f8fafc);
-    border: 1px solid var(--border, #e2e8f0);
-    border-radius: var(--radius-sm, 0.625rem);
-    color: var(--text, #0f172a);
+    background-color: var(--surface, #ffffff) !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    border-radius: var(--radius-sm, 0.625rem) !important;
+    color: var(--text, #0f172a) !important;
     width: 100%;
     padding: 0.75rem 1rem;
     transition: all 0.3s ease;
 }
+.form-control.form-control-search {
+    padding-left: 2.75rem !important;
+}
 .form-control:focus {
-    border-color: var(--primary, #6366f1);
+    border-color: var(--primary, #6366f1) !important;
     outline: none;
     box-shadow: 0 0 0 3px var(--primary-light, rgba(99, 102, 241, 0.12));
 }
 .btn {
-    border-radius: var(--radius-sm, 0.625rem);
+    border-radius: var(--radius-sm, 0.625rem) !important;
     padding: 0.75rem 1.5rem;
     font-weight: 700;
     transition: all 0.3s ease;
 }
 .btn-primary {
-    background: var(--primary-gradient, linear-gradient(135deg, #6366f1 0%, #4f46e5 100%));
-    color: #ffffff;
+    background: var(--primary-gradient, linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)) !important;
+    color: var(--btn-text, #ffffff) !important;
+    border: none !important;
 }
 .btn-primary:hover {
-    opacity: 0.95;
+    opacity: 0.92;
 }
 .btn-outline {
-    background: transparent;
-    border: 1px solid var(--border, #e2e8f0);
-    color: var(--text, #0f172a);
+    background: transparent !important;
+    border: 1px solid var(--border, #e2e8f0) !important;
+    color: var(--text, #0f172a) !important;
 }
 .btn-outline:hover {
-    background: var(--background-subtle, #f8fafc);
+    background: var(--primary-light, rgba(99, 102, 241, 0.12)) !important;
 }
 </style>

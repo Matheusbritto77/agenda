@@ -38,7 +38,7 @@ const submit = () => {
         <div class="space-y-6">
             <!-- Header Icon & Title -->
             <div class="text-center space-y-2">
-                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-brand-500 to-cyan-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/30">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock">
                         <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -48,61 +48,74 @@ const submit = () => {
                 <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
                     Acesso ao Painel
                 </h1>
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-                    Entre com suas credenciais para gerenciar sua agenda, serviços e equipe.
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    Digite suas credenciais para gerenciar sua agenda
                 </p>
             </div>
 
-            <div v-if="status" class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle shrink-0">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <path d="m9 11 3 3L22 4"/>
+            <!-- Validation Error Alert -->
+            <div v-if="hasErrors" class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2.5 animate-shake">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-circle shrink-0">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" x2="12" y1="8" y2="12"/>
+                    <line x1="12" x2="12.01" y1="16" y2="16"/>
                 </svg>
-                <span>{{ status }}</span>
+                <span>Credenciais inválidas. Verifique seu e-mail e senha.</span>
             </div>
 
-            <form @submit.prevent="submit" class="text-left space-y-4">
+            <!-- Login Form -->
+            <form @submit.prevent="submit" class="space-y-4">
                 <!-- Email Field -->
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" for="email">
-                        E-mail Profissional
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        E-mail
                     </label>
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mail">
                                 <rect width="20" height="16" x="2" y="4" rx="2"/>
                                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                             </svg>
                         </div>
                         <input 
                             type="email" 
-                            id="email" 
-                            v-model="form.email"
-                            class="block w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all" 
-                            placeholder="seu.email@exemplo.com" 
+                            v-model="form.email" 
                             required 
-                            autofocus
+                            autofocus 
                             autocomplete="username"
-                        />
+                            placeholder="seu.email@exemplo.com"
+                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-xs"
+                            :class="{ 'border-rose-500 dark:border-rose-500': form.errors.email }"
+                        >
                     </div>
-                    <InputError class="mt-1" :message="form.errors.email" />
+                    <span v-if="form.errors.email" class="text-[11px] font-semibold text-rose-500 block">
+                        {{ form.errors.email }}
+                    </span>
                 </div>
 
                 <!-- Password Field -->
                 <div class="space-y-1.5">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300" for="password">
-                        Senha
-                    </label>
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Senha
+                        </label>
+                        <Link 
+                            v-if="canResetPassword" 
+                            :href="route('password.request')" 
+                            class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-all"
+                        >
+                            Esqueceu a senha?
+                        </Link>
+                    </div>
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round">
-                                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4.414-4.414l-.814.814z"/>
-                                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-key-round">
+                                <path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/>
+                                <circle cx="16.5" cy="7.5" r=".5"/>
                             </svg>
                         </div>
                         <input 
                             :type="showPassword ? 'text' : 'password'" 
-                            id="password" 
                             v-model="form.password"
                             class="block w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all" 
                             placeholder="••••••••" 
@@ -140,7 +153,7 @@ const submit = () => {
                 <!-- Submit Button -->
                 <button 
                     type="submit" 
-                    class="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-indigo-600 via-brand-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                    class="w-full py-3 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
                     :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
                     :disabled="form.processing"
                 >

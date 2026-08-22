@@ -11,52 +11,49 @@ defineProps({
     <div class="space-y-5">
         <!-- WhatsApp -->
         <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold block" for="whatsapp_number">Número de WhatsApp para Atendimento</label>
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-emerald-500">
-                    <i class="fa-brands fa-whatsapp text-base"></i>
-                </div>
-                <input
-                    type="text"
-                    id="whatsapp_number"
-                    v-model="form.whatsapp_number"
-                    class="form-control pl-10 text-xs sm:text-sm rounded-xl"
-                    placeholder="Ex: (11) 99999-8888 ou 5511999998888"
-                />
-            </div>
-        </div>
-
-        <!-- WhatsApp Floating Button Toggle -->
-        <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between gap-3">
-            <div>
-                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Botão Flutuante de WhatsApp</p>
-                <p class="text-[11px] text-slate-400">Exibir ícone flutuante no canto da tela para clientes tirarem dúvidas direto no seu WhatsApp.</p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input
-                    type="checkbox"
-                    v-model="form.whatsapp_button_enabled"
-                    class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            <label class="form-label text-xs font-bold block" for="whatsapp_number">
+                <i class="fa-brands fa-whatsapp text-emerald-500 mr-1.5"></i>
+                Número de WhatsApp para Atendimento
             </label>
+            <input
+                type="text"
+                id="whatsapp_number"
+                v-model="form.whatsapp_number"
+                class="form-control text-xs sm:text-sm rounded-xl"
+                placeholder="Ex: (11) 99999-8888 ou 5511999998888"
+            />
+            <p class="text-[11px] text-slate-400 mt-1">Utilizado para botão de contato e envio de confirmações aos clientes.</p>
         </div>
 
         <!-- Instagram Handle -->
         <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold block" for="instagram_handle">Perfil do Instagram (Opcional)</label>
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-pink-500">
-                    <i class="fa-brands fa-instagram text-base"></i>
-                </div>
-                <input
-                    type="text"
-                    id="instagram_handle"
-                    v-model="form.instagram_handle"
-                    class="form-control pl-10 text-xs sm:text-sm rounded-xl"
-                    placeholder="Ex: @minhaempresa"
-                />
-            </div>
+            <label class="form-label text-xs font-bold block" for="instagram_handle">
+                <i class="fa-brands fa-instagram text-pink-500 mr-1.5"></i>
+                Perfil do Instagram (Opcional)
+            </label>
+            <input
+                type="text"
+                id="instagram_handle"
+                v-model="form.instagram_handle"
+                class="form-control text-xs sm:text-sm rounded-xl"
+                placeholder="Ex: @minhaempresa ou https://instagram.com/minhaempresa"
+            />
+        </div>
+
+        <!-- Physical Address -->
+        <div class="form-group mb-0">
+            <label class="form-label text-xs font-bold block" for="company_address">
+                <i class="fa-solid fa-location-dot text-indigo-500 mr-1.5"></i>
+                Endereço Físico / Localização
+            </label>
+            <input
+                type="text"
+                id="company_address"
+                v-model="form.company_address"
+                class="form-control text-xs sm:text-sm rounded-xl"
+                placeholder="Ex: Av. Paulista, 1000 - Sala 42, Bela Vista - São Paulo / SP"
+            />
+            <p class="text-[11px] text-slate-400 mt-1">Exibido nos cards de contato e nos detalhes do agendamento.</p>
         </div>
 
         <!-- Footer Text -->

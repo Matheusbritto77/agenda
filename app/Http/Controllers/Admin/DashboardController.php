@@ -36,7 +36,7 @@ class DashboardController extends Controller
         if ($user->hasPermission('appointments.view')) {
             $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all');
 
-            $appointmentsQuery = Appointment::with('service')
+            $appointmentsQuery = Appointment::with(['service', 'teamMember'])
                 ->where('appointments.user_id', $tenantId)
                 ->where('appointment_date', $selectedDate)
                 ->orderBy('appointment_time', 'asc');
@@ -51,7 +51,7 @@ class DashboardController extends Controller
 
             $appointments = $appointmentsQuery->get();
 
-            $weekAppointmentsQuery = Appointment::with('service')
+            $weekAppointmentsQuery = Appointment::with(['service', 'teamMember'])
                 ->where('appointments.user_id', $tenantId)
                 ->whereBetween('appointment_date', [$startOfWeek->toDateString(), $endOfWeek->toDateString()])
                 ->orderBy('appointment_date', 'asc')

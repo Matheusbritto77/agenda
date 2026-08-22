@@ -238,6 +238,7 @@ class PublicBookingEndpointsTest extends TestCase
 
     public function test_available_slots_endpoint_excludes_occupied_times(): void
     {
+        $testDate = Carbon::now()->addDays(2)->format('Y-m-d');
         $service = Service::create([
             'user_id' => $this->tenant->id,
             'name' => 'Barba',
@@ -253,17 +254,17 @@ class PublicBookingEndpointsTest extends TestCase
             'client_name' => 'João',
             'client_email' => 'joao@example.com',
             'client_phone' => '11999990000',
-            'appointment_date' => '2026-08-20',
+            'appointment_date' => $testDate,
             'appointment_time' => '10:00',
             'status' => 'confirmed',
             'notes' => null,
         ]);
 
-        $response = $this->getJson('http://studio.agendae.app/available-slots?service_id=' . $service->id . '&date=2026-08-20');
+        $response = $this->getJson('http://studio.agendae.app/available-slots?service_id=' . $service->id . '&date=' . $testDate);
 
         $response->assertOk();
         $response->assertJsonPath('service_id', $service->id);
-        $response->assertJsonPath('date', '2026-08-20');
+        $response->assertJsonPath('date', $testDate);
 
         $slots = $response->json('slots');
 
@@ -273,6 +274,7 @@ class PublicBookingEndpointsTest extends TestCase
 
     public function test_api_available_slots_endpoint_is_consistent(): void
     {
+        $testDate = Carbon::now()->addDays(3)->format('Y-m-d');
         $service = Service::create([
             'user_id' => $this->tenant->id,
             'name' => 'Corte',
@@ -282,12 +284,12 @@ class PublicBookingEndpointsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->getJson('http://studio.agendae.app/api/services/' . $service->id . '/slots?date=2026-08-21');
+        $response = $this->getJson('http://studio.agendae.app/api/services/' . $service->id . '/slots?date=' . $testDate);
 
         $response->assertOk();
         $response->assertJsonFragment([
             'service_id' => $service->id,
-            'date' => '2026-08-21',
+            'date' => $testDate,
         ]);
     }
 

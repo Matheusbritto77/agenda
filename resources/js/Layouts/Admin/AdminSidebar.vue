@@ -104,12 +104,12 @@ const submitLogout = () => {
     >
         <div class="h-20 px-6 flex items-center justify-between border-b" style="border-color: var(--border);">
             <Link :href="route('admin.dashboard')" class="flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-accent-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
                     <i class="fa-solid fa-calendar-check text-lg"></i>
                 </div>
                 <div>
-                    <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-brand-600 bg-clip-text text-transparent">Agendae</span>
-                    <span class="block text-[10px] font-semibold uppercase tracking-wider text-brand-500 dark:text-brand-400">Painel Admin</span>
+                    <span class="text-xl font-black tracking-tight text-slate-900 dark:text-white">Agendae</span>
+                    <span class="block text-[10px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Painel Admin</span>
                 </div>
             </Link>
             <button type="button" @click="$emit('close')" class="md:hidden opacity-60 hover:opacity-100 p-2 rounded-lg" aria-label="Fechar menu lateral">
@@ -127,7 +127,7 @@ const submitLogout = () => {
                 :class="[
                     'flex items-center gap-3.5 px-3.5 py-3 rounded-xl font-semibold text-sm transition-all duration-200',
                     isActiveRoute(item.pattern)
-                        ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-lg shadow-brand-600/30'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                         : 'text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80'
                 ]"
                 @click="$emit('close')"
@@ -145,7 +145,7 @@ const submitLogout = () => {
                 class="flex items-center justify-between px-3.5 py-3 rounded-xl font-semibold text-sm text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all duration-200 group"
             >
                 <div class="flex items-center gap-3.5">
-                    <i class="fa-solid fa-globe text-accent-500 transition-colors"></i>
+                    <i class="fa-solid fa-globe text-cyan-500 transition-colors"></i>
                     <span>Página Pública</span>
                 </div>
                 <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-60 group-hover:opacity-100"></i>
@@ -155,13 +155,13 @@ const submitLogout = () => {
         <div class="p-4 border-t" style="border-color: var(--border); background-color: var(--background-subtle);">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-700 text-white flex items-center justify-center font-bold shrink-0">
+                    <div class="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold shrink-0">
                         <img v-if="userAvatarUrl" :src="userAvatarUrl" :alt="user?.name || 'Usuário'" class="w-full h-full object-cover" />
                         <span v-else>{{ userInitials }}</span>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold truncate">{{ user?.name || 'Administrador' }}</p>
-                        <p class="text-xs opacity-60 truncate">{{ user?.email || 'admin@agendae.com' }}</p>
+                        <p class="text-sm font-semibold truncate" style="color: var(--text-heading);">{{ user?.name || 'Administrador' }}</p>
+                        <p class="text-xs opacity-60 truncate" style="color: var(--text-muted);">{{ user?.email || 'admin@agendae.com' }}</p>
                     </div>
                 </div>
                 <form @submit.prevent="submitLogout">

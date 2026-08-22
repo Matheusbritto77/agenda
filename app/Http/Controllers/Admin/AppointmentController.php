@@ -66,7 +66,7 @@ class AppointmentController extends Controller
             $tenantId = $this->tenantId($request);
             $query = Appointment::query()
                 ->where('appointments.user_id', $tenantId)
-                ->with('service');
+                ->with(['service', 'teamMember']);
 
             if ($request->filled('status')) {
                 $query->where('status', strtolower(trim((string) $request->status)));
@@ -149,7 +149,7 @@ class AppointmentController extends Controller
                 abort(404);
             }
 
-            $appointment->load('service');
+            $appointment->load(['service', 'teamMember']);
             $payload = $this->formatAgendaAppointmentDetail($appointment);
 
             if ($request->expectsJson()) {
@@ -197,10 +197,10 @@ class AppointmentController extends Controller
 
             if ($request->expectsJson()) {
                 return $this->jsonSuccess($request, 'Status atualizado com sucesso.', [
-                    'appointment' => $appointment->load('service'),
-                    'appointment_detail' => $this->formatAgendaAppointmentDetail($appointment->fresh('service')),
-                    'agenda_appointment' => $this->formatAgendaAppointment($appointment->fresh('service')),
-                    'calendar_event' => $this->formatCalendarEvent($appointment->fresh('service')),
+                    'appointment' => $appointment->load(['service', 'teamMember']),
+                    'appointment_detail' => $this->formatAgendaAppointmentDetail($appointment->fresh(['service', 'teamMember'])),
+                    'agenda_appointment' => $this->formatAgendaAppointment($appointment->fresh(['service', 'teamMember'])),
+                    'calendar_event' => $this->formatCalendarEvent($appointment->fresh(['service', 'teamMember'])),
                 ]);
             }
 
@@ -236,7 +236,7 @@ class AppointmentController extends Controller
             $tenantId = $this->tenantId($request);
             $query = Appointment::query()
                 ->where('appointments.user_id', $tenantId)
-                ->with('service');
+                ->with(['service', 'teamMember']);
 
             if (! empty($validated['start']) && ! empty($validated['end'])) {
                 $startDate = Carbon::parse($validated['start'])->toDateString();
@@ -269,9 +269,11 @@ class AppointmentController extends Controller
                     ? $appointment->appointment_date->format('Y-m-d')
                     : Carbon::parse($appointment->appointment_date)->format('Y-m-d');
 
+                $teamMemberName = $appointment->teamMember?->name;
+
                 return [
                     'id' => $appointment->id,
-                    'title' => $appointment->customer_name . ' - ' . ($appointment->service->name ?? 'Serviço'),
+                    'title' => $appointment->customer_name . ' - ' . ($appointment->service->name ?? 'Serviço') . ($teamMemberName ? ' (' . $teamMemberName . ')' : ''),
                     'start' => $dateStr . 'T' . $appointment->start_time,
                     'end' => $dateStr . 'T' . $appointment->end_time,
                     'backgroundColor' => $color,
@@ -282,6 +284,13 @@ class AppointmentController extends Controller
                         'customer_phone' => $appointment->customer_phone,
                         'service_name' => $appointment->service->name ?? '',
                         'service_price' => $appointment->service->price ?? 0,
+                        'team_member_name' => $teamMemberName,
+                        'team_member' => $appointment->teamMember ? [
+                            'id' => $appointment->teamMember->id,
+                            'name' => $appointment->teamMember->name,
+                            'job_title' => $appointment->teamMember->job_title,
+                            'avatar_url' => $appointment->teamMember->avatar_url,
+                        ] : null,
                         'status' => $appointment->status,
                         'notes' => $appointment->notes,
                     ],
@@ -328,6 +337,7 @@ class AppointmentController extends Controller
     private function formatAgendaAppointment(Appointment $appointment): array
     {
         $service = $appointment->service;
+        $teamMember = $appointment->teamMember;
 
         return [
             'id' => $appointment->id,
@@ -343,6 +353,14 @@ class AppointmentController extends Controller
             'service_name' => $service?->name ?? '',
             'service_price' => $service?->price ?? 0,
             'service_duration_minutes' => $service?->duration_minutes ?? 0,
+            'team_member_id' => $appointment->team_member_id,
+            'team_member_name' => $teamMember?->name,
+            'team_member' => $teamMember ? [
+                'id' => $teamMember->id,
+                'name' => $teamMember->name,
+                'job_title' => $teamMember->job_title,
+                'avatar_url' => $teamMember->avatar_url,
+            ] : null,
             'status' => $appointment->status,
             'notes' => $appointment->notes,
             'appointment_datetime' => $appointment->appointment_datetime?->toIso8601String(),
@@ -352,6 +370,7 @@ class AppointmentController extends Controller
     private function formatAgendaAppointmentDetail(Appointment $appointment): array
     {
         $service = $appointment->service;
+        $teamMember = $appointment->teamMember;
 
         return [
             'id' => $appointment->id,
@@ -367,6 +386,14 @@ class AppointmentController extends Controller
             'service_name' => $service?->name ?? '',
             'service_price' => $service?->price ?? 0,
             'service_duration_minutes' => $service?->duration_minutes ?? 0,
+            'team_member_id' => $appointment->team_member_id,
+            'team_member_name' => $teamMember?->name,
+            'team_member' => $teamMember ? [
+                'id' => $teamMember->id,
+                'name' => $teamMember->name,
+                'job_title' => $teamMember->job_title,
+                'avatar_url' => $teamMember->avatar_url,
+            ] : null,
             'status' => $appointment->status,
             'notes' => $appointment->notes,
             'appointment_datetime' => $appointment->appointment_datetime?->toIso8601String(),
@@ -376,13 +403,14 @@ class AppointmentController extends Controller
     private function formatCalendarEvent(Appointment $appointment): array
     {
         $service = $appointment->service;
+        $teamMember = $appointment->teamMember;
         $dateStr = $appointment->appointment_date instanceof Carbon
             ? $appointment->appointment_date->format('Y-m-d')
             : Carbon::parse($appointment->appointment_date)->format('Y-m-d');
 
         return [
             'id' => $appointment->id,
-            'title' => $appointment->customer_name . ' - ' . ($service?->name ?? 'Serviço'),
+            'title' => $appointment->customer_name . ' - ' . ($service?->name ?? 'Serviço') . ($teamMember ? ' (' . $teamMember->name . ')' : ''),
             'start' => $dateStr . 'T' . $appointment->start_time,
             'end' => $dateStr . 'T' . $appointment->end_time,
             'extendedProps' => [
@@ -391,6 +419,13 @@ class AppointmentController extends Controller
                 'customer_phone' => $appointment->customer_phone,
                 'service_name' => $service?->name ?? '',
                 'service_price' => $service?->price ?? 0,
+                'team_member_name' => $teamMember?->name,
+                'team_member' => $teamMember ? [
+                    'id' => $teamMember->id,
+                    'name' => $teamMember->name,
+                    'job_title' => $teamMember->job_title,
+                    'avatar_url' => $teamMember->avatar_url,
+                ] : null,
                 'status' => $appointment->status,
                 'notes' => $appointment->notes,
             ],

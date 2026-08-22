@@ -149,7 +149,7 @@ const submitDelete = () => {
             <section class="card p-5 sm:p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                     <div class="flex items-center gap-4 min-w-0">
-                        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-700 text-white flex items-center justify-center font-black text-xl shrink-0">
+                        <div class="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-black text-xl shrink-0">
                             <img v-if="avatarPreview" :src="avatarPreview" :alt="profileForm.name" class="w-full h-full object-cover" />
                             <span v-else>{{ userInitials }}</span>
                         </div>
@@ -207,7 +207,7 @@ const submitDelete = () => {
                     <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-6">
                         <div class="space-y-3">
                             <label class="block text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">Foto de Perfil</label>
-                            <div class="w-28 h-28 rounded-3xl overflow-hidden bg-gradient-to-tr from-brand-600 to-indigo-700 text-white flex items-center justify-center font-black text-3xl">
+                            <div class="w-28 h-28 rounded-3xl overflow-hidden bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-black text-3xl">
                                 <img v-if="avatarPreview" :src="avatarPreview" :alt="profileForm.name" class="w-full h-full object-cover" />
                                 <span v-else>{{ userInitials }}</span>
                             </div>

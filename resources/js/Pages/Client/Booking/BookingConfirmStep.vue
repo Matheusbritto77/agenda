@@ -24,6 +24,18 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    title: {
+        type: String,
+        default: 'Dados & Confirmação',
+    },
+    confirmButtonLabel: {
+        type: String,
+        default: 'Confirmar Agendamento',
+    },
+    showNotes: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 defineEmits(['prev-step', 'submit-booking']);
@@ -39,7 +51,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
 <template>
     <div class="space-y-6">
         <!-- Summary Box -->
-        <div class="card p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 space-y-4" :style="{ backgroundColor: 'var(--primary-light)' }">
+        <div class="card p-5 sm:p-6 border space-y-4 shadow-sm" :style="{ backgroundColor: 'var(--primary-light)', borderColor: 'var(--primary)' }">
             <div class="flex items-center gap-2 text-xs font-black uppercase tracking-wider" :style="{ color: 'var(--primary)' }">
                 <i class="fa-solid fa-clipboard-list"></i>
                 <span>Resumo da sua Reserva</span>
@@ -47,39 +59,41 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs sm:text-sm">
                 <div v-if="activeProfessional" class="space-y-0.5">
-                    <span class="text-[10px] font-bold uppercase text-slate-400">Profissional</span>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Profissional</span>
                     <p class="font-extrabold" :style="{ color: 'var(--primary)' }">{{ activeProfessional.name }}</p>
                 </div>
 
                 <div class="space-y-0.5">
-                    <span class="text-[10px] font-bold uppercase text-slate-400">Serviço</span>
-                    <p class="font-extrabold text-slate-900 dark:text-white">{{ selectedService?.name }}</p>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Serviço</span>
+                    <p class="font-extrabold" :style="{ color: 'var(--text-heading)' }">{{ selectedService?.name }}</p>
                 </div>
 
                 <div class="space-y-0.5">
-                    <span class="text-[10px] font-bold uppercase text-slate-400">Data</span>
-                    <p class="font-bold text-slate-700 dark:text-slate-200 capitalize">{{ formatDateLong(selectedDate) }}</p>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Data</span>
+                    <p class="font-bold capitalize" :style="{ color: 'var(--text)' }">{{ formatDateLong(selectedDate) }}</p>
                 </div>
 
                 <div class="space-y-0.5">
-                    <span class="text-[10px] font-bold uppercase text-slate-400">Horário</span>
-                    <p class="font-bold text-slate-700 dark:text-slate-200">{{ selectedTime }} ({{ selectedService?.duration_minutes || 30 }} min)</p>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Horário</span>
+                    <p class="font-bold" :style="{ color: 'var(--text)' }">{{ selectedTime }} ({{ selectedService?.duration_minutes || 30 }} min)</p>
                 </div>
 
                 <div class="space-y-0.5 sm:col-span-2">
-                    <span class="text-[10px] font-bold uppercase text-slate-400">Valor Total</span>
-                    <p class="text-base font-black text-emerald-600 dark:text-emerald-400">R$ {{ formatCurrency(selectedService?.price) }}</p>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Valor Total</span>
+                    <p class="text-base font-black" :style="{ color: 'var(--primary)' }">R$ {{ formatCurrency(selectedService?.price) }}</p>
                 </div>
             </div>
         </div>
 
         <!-- Customer Details Form -->
         <form @submit.prevent="$emit('submit-booking', paymentEnabled)" class="card p-5 sm:p-6 shadow-sm space-y-4">
-            <h4 class="text-sm font-extrabold" style="color: var(--text-heading);">Seus Dados para Contato</h4>
+            <h4 class="text-sm font-extrabold" :style="{ color: 'var(--text-heading)' }">
+                {{ title }}
+            </h4>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-group mb-0">
-                    <label class="form-label text-xs" for="form_client_name">Nome Completo *</label>
+                    <label class="form-label text-xs font-bold block mb-1" for="form_client_name" :style="{ color: 'var(--text-heading)' }">Nome Completo *</label>
                     <input
                         type="text"
                         id="form_client_name"
@@ -92,7 +106,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 </div>
 
                 <div class="form-group mb-0">
-                    <label class="form-label text-xs" for="form_client_email">E-mail *</label>
+                    <label class="form-label text-xs font-bold block mb-1" for="form_client_email" :style="{ color: 'var(--text-heading)' }">E-mail *</label>
                     <input
                         type="email"
                         id="form_client_email"
@@ -105,7 +119,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 </div>
 
                 <div class="form-group mb-0 md:col-span-2">
-                    <label class="form-label text-xs" for="form_client_phone">Telefone / WhatsApp *</label>
+                    <label class="form-label text-xs font-bold block mb-1" for="form_client_phone" :style="{ color: 'var(--text-heading)' }">Telefone / WhatsApp *</label>
                     <input
                         type="tel"
                         id="form_client_phone"
@@ -117,8 +131,8 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                     <span v-if="bookingForm.errors?.client_phone" class="text-xs text-rose-500 mt-1 block">{{ bookingForm.errors.client_phone }}</span>
                 </div>
 
-                <div class="form-group mb-0 md:col-span-2">
-                    <label class="form-label text-xs" for="form_notes">Observações (opcional)</label>
+                <div v-if="showNotes" class="form-group mb-0 md:col-span-2">
+                    <label class="form-label text-xs font-bold block mb-1" for="form_notes" :style="{ color: 'var(--text-heading)' }">Observações (opcional)</label>
                     <textarea
                         id="form_notes"
                         v-model="bookingForm.notes"
@@ -130,11 +144,11 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-center justify-between gap-3 pt-4 border-t" style="border-color: var(--border);">
+            <div class="flex items-center justify-between gap-3 pt-4 border-t" :style="{ borderColor: 'var(--border, #e2e8f0)' }">
                 <button
                     type="button"
                     @click="$emit('prev-step')"
-                    class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl"
+                    class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl cursor-pointer"
                 >
                     <i class="fa-solid fa-arrow-left text-xs mr-1"></i>
                     Voltar
@@ -146,7 +160,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                         type="button"
                         @click="$emit('submit-booking', false)"
                         :disabled="bookingForm.processing"
-                        class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl"
+                        class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl cursor-pointer"
                     >
                         Agendar sem Pagar
                     </button>
@@ -154,11 +168,15 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                     <button
                         type="submit"
                         :disabled="bookingForm.processing"
-                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-md"
+                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                        :style="{
+                            backgroundColor: 'var(--primary)',
+                            color: 'var(--btn-text, #ffffff)'
+                        }"
                     >
                         <i v-if="bookingForm.processing" class="fa-solid fa-spinner fa-spin text-xs mr-1"></i>
                         <i v-else :class="['fa-solid text-xs mr-1', paymentEnabled ? 'fa-wallet' : 'fa-calendar-check']"></i>
-                        <span>{{ bookingForm.processing ? 'Processando...' : (paymentEnabled ? 'Pagar e Confirmar' : 'Confirmar Agendamento') }}</span>
+                        <span>{{ bookingForm.processing ? 'Processando...' : (paymentEnabled ? 'Pagar e Confirmar' : confirmButtonLabel) }}</span>
                     </button>
                 </div>
             </div>

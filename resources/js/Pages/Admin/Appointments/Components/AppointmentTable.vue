@@ -68,6 +68,7 @@ const statusLabel = (status) => {
                     <tr>
                         <th>Cliente</th>
                         <th>Serviço</th>
+                        <th>Profissional</th>
                         <th>Data & Horário</th>
                         <th>Valor</th>
                         <th>Status</th>
@@ -88,6 +89,26 @@ const statusLabel = (status) => {
                         <td>
                             <div class="font-medium text-xs sm:text-sm">{{ app.service?.name || 'Serviço' }}</div>
                             <div class="text-[11px] text-slate-400">{{ app.service?.duration_minutes || 30 }} min</div>
+                        </td>
+                        <td>
+                            <div v-if="app.team_member || app.teamMember || app.team_member_name" class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-black shrink-0 overflow-hidden border border-indigo-500/20">
+                                    <img v-if="(app.team_member || app.teamMember)?.avatar_url" :src="(app.team_member || app.teamMember).avatar_url" class="w-full h-full object-cover" />
+                                    <span v-else>{{ (app.team_member_name || (app.team_member || app.teamMember)?.name || 'P').substring(0, 1).toUpperCase() }}</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-bold text-xs truncate" style="color: var(--text-heading);">
+                                        {{ app.team_member_name || (app.team_member || app.teamMember)?.name }}
+                                    </p>
+                                    <p v-if="(app.team_member || app.teamMember)?.job_title" class="text-[10px] opacity-60 truncate">
+                                        {{ (app.team_member || app.teamMember).job_title }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div v-else class="text-xs opacity-50 flex items-center gap-1.5 italic">
+                                <i class="fa-solid fa-user-slash text-[10px]"></i>
+                                <span>Geral</span>
+                            </div>
                         </td>
                         <td>
                             <div class="font-medium text-xs sm:text-sm flex items-center gap-1.5">

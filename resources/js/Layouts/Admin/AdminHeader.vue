@@ -63,18 +63,18 @@ const todayTime = computed(() => {
                 v-if="hasPermission('appointments.create')"
                 type="button"
                 @click="$emit('open-booking-modal')"
-                class="inline-flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-brand-600 to-indigo-600 text-white hover:from-brand-500 hover:to-indigo-500 transition-all shadow-md shadow-brand-600/25 cursor-pointer"
+                class="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-md shadow-indigo-600/25 hover:shadow-indigo-600/40 cursor-pointer"
             >
                 <i class="fa-solid fa-plus text-xs"></i>
                 <span class="hidden sm:inline">+ Agendamento Manual</span>
                 <span class="sm:hidden">+ Manual</span>
             </button>
 
-            <div class="h-8 w-px opacity-20 bg-slate-500 hidden md:block"></div>
+            <div class="h-8 w-px opacity-20 bg-slate-400 dark:bg-slate-700 hidden md:block"></div>
 
             <div class="text-right hidden md:block">
-                <span class="text-xs opacity-60 block">{{ todayDate }}</span>
-                <span class="text-xs font-semibold"><i class="fa-regular fa-clock mr-1 text-brand-500"></i>{{ todayTime }}</span>
+                <span class="text-xs opacity-60 block" style="color: var(--text);">{{ todayDate }}</span>
+                <span class="text-xs font-semibold" style="color: var(--text);"><i class="fa-regular fa-clock mr-1 text-indigo-600 dark:text-indigo-400"></i>{{ todayTime }}</span>
             </div>
         </div>
     </header>

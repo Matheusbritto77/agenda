@@ -71,6 +71,9 @@ const openDetailModal = (appointment) => {
     const endTime = (appointment.end_time || '00:00').substring(0, 5);
     const dateDisplay = appointment.appointment_date ? new Date(appointment.appointment_date + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
 
+    const teamMemberObj = appointment.team_member || appointment.teamMember || null;
+    const teamMemberName = teamMemberObj?.name || appointment.team_member_name || (appointment.team_member_id ? 'Profissional da Equipe' : null);
+
     selectedAppointment.value = {
         id: appointment.id,
         customer_name: appointment.customer_name,
@@ -78,6 +81,10 @@ const openDetailModal = (appointment) => {
         customer_phone: appointment.customer_phone,
         service_name: appointment.service?.name ?? 'Serviço',
         service_price: servicePrice,
+        team_member: teamMemberObj,
+        team_member_name: teamMemberName,
+        team_member_job: teamMemberObj?.job_title,
+        team_member_avatar: teamMemberObj?.avatar_url,
         date: dateDisplay,
         time: `${startTime} às ${endTime}`,
         duration: duration + ' min',

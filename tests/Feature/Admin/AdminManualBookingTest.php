@@ -27,9 +27,11 @@ class AdminManualBookingTest extends TestCase
             'is_active' => true,
         ]);
 
+        $targetDate = Carbon::now()->addDays(2)->format('Y-m-d');
+
         BusinessHour::create([
             'user_id' => $admin->id,
-            'day_of_week' => Carbon::parse('2026-08-20')->dayOfWeek,
+            'day_of_week' => Carbon::parse($targetDate)->dayOfWeek,
             'opens_at' => '08:00:00',
             'closes_at' => '18:00:00',
             'label' => 'Expediente do Admin',
@@ -44,7 +46,7 @@ class AdminManualBookingTest extends TestCase
                 'client_name' => 'Cliente Manual',
                 'client_email' => 'cliente.manual@example.com',
                 'client_phone' => '11999990000',
-                'appointment_date' => '2026-08-20',
+                'appointment_date' => $targetDate,
                 'appointment_time' => '14:45',
                 'status' => 'confirmed',
                 'notes' => 'Criado pelo painel administrativo',
@@ -60,7 +62,7 @@ class AdminManualBookingTest extends TestCase
             'client_name' => 'Cliente Manual',
             'client_email' => 'cliente.manual@example.com',
             'client_phone' => '11999990000',
-            'appointment_date' => '2026-08-20',
+            'appointment_date' => $targetDate,
             'appointment_time' => '14:45',
             'status' => 'confirmed',
             'notes' => 'Criado pelo painel administrativo',

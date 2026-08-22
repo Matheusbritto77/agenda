@@ -45,7 +45,7 @@ const handleBackdropClick = (event) => {
             <div class="liquid-glass-card w-full max-w-xl p-6 sm:p-7 space-y-6 relative" @click.stop>
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-brand-600/30">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-600/30">
                             <i class="fa-solid fa-calendar-check"></i>
                         </div>
                         <div>
@@ -75,15 +75,39 @@ const handleBackdropClick = (event) => {
                     </div>
 
                     <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Profissional Responsável</span>
+                        <div v-if="appointment.team_member_name" class="flex items-center gap-2.5 pt-0.5">
+                            <div class="w-8 h-8 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-black shrink-0 overflow-hidden border border-indigo-500/20">
+                                <img v-if="appointment.team_member_avatar" :src="appointment.team_member_avatar" class="w-full h-full object-cover" />
+                                <span v-else>{{ appointment.team_member_name.substring(0, 1).toUpperCase() }}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-bold text-slate-900 dark:text-white truncate">{{ appointment.team_member_name }}</p>
+                                <p v-if="appointment.team_member_job" class="text-xs text-slate-400 truncate">{{ appointment.team_member_job }}</p>
+                            </div>
+                        </div>
+                        <div v-else class="text-xs text-slate-400 italic pt-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-slash text-xs"></i>
+                            <span>Atendimento geral / Sem profissional específico</span>
+                        </div>
+                    </div>
+
+                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
                         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Serviço</span>
                         <p class="font-bold text-indigo-600 dark:text-indigo-400">{{ appointment.service_name }}</p>
                         <p class="text-xs text-slate-400">Duração: {{ appointment.duration }}</p>
                         <p class="font-black text-sm text-slate-900 dark:text-white pt-1">R$ {{ appointment.service_price }}</p>
                     </div>
 
-                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1 sm:col-span-2">
+                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1">
                         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Horário Marcado</span>
-                        <p class="font-bold text-slate-900 dark:text-white">{{ appointment.date }} &bull; {{ appointment.time }}</p>
+                        <p class="font-bold text-slate-900 dark:text-white">{{ appointment.date }}</p>
+                        <p class="text-xs text-slate-400">{{ appointment.time }}</p>
+                        <div class="pt-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider" :class="appointment.status === 'confirmed' ? 'bg-emerald-500/15 text-emerald-600' : (appointment.status === 'completed' ? 'bg-blue-500/15 text-blue-600' : (appointment.status === 'cancelled' ? 'bg-rose-500/15 text-rose-600' : 'bg-amber-500/15 text-amber-600'))">
+                                {{ appointment.status === 'confirmed' ? 'Confirmado' : (appointment.status === 'completed' ? 'Concluído' : (appointment.status === 'cancelled' ? 'Cancelado' : 'Pendente')) }}
+                            </span>
+                        </div>
                     </div>
 
                     <div v-if="appointment.notes" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1 sm:col-span-2">

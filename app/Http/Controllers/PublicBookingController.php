@@ -233,10 +233,11 @@ class PublicBookingController extends Controller
             'hours_summary' => array_values($hoursSummary),
             'services_count' => $services->count(),
             'services_preview' => $servicesForProfile,
-            'professionals_count' => $teamMembers->count(),
+            'border_radius' => $settings['border_radius'] ?? 'rounded-2xl',
             'contact' => [
                 'whatsapp_number' => $settings['whatsapp_number'] ?? null,
                 'instagram_handle' => $settings['instagram_handle'] ?? null,
+                'company_address' => $settings['company_address'] ?? null,
             ],
         ];
     }

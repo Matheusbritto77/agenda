@@ -6,7 +6,8 @@ import BookingStepperNav from './Booking/BookingStepperNav.vue';
 import BookingCompanyProfileStep from './Booking/BookingCompanyProfileStep.vue';
 import BookingProfessionalStep from './Booking/BookingProfessionalStep.vue';
 import BookingServiceStep from './Booking/BookingServiceStep.vue';
-import BookingDateTimeStep from './Booking/BookingDateTimeStep.vue';
+import BookingDateStep from './Booking/BookingDateStep.vue';
+import BookingTimeStep from './Booking/BookingTimeStep.vue';
 import BookingConfirmStep from './Booking/BookingConfirmStep.vue';
 import BookingPixModal from './Booking/BookingPixModal.vue';
 
@@ -87,8 +88,9 @@ const stepType = {
     company: 0,
     professional: 1,
     service: 2,
-    datetime: 3,
-    confirm: 4,
+    date: 3,
+    time: 4,
+    confirm: 5,
 };
 
 const firstBookingStep = computed(() => showProfessionalStep.value ? stepType.professional : stepType.service);
@@ -215,7 +217,7 @@ const selectService = (svc) => {
     selectedServiceId.value = svc.id;
     selectedService.value = svc;
     bookingForm.service_id = svc.id;
-    currentStep.value = stepType.datetime;
+    currentStep.value = stepType.date;
 };
 
 const selectDate = (day) => {
@@ -223,6 +225,7 @@ const selectDate = (day) => {
     bookingForm.appointment_date = day.dateStr;
     selectedTime.value = '';
     fetchSlots(day.dateStr);
+    currentStep.value = stepType.time;
 };
 
 const selectTime = (time) => {
@@ -232,8 +235,9 @@ const selectTime = (time) => {
 };
 
 const goToStep = (step) => {
-    if (step === stepType.service && showProfessionalStep.value && !chosenProfessionalId.value) return;
-    if (step === stepType.datetime && !selectedServiceId.value) return;
+    if (step === stepType.service && showProfessionalStep.value && chosenProfessionalId.value === undefined) return;
+    if (step === stepType.date && !selectedServiceId.value) return;
+    if (step === stepType.time && (!selectedServiceId.value || !selectedDate.value)) return;
     if (step === stepType.confirm && (!selectedDate.value || !selectedTime.value)) return;
     currentStep.value = step;
 };
@@ -287,7 +291,7 @@ const submitBooking = (withPayment) => {
                 selectedTime.value = '';
                 bookingForm.appointment_time = '';
                 await fetchSlots(selectedDate.value);
-                currentStep.value = stepType.datetime;
+                currentStep.value = stepType.date;
             }
         },
         onError: (errors) => {
@@ -420,6 +424,9 @@ onMounted(() => {
                     v-if="currentStep === stepType.professional && showProfessionalStep"
                     :professionals="filteredProfessionals"
                     :chosen-professional-id="chosenProfessionalId"
+                    :title="branding?.settings?.booking_step_professional_title || 'Escolha o Profissional'"
+                    :subtitle="branding?.settings?.booking_step_professional_subtitle || 'Selecione quem irá lhe atender'"
+                    :allow-any="branding?.settings?.booking_step_professional_allow_any ?? true"
                     v-model:searchQuery="professionalSearchQuery"
                     @select-professional="selectProfessional"
                 />
@@ -429,27 +436,43 @@ onMounted(() => {
                     v-if="currentStep === stepType.service"
                     :services="filteredServices"
                     :selected-service-id="selectedServiceId"
+                    :title="branding?.settings?.booking_step_service_title || 'Escolha o Serviço'"
+                    :subtitle="branding?.settings?.booking_step_service_subtitle || 'Selecione os procedimentos desejados'"
+                    :search-enabled="branding?.settings?.booking_step_service_search_enabled ?? true"
                     v-model:searchQuery="serviceSearchQuery"
                     @select-service="selectService"
                 />
 
-                <!-- Step 3: DateTime -->
-                <BookingDateTimeStep
-                    v-if="currentStep === stepType.datetime"
+                <!-- Step 3: Date -->
+                <BookingDateStep
+                    v-if="currentStep === stepType.date"
                     :month-title="monthTitle"
                     :calendar-days="calendarDays"
+                    :selected-date="selectedDate"
+                    :can-prev-month="canPrevMonth"
+                    :title="branding?.settings?.booking_step_date_title || branding?.settings?.booking_step_datetime_title || 'Escolha a Data'"
+                    :subtitle="branding?.settings?.booking_step_date_subtitle || 'Selecione o melhor dia para seu atendimento'"
+                    @prev-month="prevMonth"
+                    @next-month="nextMonth"
+                    @select-date="selectDate"
+                    @prev-step="currentStep = stepType.service"
+                />
+
+                <!-- Step 4: Time -->
+                <BookingTimeStep
+                    v-if="currentStep === stepType.time"
                     :selected-date="selectedDate"
                     :selected-time="selectedTime"
                     :available-slots="availableSlots"
                     :slots-loading="slotsLoading"
-                    :can-prev-month="canPrevMonth"
-                    @prev-month="prevMonth"
-                    @next-month="nextMonth"
-                    @select-date="selectDate"
+                    :title="branding?.settings?.booking_step_time_title || 'Escolha o Horário'"
+                    :subtitle="branding?.settings?.booking_step_time_subtitle || 'Selecione o horário desejado para seu atendimento'"
                     @select-time="selectTime"
+                    @change-date="currentStep = stepType.date"
+                    @prev-step="currentStep = stepType.date"
                 />
 
-                <!-- Step 4: Confirm -->
+                <!-- Step 5: Confirm -->
                 <BookingConfirmStep
                     v-if="currentStep === stepType.confirm"
                     :active-professional="props.teamMembers.find(m => m.id === chosenProfessionalId) || props.selectedProfessional"
@@ -458,7 +481,10 @@ onMounted(() => {
                     :selected-time="selectedTime"
                     :booking-form="bookingForm"
                     :payment-enabled="paymentEnabled"
-                    @prev-step="currentStep = stepType.datetime"
+                    :title="branding?.settings?.booking_step_confirm_title || 'Dados & Confirmação'"
+                    :confirm-button-label="branding?.settings?.booking_step_confirm_button_label || 'Confirmar Agendamento'"
+                    :show-notes="branding?.settings?.booking_step_confirm_show_notes ?? true"
+                    @prev-step="currentStep = stepType.time"
                     @submit-booking="submitBooking"
                 />
             </div>
@@ -479,55 +505,87 @@ onMounted(() => {
         <Teleport to="body">
             <div
                 v-if="showSuccessModal && confirmedBooking"
-                class="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
+                class="fixed inset-0 z-[99999] w-screen h-screen flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
                 @click.self="closeSuccessModal"
             >
-                <div class="liquid-glass-card w-full max-w-md p-6 sm:p-7 space-y-5 text-center relative" @click.stop>
+                <div
+                    class="w-full max-w-md p-6 sm:p-7 space-y-5 text-center relative border shadow-2xl transition-all"
+                    :style="{
+                        backgroundColor: 'var(--surface, #ffffff)',
+                        borderColor: 'var(--border, #e2e8f0)',
+                        borderRadius: 'var(--radius, 1rem)',
+                        color: 'var(--text, #0f172a)'
+                    }"
+                    @click.stop
+                >
                     <button
                         type="button"
                         @click="closeSuccessModal"
-                        class="absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                        class="absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center opacity-60 hover:opacity-100 transition-all cursor-pointer"
+                        :style="{ color: 'var(--text, #0f172a)' }"
                         aria-label="Fechar"
                     >
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
 
-                    <div class="mx-auto w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-2xl">
+                    <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm" :style="{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }">
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
 
                     <div class="space-y-2">
-                        <h2 class="text-xl font-black tracking-tight" style="color: var(--text-heading);">
-                            Agendamento confirmado
+                        <h2 class="text-xl font-black tracking-tight" :style="{ color: 'var(--text-heading, #0f172a)' }">
+                            {{ branding?.settings?.booking_step_success_title || 'Agendamento confirmado' }}
                         </h2>
-                        <p class="text-sm text-slate-500 leading-relaxed">
-                            Tudo certo, {{ confirmedBooking.customerName }}. Seu horário foi reservado com sucesso.
+                        <p class="text-sm opacity-75 leading-relaxed" :style="{ color: 'var(--text-muted, #64748b)' }">
+                            {{ branding?.settings?.booking_step_success_message || ('Tudo certo, ' + confirmedBooking.customerName + '. Seu horário foi reservado com sucesso.') }}
                         </p>
                     </div>
 
-                    <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-left space-y-2">
+                    <div class="rounded-2xl border p-4 text-left space-y-2" :style="{ backgroundColor: 'var(--primary-light)', borderColor: 'var(--primary)' }">
                         <div class="flex items-center justify-between gap-3">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Serviço</span>
-                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right">{{ confirmedBooking.serviceName }}</span>
+                            <span class="text-xs font-bold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text-muted)' }">Serviço</span>
+                            <span class="text-sm font-extrabold text-right" :style="{ color: 'var(--text-heading)' }">{{ confirmedBooking.serviceName }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-3">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Data</span>
-                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right capitalize">{{ formatConfirmedDate(confirmedBooking.date) }}</span>
+                            <span class="text-xs font-bold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text-muted)' }">Data</span>
+                            <span class="text-sm font-extrabold text-right capitalize" :style="{ color: 'var(--text-heading)' }">{{ formatConfirmedDate(confirmedBooking.date) }}</span>
                         </div>
                         <div class="flex items-center justify-between gap-3">
-                            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Horário</span>
-                            <span class="text-sm font-extrabold text-slate-900 dark:text-white text-right">{{ confirmedBooking.time }}</span>
+                            <span class="text-xs font-bold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text-muted)' }">Horário</span>
+                            <span class="text-sm font-extrabold text-right" :style="{ color: 'var(--text-heading)' }">{{ confirmedBooking.time }}</span>
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        @click="closeSuccessModal"
-                        class="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md cursor-pointer"
-                    >
-                        <i class="fa-solid fa-check"></i>
-                        <span>Entendi</span>
-                    </button>
+                    <div class="space-y-2.5 pt-2">
+                        <a
+                            v-if="branding?.settings?.whatsapp_number"
+                            :href="'https://wa.me/' + branding.settings.whatsapp_number.replace(/\\D/g, '') + '?text=' + encodeURIComponent('Olá! Acabei de realizar o agendamento de ' + confirmedBooking.serviceName + ' para ' + formatConfirmedDate(confirmedBooking.date) + ' às ' + confirmedBooking.time + '.')"
+                            target="_blank"
+                            class="w-full inline-flex items-center justify-center gap-2 py-3 px-4 font-bold text-sm transition-all shadow-md cursor-pointer hover:scale-102"
+                            :style="{
+                                backgroundColor: 'var(--primary)',
+                                color: 'var(--btn-text, #ffffff)',
+                                borderRadius: 'var(--radius-sm, 0.75rem)'
+                            }"
+                        >
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                            <span>{{ branding?.settings?.booking_step_success_whatsapp_label || 'Conversar no WhatsApp' }}</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            @click="closeSuccessModal"
+                            class="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 font-bold text-xs border transition-all cursor-pointer hover:opacity-80"
+                            :style="{
+                                backgroundColor: 'transparent',
+                                borderColor: 'var(--border, #e2e8f0)',
+                                color: 'var(--text, #0f172a)',
+                                borderRadius: 'var(--radius-sm, 0.75rem)'
+                            }"
+                        >
+                            <span>Fechar</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </Teleport>

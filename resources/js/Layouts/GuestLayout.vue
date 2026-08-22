@@ -39,23 +39,23 @@ onMounted(() => {
 
 <template>
     <div
-        class="min-h-screen flex flex-col justify-between font-sans text-slate-900 dark:text-slate-100 antialiased bg-slate-50 dark:bg-slate-950 relative overflow-x-hidden selection:bg-brand-500 selection:text-white transition-colors duration-300"
+        class="min-h-screen flex flex-col justify-between font-sans text-slate-900 dark:text-slate-100 antialiased bg-slate-50 dark:bg-slate-950 relative overflow-x-hidden selection:bg-indigo-500 selection:text-white transition-colors duration-300"
     >
         <!-- Background Ambient Dynamic Glow Meshes -->
         <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-            <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[36rem] sm:w-[52rem] h-[28rem] bg-gradient-to-tr from-indigo-500/25 via-brand-600/20 to-cyan-400/20 rounded-full blur-3xl opacity-80 dark:opacity-60 transition-opacity"></div>
+            <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[36rem] sm:w-[52rem] h-[28rem] bg-gradient-to-tr from-indigo-500/25 via-indigo-600/20 to-cyan-400/20 rounded-full blur-3xl opacity-80 dark:opacity-60 transition-opacity"></div>
             <div class="absolute -bottom-28 -right-28 w-96 h-96 bg-cyan-500/20 dark:bg-cyan-500/15 rounded-full blur-3xl opacity-70"></div>
-            <div class="absolute -bottom-28 -left-28 w-96 h-96 bg-brand-600/20 dark:bg-brand-600/15 rounded-full blur-3xl opacity-70"></div>
+            <div class="absolute -bottom-28 -left-28 w-96 h-96 bg-indigo-600/20 dark:bg-indigo-600/15 rounded-full blur-3xl opacity-70"></div>
         </div>
 
         <!-- Top Header Navigation -->
         <header class="w-full max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 flex items-center justify-between z-20 shrink-0">
             <Link href="/" class="flex items-center gap-2.5 group transition-transform hover:scale-105">
-                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-accent-500 flex items-center justify-center text-white shadow-lg shadow-brand-500/25">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-check"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
                 </div>
                 <div>
-                    <span class="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-indigo-500 via-brand-600 to-cyan-500 bg-clip-text text-transparent">Agendae</span>
+                    <span class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">Agendae</span>
                 </div>
             </Link>
 
