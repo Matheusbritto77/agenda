@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\StorageHelper;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 class BrandingSetting extends Model
 {
@@ -35,28 +35,13 @@ class BrandingSetting extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        if (empty($this->logo_path)) {
-            return null;
-        }
-
-        if (filter_var($this->logo_path, FILTER_VALIDATE_URL)) {
-            return $this->logo_path;
-        }
-
-        return '/storage/' . ltrim($this->logo_path, '/');
+        return StorageHelper::url($this->logo_path);
     }
 
     public function getBannerUrlAttribute(): ?string
     {
         $bannerPath = $this->settings['banner_path'] ?? null;
-        if (empty($bannerPath)) {
-            return null;
-        }
 
-        if (filter_var($bannerPath, FILTER_VALIDATE_URL)) {
-            return $bannerPath;
-        }
-
-        return '/storage/' . ltrim($bannerPath, '/');
+        return StorageHelper::url($bannerPath);
     }
 }

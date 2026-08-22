@@ -46,15 +46,7 @@ class Service extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (empty($this->image_path)) {
-            return null;
-        }
-
-        if (filter_var($this->image_path, FILTER_VALIDATE_URL)) {
-            return $this->image_path;
-        }
-
-        return '/storage/' . ltrim($this->image_path, '/');
+        return \App\Support\StorageHelper::url($this->image_path);
     }
 
     public function scopeForTenant(Builder $query, int $tenantId): Builder

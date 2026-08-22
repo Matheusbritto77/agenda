@@ -57,8 +57,8 @@ class ProfileController extends Controller
         $avatarUrl = $user->avatar_url;
 
         if ($request->hasFile('avatar')) {
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $avatarUrl = Storage::url($path);
+            \App\Support\StorageHelper::delete($user->avatar_url);
+            $avatarUrl = $request->file('avatar')->store('avatars', 'public');
         } elseif (array_key_exists('avatar_url', $validated)) {
             $avatarUrl = $validated['avatar_url'] ?: null;
         }

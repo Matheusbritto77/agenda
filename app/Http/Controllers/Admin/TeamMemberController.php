@@ -189,8 +189,7 @@ class TeamMemberController extends Controller
             $avatarUrl = $validated['avatar_url'] ?? null;
 
             if ($request->hasFile('avatar')) {
-                $path = $request->file('avatar')->store('avatars', 'public');
-                $avatarUrl = Storage::url($path);
+                $avatarUrl = $request->file('avatar')->store('team/avatars', 'public');
             }
 
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;
@@ -275,8 +274,8 @@ class TeamMemberController extends Controller
             }
 
             if ($request->hasFile('avatar')) {
-                $path = $request->file('avatar')->store('avatars', 'public');
-                $avatarUrl = Storage::url($path);
+                \App\Support\StorageHelper::delete($teamMember->avatar_url);
+                $avatarUrl = $request->file('avatar')->store('team/avatars', 'public');
             }
 
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;
@@ -347,6 +346,7 @@ class TeamMemberController extends Controller
                         ->delete();
                 }
 
+                \App\Support\StorageHelper::delete($teamMember->avatar_url);
                 $teamMember->delete();
             });
 

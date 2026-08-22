@@ -76,23 +76,7 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute(?string $value): ?string
     {
-        if (empty($value)) {
-            return null;
-        }
-
-        if (filter_var($value, FILTER_VALIDATE_URL)) {
-            return $value;
-        }
-
-        if (str_starts_with($value, '/storage/')) {
-            return $value;
-        }
-
-        if (str_starts_with($value, 'storage/')) {
-            return '/' . $value;
-        }
-
-        return '/storage/' . ltrim($value, '/');
+        return \App\Support\StorageHelper::url($value);
     }
 
     public function hasPermission(string $permission): bool

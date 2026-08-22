@@ -138,29 +138,19 @@ class BrandingController extends Controller
 
         // Handle Logo file
         if ($request->hasFile('logo_file')) {
-            if ($branding->logo_path && ! filter_var($branding->logo_path, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($branding->logo_path);
-            }
-            $updateData['logo_path'] = $request->file('logo_file')->store('branding', 'public');
+            \App\Support\StorageHelper::delete($branding->logo_path);
+            $updateData['logo_path'] = $request->file('logo_file')->store('branding/logos', 'public');
         } elseif ($request->boolean('delete_logo') === true) {
-            if ($branding->logo_path && ! filter_var($branding->logo_path, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($branding->logo_path);
-            }
+            \App\Support\StorageHelper::delete($branding->logo_path);
             $updateData['logo_path'] = null;
         }
 
         // Handle Banner file
         if ($request->hasFile('banner_file')) {
-            $oldBanner = $currentSettings['banner_path'] ?? null;
-            if ($oldBanner && ! filter_var($oldBanner, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($oldBanner);
-            }
+            \App\Support\StorageHelper::delete($currentSettings['banner_path'] ?? null);
             $settingsData['banner_path'] = $request->file('banner_file')->store('branding/banners', 'public');
         } elseif ($request->boolean('delete_banner') === true) {
-            $oldBanner = $currentSettings['banner_path'] ?? null;
-            if ($oldBanner && ! filter_var($oldBanner, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($oldBanner);
-            }
+            \App\Support\StorageHelper::delete($currentSettings['banner_path'] ?? null);
             $settingsData['banner_path'] = null;
         }
 

@@ -167,6 +167,7 @@ class ServiceController extends Controller
             $companyId = $request->user()?->parent_id ?? $request->user()?->id;
             abort_unless((int) $companyId === (int) $service->user_id, 404);
 
+            $this->deleteStoredImageIfNeeded($service);
             $deletedService = $service->toArray();
             $service->delete();
 
@@ -246,8 +247,8 @@ class ServiceController extends Controller
 
     private function deleteStoredImageIfNeeded(?Service $service = null): void
     {
-        if ($service && $service->image_path && ! filter_var($service->image_path, FILTER_VALIDATE_URL)) {
-            Storage::disk('public')->delete($service->image_path);
+        if ($service && $service->image_path) {
+            \App\Support\StorageHelper::delete($service->image_path);
         }
     }
 
