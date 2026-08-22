@@ -49,4 +49,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (\Illuminate\Http\Exceptions\PostTooLargeException $e, Request $request) {
+            if ($request->hasHeader('X-Inertia') || $request->expectsJson() || $request->ajax()) {
+                return back()->withErrors([
+                    'logo_file' => 'O arquivo enviado é maior do que o permitido pelo servidor. Escolha um arquivo de até 10 MB.',
+                    'banner_file' => 'O arquivo enviado é maior do que o permitido pelo servidor. Escolha um arquivo de até 10 MB.',
+                    'image_file' => 'O arquivo enviado é maior do que o permitido pelo servidor. Escolha um arquivo de até 10 MB.',
+                    'avatar' => 'O arquivo enviado é maior do que o permitido pelo servidor. Escolha um arquivo de até 10 MB.',
+                    'file' => 'O arquivo enviado excede o limite máximo permitido pelo servidor.',
+                ])->with('warning', 'O arquivo selecionado excede o limite do servidor. O limite máximo é 10 MB.');
+            }
+
+            return back()->with('warning', 'O arquivo selecionado excede o limite do servidor. O limite máximo é 10 MB.');
+        });
     })->create();

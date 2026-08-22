@@ -20,13 +20,32 @@ const emit = defineEmits(['logo-change', 'remove-logo', 'banner-change', 'remove
 
 const logoFileInput = ref(null);
 const bannerFileInput = ref(null);
+const logoError = ref('');
+const bannerError = ref('');
+const maxSizeBytes = 10 * 1024 * 1024; // 10MB
 
 const onLogoSelected = (e) => {
-    emit('logo-change', e.target.files[0]);
+    const file = e.target.files?.[0];
+    logoError.value = '';
+    if (!file) return;
+    if (file.size > maxSizeBytes) {
+        logoError.value = 'O arquivo do logotipo deve ter no máximo 10 MB.';
+        e.target.value = '';
+        return;
+    }
+    emit('logo-change', file);
 };
 
 const onBannerSelected = (e) => {
-    emit('banner-change', e.target.files[0]);
+    const file = e.target.files?.[0];
+    bannerError.value = '';
+    if (!file) return;
+    if (file.size > maxSizeBytes) {
+        bannerError.value = 'O arquivo de imagem de capa deve ter no máximo 10 MB.';
+        e.target.value = '';
+        return;
+    }
+    emit('banner-change', file);
 };
 </script>
 
@@ -97,6 +116,8 @@ const onBannerSelected = (e) => {
                     <p class="text-[10px] text-slate-400 leading-tight">
                         PNG, JPG ou WEBP (Máx: 10MB). Quando você define um logotipo, a marca "Agendae" é ocultada automaticamente.
                     </p>
+                    <p v-if="logoError" class="text-xs text-rose-500 font-bold mt-1">{{ logoError }}</p>
+                    <p v-if="form.errors?.logo_file" class="text-xs text-rose-500 font-bold mt-1">{{ form.errors.logo_file }}</p>
                 </div>
             </div>
         </div>
@@ -135,6 +156,8 @@ const onBannerSelected = (e) => {
                     </button>
                     <span class="text-[10px] text-slate-400">Recomendado: 1200x400px (Máx: 10MB).</span>
                 </div>
+                <p v-if="bannerError" class="text-xs text-rose-500 font-bold mt-1">{{ bannerError }}</p>
+                <p v-if="form.errors?.banner_file" class="text-xs text-rose-500 font-bold mt-1">{{ form.errors.banner_file }}</p>
             </div>
         </div>
     </div>
