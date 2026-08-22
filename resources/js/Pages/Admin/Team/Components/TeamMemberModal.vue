@@ -177,6 +177,7 @@ const isServiceSelected = (svcId) => {
                                     <i class="fa-solid fa-upload mr-1 text-[10px]"></i>
                                     Foto de Perfil
                                 </button>
+                                <p class="text-[10px] text-slate-400">PNG, JPG ou WEBP até 10MB</p>
                             </div>
                         </div>
                     </div>

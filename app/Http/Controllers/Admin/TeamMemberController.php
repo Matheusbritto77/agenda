@@ -160,7 +160,7 @@ class TeamMemberController extends Controller
                 ],
                 'phone' => ['nullable', 'string', 'max:50'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
-                'avatar' => ['nullable', 'image', 'max:4096'],
+                'avatar' => ['nullable', 'image', 'max:10240'],
                 'subdomain' => [
                     'nullable',
                     'string',
@@ -257,7 +257,7 @@ class TeamMemberController extends Controller
                 'email' => ['nullable', 'email', 'max:255'],
                 'phone' => ['nullable', 'string', 'max:50'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
-                'avatar' => ['nullable', 'image', 'max:4096'],
+                'avatar' => ['nullable', 'image', 'max:10240'],
                 'subdomain' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/i'],
                 'custom_domain' => ['nullable', 'string', 'max:255'],
                 'bio' => ['nullable', 'string', 'max:1000'],

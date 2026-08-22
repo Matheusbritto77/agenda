@@ -17,7 +17,7 @@ const showDeleteModal = ref(false);
 const verificationSent = ref(false);
 const avatarPreview = ref(props.accountContext.avatar_url || props.user.avatar_url || null);
 const avatarClientError = ref('');
-const maxAvatarSizeBytes = 1.5 * 1024 * 1024;
+const maxAvatarSizeBytes = 10 * 1024 * 1024;
 
 const profileForm = useForm({
     name: props.user.name || '',
@@ -60,7 +60,7 @@ const onAvatarChange = (event) => {
 
     if (file && file.size > maxAvatarSizeBytes) {
         profileForm.avatar = null;
-        avatarClientError.value = 'Escolha uma imagem de até 1,5 MB.';
+        avatarClientError.value = 'Escolha uma imagem de até 10 MB.';
         event.target.value = '';
         return;
     }
@@ -219,8 +219,8 @@ onUnmounted(() => {
                                 <img v-if="avatarPreview" :src="avatarPreview" :alt="profileForm.name" class="w-full h-full object-cover" />
                                 <span v-else>{{ userInitials }}</span>
                             </div>
-                            <input type="file" accept="image/*" @change="onAvatarChange" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-600 file:text-white file:font-bold file:text-xs" />
-                            <p class="text-[11px] text-slate-400">PNG/JPG até 1,5 MB.</p>
+                            <input type="file" accept="image/*" @change="onAvatarChange" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-indigo-600 file:text-white file:font-bold file:text-xs cursor-pointer" />
+                            <p class="text-[11px] text-slate-400">PNG, JPG ou WEBP até 10 MB.</p>
                             <div v-if="avatarClientError" class="text-rose-500 text-xs font-semibold">{{ avatarClientError }}</div>
                             <div v-if="profileForm.errors.avatar" class="text-rose-500 text-xs font-semibold">{{ profileForm.errors.avatar }}</div>
                         </div>

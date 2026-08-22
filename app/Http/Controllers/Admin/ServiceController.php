@@ -198,7 +198,7 @@ class ServiceController extends Controller
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
             'slot_duration_minutes' => ['nullable', 'integer', Rule::in([15, 30, 45, 60, 90, 120])],
             'image_url' => ['nullable', 'url', 'max:2048'],
-            'image_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
+            'image_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,webp,jpg', 'max:10240'],
         ])->after(function ($validator) use ($request): void {
             if ($request->filled('image_url') && $request->hasFile('image_file')) {
                 $validator->errors()->add('image_file', 'Envie apenas uma imagem por vez: arquivo ou URL.');

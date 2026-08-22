@@ -54,6 +54,9 @@ class BrandingController extends Controller
             'company_profile_show_hours' => ['nullable', 'boolean'],
             'company_profile_show_services' => ['nullable', 'boolean'],
             'company_profile_show_professionals' => ['nullable', 'boolean'],
+            'company_profile_show_reviews' => ['nullable', 'boolean'],
+            'company_profile_reviews_title' => ['nullable', 'string', 'max:60'],
+            'company_profile_reviews_subtitle' => ['nullable', 'string', 'max:120'],
             'whatsapp_number' => ['nullable', 'string', 'max:30'],
             'whatsapp_button_enabled' => ['nullable', 'boolean'],
             'instagram_handle' => ['nullable', 'string', 'max:100'],
@@ -75,10 +78,10 @@ class BrandingController extends Controller
             'booking_step_success_title' => ['nullable', 'string', 'max:100'],
             'booking_step_success_message' => ['nullable', 'string', 'max:500'],
             'booking_step_success_whatsapp_label' => ['nullable', 'string', 'max:60'],
-            // Files
-            'logo_file' => ['nullable', 'image', 'max:2048'],
+            // Files (allowed up to 10MB)
+            'logo_file' => ['nullable', 'image', 'max:10240'],
             'delete_logo' => ['nullable', 'boolean'],
-            'banner_file' => ['nullable', 'image', 'max:4096'],
+            'banner_file' => ['nullable', 'image', 'max:10240'],
             'delete_banner' => ['nullable', 'boolean'],
         ])->validate();
 
@@ -99,6 +102,9 @@ class BrandingController extends Controller
             'company_profile_show_hours' => isset($validated['company_profile_show_hours']) ? (bool) $validated['company_profile_show_hours'] : ($currentSettings['company_profile_show_hours'] ?? true),
             'company_profile_show_services' => isset($validated['company_profile_show_services']) ? (bool) $validated['company_profile_show_services'] : ($currentSettings['company_profile_show_services'] ?? true),
             'company_profile_show_professionals' => isset($validated['company_profile_show_professionals']) ? (bool) $validated['company_profile_show_professionals'] : ($currentSettings['company_profile_show_professionals'] ?? true),
+            'company_profile_show_reviews' => isset($validated['company_profile_show_reviews']) ? (bool) $validated['company_profile_show_reviews'] : ($currentSettings['company_profile_show_reviews'] ?? true),
+            'company_profile_reviews_title' => $validated['company_profile_reviews_title'] ?? ($currentSettings['company_profile_reviews_title'] ?? 'O que os clientes dizem'),
+            'company_profile_reviews_subtitle' => $validated['company_profile_reviews_subtitle'] ?? ($currentSettings['company_profile_reviews_subtitle'] ?? 'Avaliações de atendimentos concluídos nesta empresa.'),
             'whatsapp_number' => $validated['whatsapp_number'] ?? ($currentSettings['whatsapp_number'] ?? null),
             'whatsapp_button_enabled' => isset($validated['whatsapp_button_enabled']) ? (bool) $validated['whatsapp_button_enabled'] : ($currentSettings['whatsapp_button_enabled'] ?? false),
             'instagram_handle' => $validated['instagram_handle'] ?? ($currentSettings['instagram_handle'] ?? null),

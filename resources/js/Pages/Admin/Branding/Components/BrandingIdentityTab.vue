@@ -95,7 +95,7 @@ const onBannerSelected = (e) => {
                         </button>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-tight">
-                        PNG transparente recomendado. Quando você define um logotipo, a marca "Agendae" é ocultada automaticamente.
+                        PNG, JPG ou WEBP (Máx: 10MB). Quando você define um logotipo, a marca "Agendae" é ocultada automaticamente.
                     </p>
                 </div>
             </div>
@@ -133,7 +133,7 @@ const onBannerSelected = (e) => {
                         <i class="fa-solid fa-image text-[11px] mr-1"></i>
                         {{ bannerPreview ? 'Trocar imagem de capa' : 'Adicionar capa de cabeçalho' }}
                     </button>
-                    <span class="text-[10px] text-slate-400">Recomendado: 1200x400px (Máx: 4MB).</span>
+                    <span class="text-[10px] text-slate-400">Recomendado: 1200x400px (Máx: 10MB).</span>
                 </div>
             </div>
         </div>
