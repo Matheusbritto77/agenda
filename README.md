@@ -41,6 +41,19 @@ php artisan boost:install
 
 Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
 
+## E-mail com Resend
+
+As notificações transacionais usam o transport oficial do Resend para Laravel. Configure um domínio verificado no painel do Resend e defina no `.env`:
+
+```dotenv
+MAIL_MAILER=resend
+MAIL_FROM_ADDRESS=notificacoes@seu-dominio-verificado.com
+MAIL_FROM_NAME="Agendae"
+RESEND_API_KEY=re_sua_chave_aqui
+```
+
+Após alterar essas variáveis, execute `php artisan config:clear`. Nunca salve uma chave real no repositório.
+
 ## Contributing
 
 Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).

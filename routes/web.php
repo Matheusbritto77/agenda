@@ -1,20 +1,26 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminAppointmentController;
-use App\Http\Controllers\Admin\DomainController;
-use App\Http\Controllers\PublicBookingController;
-use App\Http\Controllers\Admin\BusinessHourController;
-use App\Http\Controllers\Admin\BlockedTimeSlotController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\AppointmentController;
-use App\Http\Controllers\Admin\TeamMemberController;
-use App\Http\Controllers\Admin\RolePermissionController;
-use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\BlockedTimeSlotController;
 use App\Http\Controllers\Admin\BrandingController;
+use App\Http\Controllers\Admin\BusinessHourController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DomainController;
+use App\Http\Controllers\Admin\FinancialController;
+use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\TeamMemberController;
+use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Client\ClientAuthController;
+use App\Http\Controllers\Client\ClientPasswordController;
+use App\Http\Controllers\Client\ClientPortalController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicBookingController;
 use App\Http\Middleware\ResolvePublicBookingTenant;
+use App\Models\TeamMember;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +28,24 @@ use Inertia\Inertia;
 
 // Public Client Booking & SaaS Landing Routes
 Route::get('/landing', [PublicBookingController::class, 'landing'])->name('landing');
+
+Route::prefix('cliente')->name('client.')->group(function (): void {
+    Route::middleware('guest:client')->group(function (): void {
+        Route::get('/entrar', [ClientAuthController::class, 'create'])->name('login');
+        Route::post('/entrar', [ClientAuthController::class, 'store'])->middleware('throttle:5,1')->name('login.store');
+    });
+
+    Route::middleware('auth:client')->group(function (): void {
+        Route::get('/senha', [ClientPasswordController::class, 'edit'])->name('password.edit');
+        Route::put('/senha', [ClientPasswordController::class, 'update'])->name('password.update');
+        Route::post('/sair', [ClientAuthController::class, 'destroy'])->name('logout');
+
+        Route::middleware('client.password.reset')->group(function (): void {
+            Route::get('/', [ClientPortalController::class, 'index'])->name('dashboard');
+            Route::put('/agendamentos/{appointment}/avaliacao', [ClientPortalController::class, 'review'])->name('reviews.store');
+        });
+    });
+});
 
 $rootHosts = array_values(array_unique(array_filter([
     'localhost',
@@ -73,7 +97,7 @@ Route::get('/s/{subdomain}', function (Request $request, string $subdomain) {
         return redirect()->away($tenant->publicBookingUrl());
     }
 
-    $member = \App\Models\TeamMember::query()
+    $member = TeamMember::query()
         ->where(function ($query) use ($slug): void {
             $query->where('subdomain', $slug)
                 ->orWhere('custom_domain', $slug);
@@ -102,7 +126,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::middleware('permission:appointments.cancel')->post('/appointments/{id}/cancel', [DashboardController::class, 'cancelAppointment'])->name('appointments.cancel');
-    Route::middleware('permission:reports.revenue')->get('/financial', [\App\Http\Controllers\Admin\FinancialController::class, 'index'])->name('financial.index');
+    Route::middleware('permission:reports.revenue')->get('/financial', [FinancialController::class, 'index'])->name('financial.index');
     Route::middleware('permission:schedules.view')->get('/business-hours', [BusinessHourController::class, 'index'])->name('business-hours.index');
     Route::middleware('permission:schedules.manage')->post('/business-hours', [BusinessHourController::class, 'store'])->name('business-hours.store');
     Route::middleware('permission:schedules.manage,schedules.breaks')->put('/business-hours/{id}', [BusinessHourController::class, 'update'])->name('business-hours.update');
@@ -111,7 +135,7 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:schedules.blocks')->put('/business-hours/blocks/{blockedTimeSlot}', [BusinessHourController::class, 'updateBlock'])->name('business-hours.blocks.update');
     Route::middleware('permission:schedules.blocks')->delete('/business-hours/blocks/{blockedTimeSlot}', [BusinessHourController::class, 'destroyBlock'])->name('business-hours.blocks.destroy');
     Route::middleware('permission:schedules.blocks')->put('/blocks/{id}', [BlockedTimeSlotController::class, 'update'])->name('blocks.update');
-    
+
     // Services CRUD & Toggle
     Route::middleware('permission:services.view')->get('/services', [ServiceController::class, 'index'])->name('services.index');
     Route::middleware('permission:services.create')->get('/services/create', [ServiceController::class, 'create'])->name('services.create');
@@ -153,8 +177,8 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:settings.roles')->patch('/roles/team-members/{teamMember}/role', [RolePermissionController::class, 'updateMemberRole'])->name('roles.team-member.update-role');
 
     // Force Password Change Routes
-    Route::get('/force-password-change', [\App\Http\Controllers\Auth\PasswordController::class, 'showForceChangeForm'])->name('force-password-change.show');
-    Route::post('/force-password-change', [\App\Http\Controllers\Auth\PasswordController::class, 'forceChangePassword'])->name('force-password-change.submit');
+    Route::get('/force-password-change', [PasswordController::class, 'showForceChangeForm'])->name('force-password-change.show');
+    Route::post('/force-password-change', [PasswordController::class, 'forceChangePassword'])->name('force-password-change.submit');
 });
 
 require __DIR__.'/auth.php';

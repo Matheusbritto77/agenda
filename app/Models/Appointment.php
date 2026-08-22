@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Appointment extends Model
 {
@@ -15,6 +16,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'user_id',
+        'client_account_id',
         'service_id',
         'team_member_id',
         'client_name',
@@ -30,6 +32,7 @@ class Appointment extends Model
 
     protected $casts = [
         'service_id' => 'integer',
+        'client_account_id' => 'integer',
         'team_member_id' => 'integer',
         'appointment_date' => 'date:Y-m-d',
     ];
@@ -64,7 +67,7 @@ class Appointment extends Model
 
     public function getEndTimeAttribute(): string
     {
-        $start = Carbon::parse($this->appointment_date->format('Y-m-d') . ' ' . $this->appointment_time);
+        $start = Carbon::parse($this->appointment_date->format('Y-m-d').' '.$this->appointment_time);
         $duration = $this->service?->duration_minutes ?? 0;
 
         return $start->copy()->addMinutes($duration)->format('H:i:s');
@@ -72,12 +75,12 @@ class Appointment extends Model
 
     public function getAppointmentDatetimeAttribute(): Carbon
     {
-        return Carbon::parse($this->appointment_date->format('Y-m-d') . ' ' . $this->appointment_time);
+        return Carbon::parse($this->appointment_date->format('Y-m-d').' '.$this->appointment_time);
     }
 
     public function scopeForTenant(Builder $query, int $tenantId): Builder
     {
-        return $query->where($query->getModel()->getTable() . '.user_id', $tenantId);
+        return $query->where($query->getModel()->getTable().'.user_id', $tenantId);
     }
 
     public function service(): BelongsTo
@@ -93,5 +96,15 @@ class Appointment extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function clientAccount(): BelongsTo
+    {
+        return $this->belongsTo(ClientAccount::class);
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(AppointmentReview::class);
     }
 }

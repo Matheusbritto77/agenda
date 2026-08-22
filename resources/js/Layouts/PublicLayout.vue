@@ -37,6 +37,8 @@ const customStyles = computed(() => {
     styles['--background'] = bg;
     styles['--background-subtle'] = bg;
     styles['--surface'] = cardBg;
+    styles['--surface-hover'] = s.card_bg_color && s.card_bg_color !== '#ffffff' ? `${text}0d` : '#f8fafc';
+    styles['--surface-subtle'] = s.card_bg_color && s.card_bg_color !== '#ffffff' ? `${text}08` : '#f1f5f9';
     styles['--surface-header'] = topMenu;
     styles['--text'] = text;
     styles['--text-heading'] = text;
@@ -198,6 +200,21 @@ onMounted(() => {
                         <i class="fa-brands fa-whatsapp text-sm"></i>
                         <span>WhatsApp</span>
                     </a>
+
+                    <!-- Client Area Link -->
+                    <a
+                        href="/cliente"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-xs"
+                        :style="{
+                            borderColor: 'var(--border, #e2e8f0)',
+                            backgroundColor: 'var(--surface, #ffffff)',
+                            color: 'var(--text-heading, #0f172a)'
+                        }"
+                        title="Acessar Minha Área do Cliente"
+                    >
+                        <i class="fa-solid fa-user text-xs" :style="{ color: 'var(--primary)' }"></i>
+                        <span class="hidden sm:inline">Minha Área</span>
+                    </a>
                 </div>
             </div>
         </header>
@@ -226,6 +243,10 @@ onMounted(() => {
                     </template>
                 </p>
                 <div class="flex items-center gap-4 text-xs font-semibold">
+                    <a href="/cliente" class="hover:underline flex items-center gap-1" :style="{ color: 'var(--primary)' }">
+                        <i class="fa-solid fa-user text-[10px]"></i>
+                        <span>Área do Cliente</span>
+                    </a>
                     <Link :href="route('booking.index')" class="hover:underline transition-colors" :style="{ color: 'var(--primary)' }">Agendamento</Link>
                     <Link :href="route('admin.dashboard')" class="hover:underline flex items-center gap-1" :style="{ color: 'var(--primary)' }">
                         <span>Painel Administrativo</span>

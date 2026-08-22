@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureClientPasswordReset;
+use App\Http\Middleware\EnsurePasswordReset;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -14,15 +19,26 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->redirectGuestsTo(
+            fn (Request $request): string => $request->is('cliente*')
+                ? route('client.login')
+                : route('login')
+        );
+        $middleware->redirectUsersTo(
+            fn (Request $request): string => $request->is('cliente*')
+                ? route('client.dashboard')
+                : route('admin.dashboard')
+        );
 
         $middleware->alias([
-            'must.reset.password' => \App\Http\Middleware\EnsurePasswordReset::class,
-            'permission' => \App\Http\Middleware\CheckPermission::class,
+            'must.reset.password' => EnsurePasswordReset::class,
+            'permission' => CheckPermission::class,
+            'client.password.reset' => EnsureClientPasswordReset::class,
         ]);
 
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

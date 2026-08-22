@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AppointmentReview;
 use App\Models\BlockedTimeSlot;
+use App\Models\BrandingSetting;
 use App\Models\BusinessHour;
+use App\Models\PaymentSetting;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
 use App\Services\BookingAvailabilityService;
+use App\Services\ClientPortalProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -23,8 +27,11 @@ use Throwable;
 class PublicBookingController extends Controller
 {
     private const OPENING_TIME = '08:00';
+
     private const CLOSING_TIME = '18:00';
+
     private const SLOT_STEP_MINUTES = 15;
+
     private const BOOKABLE_STATUSES = ['pending', 'confirmed'];
 
     public function landing(Request $request): Response
@@ -148,7 +155,7 @@ class PublicBookingController extends Controller
 
         $services = $this->publicServicesQuery($company)->latest()->get();
 
-        $paymentSetting = \App\Models\PaymentSetting::query()
+        $paymentSetting = PaymentSetting::query()
             ->where('user_id', $company->id)
             ->where('gateway', 'mercadopago')
             ->first();
@@ -156,7 +163,7 @@ class PublicBookingController extends Controller
         $paymentEnabled = $paymentSetting ? (bool) $paymentSetting->is_active : false;
         $paymentGateway = $paymentSetting ? $paymentSetting->gateway : 'mercadopago';
 
-        $branding = \App\Models\BrandingSetting::query()
+        $branding = BrandingSetting::query()
             ->where('user_id', $company->id)
             ->first();
 
@@ -210,6 +217,29 @@ class PublicBookingController extends Controller
                 'image_url' => $service->image_url,
             ])
             ->values();
+        $reviewsQuery = AppointmentReview::query()
+            ->whereHas('appointment', fn ($query) => $query
+                ->where('appointments.user_id', $company->id)
+                ->where('appointments.status', 'completed'));
+        $reviewsCount = (clone $reviewsQuery)->count();
+        $reviewsAverage = $reviewsCount > 0
+            ? round((float) (clone $reviewsQuery)->avg('rating'), 1)
+            : null;
+        $reviews = (clone $reviewsQuery)
+            ->with(['clientAccount:id,name', 'appointment.service:id,name'])
+            ->latest('appointment_reviews.created_at')
+            ->orderByDesc('appointment_reviews.id')
+            ->limit(6)
+            ->get()
+            ->map(fn (AppointmentReview $review): array => [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'client_name' => $this->abbreviateClientName($review->clientAccount?->name),
+                'service_name' => $review->appointment?->service?->name,
+                'created_at' => $review->created_at->format('d/m/Y'),
+            ])
+            ->values();
 
         return [
             'is_company_page' => $isOwnerPage && $selectedProfessional === null,
@@ -223,7 +253,10 @@ class PublicBookingController extends Controller
                 'show_hours' => $settings['company_profile_show_hours'] ?? true,
                 'show_services' => $settings['company_profile_show_services'] ?? true,
                 'show_professionals' => $settings['company_profile_show_professionals'] ?? true,
+                'show_reviews' => $settings['company_profile_show_reviews'] ?? true,
             ],
+            'reviews_title' => $settings['company_profile_reviews_title'] ?? 'O que os clientes dizem',
+            'reviews_subtitle' => $settings['company_profile_reviews_subtitle'] ?? 'Avaliações de atendimentos concluídos nesta empresa.',
             'status' => [
                 'is_open_now' => $isOpenNow,
                 'label' => $isOpenNow ? 'Aberto agora' : 'Fechado agora',
@@ -233,6 +266,11 @@ class PublicBookingController extends Controller
             'hours_summary' => array_values($hoursSummary),
             'services_count' => $services->count(),
             'services_preview' => $servicesForProfile,
+            'reviews' => [
+                'average' => $reviewsAverage,
+                'count' => $reviewsCount,
+                'items' => $reviews,
+            ],
             'border_radius' => $settings['border_radius'] ?? 'rounded-2xl',
             'contact' => [
                 'whatsapp_number' => $settings['whatsapp_number'] ?? null,
@@ -242,14 +280,29 @@ class PublicBookingController extends Controller
         ];
     }
 
+    private function abbreviateClientName(?string $name): string
+    {
+        $parts = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if ($parts === []) {
+            return 'Cliente verificado';
+        }
+
+        if (count($parts) === 1) {
+            return $parts[0];
+        }
+
+        return $parts[0].' '.mb_strtoupper(mb_substr($parts[array_key_last($parts)], 0, 1)).'.';
+    }
+
     private function businessHourContainsCurrentTime(BusinessHour $hour, Carbon $now): bool
     {
         if (! $hour->is_active || empty($hour->opens_at) || empty($hour->closes_at)) {
             return false;
         }
 
-        $open = Carbon::parse($now->toDateString() . ' ' . $hour->opens_at);
-        $close = Carbon::parse($now->toDateString() . ' ' . $hour->closes_at);
+        $open = Carbon::parse($now->toDateString().' '.$hour->opens_at);
+        $close = Carbon::parse($now->toDateString().' '.$hour->closes_at);
 
         if ($close->lessThanOrEqualTo($open)) {
             $close->addDay();
@@ -260,8 +313,8 @@ class PublicBookingController extends Controller
         }
 
         if (! empty($hour->break_opens_at) && ! empty($hour->break_closes_at)) {
-            $breakOpen = Carbon::parse($now->toDateString() . ' ' . $hour->break_opens_at);
-            $breakClose = Carbon::parse($now->toDateString() . ' ' . $hour->break_closes_at);
+            $breakOpen = Carbon::parse($now->toDateString().' '.$hour->break_opens_at);
+            $breakClose = Carbon::parse($now->toDateString().' '.$hour->break_closes_at);
 
             if ($breakClose->lessThanOrEqualTo($breakOpen)) {
                 $breakClose->addDay();
@@ -312,10 +365,10 @@ class PublicBookingController extends Controller
             return null;
         }
 
-        $range = substr((string) $hour->opens_at, 0, 5) . ' - ' . substr((string) $hour->closes_at, 0, 5);
+        $range = substr((string) $hour->opens_at, 0, 5).' - '.substr((string) $hour->closes_at, 0, 5);
 
         if (! empty($hour->break_opens_at) && ! empty($hour->break_closes_at)) {
-            $range .= ' (pausa ' . substr((string) $hour->break_opens_at, 0, 5) . ' - ' . substr((string) $hour->break_closes_at, 0, 5) . ')';
+            $range .= ' (pausa '.substr((string) $hour->break_opens_at, 0, 5).' - '.substr((string) $hour->break_closes_at, 0, 5).')';
         }
 
         return $range;
@@ -438,6 +491,7 @@ class PublicBookingController extends Controller
             ->where(function ($query) use ($tenant): void {
                 if ($tenant === null) {
                     $query->whereNull('blocked_time_slots.user_id');
+
                     return;
                 }
                 $query->where('blocked_time_slots.user_id', $tenant->id);
@@ -457,8 +511,11 @@ class PublicBookingController extends Controller
             });
     }
 
-    public function store(Request $request, BookingAvailabilityService $availabilityService)
-    {
+    public function store(
+        Request $request,
+        BookingAvailabilityService $availabilityService,
+        ClientPortalProvisioningService $clientPortal
+    ) {
         Log::info('PublicBookingController::store: Start processing booking', [
             'host' => $request->getHost(),
             'method' => $request->method(),
@@ -532,6 +589,8 @@ class PublicBookingController extends Controller
                 'user_id' => $company->id,
             ]);
 
+            $clientPortal->provisionFor($appointment);
+
             Log::info('PublicBookingController::store: Appointment successfully created', [
                 'appointment_id' => $appointment->id,
                 'client_name' => $appointment->client_name,
@@ -545,7 +604,7 @@ class PublicBookingController extends Controller
                 'Agendamento confirmado para %s em %s às %s.',
                 $appointment->client_name,
                 $service->name,
-                Carbon::parse($appointment->appointment_date)->format('d/m/Y') . ' ' . $appointment->appointment_time
+                Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time
             );
 
             if ($request->expectsJson()) {
@@ -569,7 +628,7 @@ class PublicBookingController extends Controller
                     'id' => $appointment->id,
                     'customer_name' => $appointment->client_name,
                     'service_name' => $service->name,
-                    'datetime' => Carbon::parse($appointment->appointment_date)->format('d/m/Y') . ' ' . $appointment->appointment_time,
+                    'datetime' => Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time,
                 ])
                 ->with('success', $message);
         } catch (ValidationException $e) {
@@ -603,9 +662,12 @@ class PublicBookingController extends Controller
         }
     }
 
-    public function storeBooking(Request $request, BookingAvailabilityService $availabilityService)
-    {
-        return $this->store($request, $availabilityService);
+    public function storeBooking(
+        Request $request,
+        BookingAvailabilityService $availabilityService,
+        ClientPortalProvisioningService $clientPortal
+    ) {
+        return $this->store($request, $availabilityService, $clientPortal);
     }
 
     private function resolveAppointmentTeamMemberId(User|TeamMember|null $selectedProfessional, User $company, array $validated): ?int
@@ -633,8 +695,7 @@ class PublicBookingController extends Controller
     public function availableSlots(
         Request $request,
         BookingAvailabilityService $availabilityService
-    )
-    {
+    ) {
         try {
             $tenant = $this->resolveTenant($request);
             $company = $tenant->parent ?? $tenant;

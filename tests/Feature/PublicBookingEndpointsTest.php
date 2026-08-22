@@ -3,17 +3,19 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\AppointmentReview;
 use App\Models\BrandingSetting;
 use App\Models\BusinessHour;
+use App\Models\ClientAccount;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
-use Tests\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
 
 class PublicBookingEndpointsTest extends TestCase
 {
@@ -128,6 +130,67 @@ class PublicBookingEndpointsTest extends TestCase
         );
     }
 
+    public function test_company_profile_displays_only_verified_reviews_from_completed_services(): void
+    {
+        $service = Service::create([
+            'user_id' => $this->tenant->id,
+            'name' => 'Corte Premium',
+            'price' => 90,
+            'duration_minutes' => 45,
+            'is_active' => true,
+        ]);
+        $maria = ClientAccount::create([
+            'name' => 'Maria da Silva',
+            'email' => 'maria@example.com',
+            'password' => 'password',
+            'must_reset_password' => false,
+        ]);
+        $joao = ClientAccount::create([
+            'name' => 'João dos Santos',
+            'email' => 'joao@example.com',
+            'password' => 'password',
+            'must_reset_password' => false,
+        ]);
+
+        $firstCompleted = $this->createReviewableAppointment($service, $maria, 'completed', '14:00');
+        $secondCompleted = $this->createReviewableAppointment($service, $joao, 'completed', '15:00');
+        $notCompleted = $this->createReviewableAppointment($service, $maria, 'confirmed', '16:00');
+
+        AppointmentReview::create([
+            'appointment_id' => $firstCompleted->id,
+            'client_account_id' => $maria->id,
+            'rating' => 5,
+            'comment' => 'Atendimento excelente e pontual.',
+        ]);
+        AppointmentReview::create([
+            'appointment_id' => $secondCompleted->id,
+            'client_account_id' => $joao->id,
+            'rating' => 4,
+            'comment' => 'Gostei muito do resultado.',
+        ]);
+        AppointmentReview::create([
+            'appointment_id' => $notCompleted->id,
+            'client_account_id' => $maria->id,
+            'rating' => 1,
+            'comment' => 'Esta avaliação não pode ser publicada.',
+        ]);
+
+        $response = $this->get('http://studio.agendae.app/');
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->where('companyProfile.reviews.average', 4.5)
+            ->where('companyProfile.reviews.count', 2)
+            ->has('companyProfile.reviews.items', 2)
+            ->where('companyProfile.reviews.items.0.client_name', 'João S.')
+            ->where('companyProfile.reviews.items.0.rating', 4)
+            ->where('companyProfile.reviews.items.1.client_name', 'Maria S.')
+            ->where('companyProfile.reviews.items.1.rating', 5)
+        );
+        $response->assertDontSee('Esta avaliação não pode ser publicada.');
+        $response->assertDontSee('Maria da Silva');
+    }
+
     public function test_index_renders_service_image_when_image_url_is_present(): void
     {
         config([
@@ -199,7 +262,7 @@ class PublicBookingEndpointsTest extends TestCase
             'image_path' => $existingPath,
         ]);
 
-        $response = $this->actingAs($admin)->put('/admin/services/' . $service->id, [
+        $response = $this->actingAs($admin)->put('/admin/services/'.$service->id, [
             'name' => 'Serviço Atualizável',
             'description' => 'Imagem nova enviada',
             'price' => 110,
@@ -260,7 +323,7 @@ class PublicBookingEndpointsTest extends TestCase
             'notes' => null,
         ]);
 
-        $response = $this->getJson('http://studio.agendae.app/available-slots?service_id=' . $service->id . '&date=' . $testDate);
+        $response = $this->getJson('http://studio.agendae.app/available-slots?service_id='.$service->id.'&date='.$testDate);
 
         $response->assertOk();
         $response->assertJsonPath('service_id', $service->id);
@@ -284,7 +347,7 @@ class PublicBookingEndpointsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->getJson('http://studio.agendae.app/api/services/' . $service->id . '/slots?date=' . $testDate);
+        $response = $this->getJson('http://studio.agendae.app/api/services/'.$service->id.'/slots?date='.$testDate);
 
         $response->assertOk();
         $response->assertJsonFragment([
@@ -367,7 +430,7 @@ class PublicBookingEndpointsTest extends TestCase
 
     private function configurePublicDisk(): string
     {
-        $root = sys_get_temp_dir() . '/agendae-public-' . uniqid('', true);
+        $root = sys_get_temp_dir().'/agendae-public-'.uniqid('', true);
 
         if (! is_dir($root)) {
             mkdir($root, 0777, true);
@@ -475,7 +538,7 @@ class PublicBookingEndpointsTest extends TestCase
         ]);
 
         // Create a TeamMember with its own subdomain
-        \App\Models\TeamMember::create([
+        TeamMember::create([
             'user_id' => $this->tenant->id,
             'name' => 'Carlos Barbeiro',
             'job_title' => 'Especialista',
@@ -493,5 +556,24 @@ class PublicBookingEndpointsTest extends TestCase
             ->where('services.0.name', 'Corte Moderno')
             ->where('companyProfile.is_company_page', false)
         );
+    }
+
+    private function createReviewableAppointment(
+        Service $service,
+        ClientAccount $client,
+        string $status,
+        string $time
+    ): Appointment {
+        return Appointment::create([
+            'user_id' => $this->tenant->id,
+            'client_account_id' => $client->id,
+            'service_id' => $service->id,
+            'client_name' => $client->name,
+            'client_email' => $client->email,
+            'client_phone' => '11999999999',
+            'appointment_date' => '2026-08-19',
+            'appointment_time' => $time,
+            'status' => $status,
+        ]);
     }
 }

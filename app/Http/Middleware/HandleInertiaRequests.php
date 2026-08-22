@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\TeamMember;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -29,18 +31,18 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $user = $request->user();
+        $user = Auth::guard('web')->user();
         $canManageRoles = false;
         $userRole = 'admin';
         $userPermissions = [];
 
         if ($user) {
             if ($user->parent_id) {
-                $member = \App\Models\TeamMember::query()
+                $member = TeamMember::query()
                     ->where('user_id', $user->parent_id)
                     ->where('email', $user->email)
                     ->first();
-                
+
                 $userRole = $member ? $member->role_id : 'professional';
                 $canManageRoles = ($userRole === 'admin');
             } else {
@@ -72,6 +74,9 @@ class HandleInertiaRequests extends Middleware
                 'canManageRoles' => $canManageRoles,
                 'role' => $userRole,
                 'permissions' => $userPermissions,
+            ],
+            'clientAuth' => [
+                'user' => Auth::guard('client')->user(),
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

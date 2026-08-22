@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\TeamMember;
 use App\Notifications\AppointmentCompletedForAdmin;
 use App\Notifications\AppointmentCompletedForClient;
-use Illuminate\Http\Request;
+use App\Services\ClientPortalProvisioningService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -20,21 +22,23 @@ class AppointmentController extends Controller
     private function tenantId(Request $request): int
     {
         $user = $request->user();
+
         return $user->parent_id ? (int) $user->parent_id : (int) $user->id;
     }
 
-    private function getTeamMember(Request $request): ?\App\Models\TeamMember
+    private function getTeamMember(Request $request): ?TeamMember
     {
         $user = $request->user();
         if ($user->parent_id) {
-            return \App\Models\TeamMember::where('user_id', $user->parent_id)
+            return TeamMember::where('user_id', $user->parent_id)
                 ->where('email', $user->email)
                 ->first();
         }
+
         return null;
     }
 
-    public function store(Request $request)
+    public function store(Request $request, ClientPortalProvisioningService $clientPortal)
     {
         $tenantId = $this->tenantId($request);
         $validated = $request->validate([
@@ -55,7 +59,8 @@ class AppointmentController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        Appointment::create($validated + ['user_id' => $tenantId]);
+        $appointment = Appointment::create($validated + ['user_id' => $tenantId]);
+        $clientPortal->provisionFor($appointment);
 
         return back()->with('success', 'Agendamento manual criado com sucesso!');
     }
@@ -273,9 +278,9 @@ class AppointmentController extends Controller
 
                 return [
                     'id' => $appointment->id,
-                    'title' => $appointment->customer_name . ' - ' . ($appointment->service->name ?? 'Serviço') . ($teamMemberName ? ' (' . $teamMemberName . ')' : ''),
-                    'start' => $dateStr . 'T' . $appointment->start_time,
-                    'end' => $dateStr . 'T' . $appointment->end_time,
+                    'title' => $appointment->customer_name.' - '.($appointment->service->name ?? 'Serviço').($teamMemberName ? ' ('.$teamMemberName.')' : ''),
+                    'start' => $dateStr.'T'.$appointment->start_time,
+                    'end' => $dateStr.'T'.$appointment->end_time,
                     'backgroundColor' => $color,
                     'borderColor' => $color,
                     'extendedProps' => [
@@ -410,9 +415,9 @@ class AppointmentController extends Controller
 
         return [
             'id' => $appointment->id,
-            'title' => $appointment->customer_name . ' - ' . ($service?->name ?? 'Serviço') . ($teamMember ? ' (' . $teamMember->name . ')' : ''),
-            'start' => $dateStr . 'T' . $appointment->start_time,
-            'end' => $dateStr . 'T' . $appointment->end_time,
+            'title' => $appointment->customer_name.' - '.($service?->name ?? 'Serviço').($teamMember ? ' ('.$teamMember->name.')' : ''),
+            'start' => $dateStr.'T'.$appointment->start_time,
+            'end' => $dateStr.'T'.$appointment->end_time,
             'extendedProps' => [
                 'customer_name' => $appointment->customer_name,
                 'customer_email' => $appointment->customer_email,

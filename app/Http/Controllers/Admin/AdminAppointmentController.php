@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Services\BookingAvailabilityService;
+use App\Services\ClientPortalProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,8 +21,11 @@ class AdminAppointmentController extends Controller
     /**
      * Store a manually created appointment for the admin dashboard.
      */
-    public function store(Request $request, BookingAvailabilityService $availabilityService): RedirectResponse|JsonResponse
-    {
+    public function store(
+        Request $request,
+        BookingAvailabilityService $availabilityService,
+        ClientPortalProvisioningService $clientPortal
+    ): RedirectResponse|JsonResponse {
         try {
             $tenantId = (int) $request->user()->id;
             $request->merge([
@@ -78,6 +82,8 @@ class AdminAppointmentController extends Controller
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $tenantId,
             ]);
+
+            $clientPortal->provisionFor($appointment);
 
             if ($request->expectsJson()) {
                 $appointment = $appointment->load('service');
@@ -173,9 +179,9 @@ class AdminAppointmentController extends Controller
 
         return [
             'id' => $appointment->id,
-            'title' => $appointment->client_name . ' - ' . ($service?->name ?? 'Serviço'),
-            'start' => $dateStr . 'T' . $appointment->appointment_time,
-            'end' => $dateStr . 'T' . $appointment->end_time,
+            'title' => $appointment->client_name.' - '.($service?->name ?? 'Serviço'),
+            'start' => $dateStr.'T'.$appointment->appointment_time,
+            'end' => $dateStr.'T'.$appointment->end_time,
             'extendedProps' => [
                 'client_name' => $appointment->client_name,
                 'client_email' => $appointment->client_email,

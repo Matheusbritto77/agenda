@@ -529,6 +529,67 @@ const businessName = computed(() => props.form.business_name || 'Minha Empresa')
                             </div>
                         </div>
                     </div>
+
+                    <!-- Reviews & Comments Live Preview Section -->
+                    <div
+                        v-if="form.company_profile_show_reviews"
+                        class="p-3.5 border border-slate-200/60 shadow-xs space-y-3"
+                        :class="radiusClass"
+                        :style="{ backgroundColor: form.card_bg_color }"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <span class="text-[9px] font-black uppercase tracking-wider opacity-60 block leading-none" :style="{ color: form.text_color }">
+                                    Experiências Reais
+                                </span>
+                                <h6 class="text-[11px] font-black mt-0.5 truncate" :style="{ color: form.text_color }">
+                                    {{ form.company_profile_reviews_title || 'O que os clientes dizem' }}
+                                </h6>
+                            </div>
+                            <div
+                                class="px-2 py-1 rounded-lg flex items-center gap-1.5 shrink-0"
+                                :style="{ backgroundColor: form.primary_color + '18' }"
+                            >
+                                <span class="text-xs font-black" :style="{ color: form.primary_color }">5.0</span>
+                                <div class="flex gap-0.5 text-amber-400 text-[8px]">
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sample Review Card -->
+                        <div
+                            class="p-2.5 rounded-xl border border-slate-200/40 space-y-1.5 shadow-2xs"
+                            :style="{
+                                backgroundColor: form.card_bg_color && form.card_bg_color !== '#ffffff' ? 'rgba(255, 255, 255, 0.05)' : '#f8fafc',
+                                color: form.text_color
+                            }"
+                        >
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex gap-0.5 text-amber-400 text-[9px]">
+                                    <i v-for="s in 5" :key="s" class="fa-solid fa-star"></i>
+                                </div>
+                                <span class="text-[8px] opacity-60">Hoje</span>
+                            </div>
+                            <p class="text-[10px] italic leading-tight opacity-90">
+                                "Atendimento impecável! Profissionais pontuais e ambiente nota 10."
+                            </p>
+                            <div class="pt-1 border-t border-slate-200/30 flex items-center justify-between text-[9px]">
+                                <span class="font-bold">Gabriel S.</span>
+                                <span class="opacity-60">Corte Degradê</span>
+                            </div>
+                        </div>
+
+                        <!-- Client portal link invitation -->
+                        <div class="pt-1 flex items-center justify-between text-[8px] opacity-70">
+                            <span>Avaliações verificadas de clientes reais.</span>
+                            <span class="font-bold underline" :style="{ color: form.primary_color }">Área do Cliente →</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ============================================================= -->

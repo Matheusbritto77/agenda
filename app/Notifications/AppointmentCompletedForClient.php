@@ -11,9 +11,7 @@ class AppointmentCompletedForClient extends Notification
 {
     use Queueable;
 
-    public function __construct(private readonly Appointment $appointment)
-    {
-    }
+    public function __construct(private readonly Appointment $appointment) {}
 
     public function via(object $notifiable): array
     {
@@ -26,7 +24,7 @@ class AppointmentCompletedForClient extends Notification
         $date = $appointment->appointment_date->format('d/m/Y');
         $time = substr($appointment->appointment_time, 0, 5);
         $serviceName = $appointment->service?->name ?? 'Serviço';
-        $publicUrl = $appointment->tenant?->publicBookingUrl() ?? url('/');
+        $clientAreaUrl = rtrim((string) config('app.url'), '/').route('client.dashboard', [], false);
 
         return (new MailMessage)
             ->subject('Seu agendamento foi concluído')
@@ -36,6 +34,6 @@ class AppointmentCompletedForClient extends Notification
             ->line("Data: {$date}")
             ->line("Horário: {$time}")
             ->line('Obrigado pela preferência.')
-            ->action('Ver agendamentos', $publicUrl);
+            ->action('Ver agendamentos', $clientAreaUrl);
     }
 }

@@ -24,6 +24,7 @@ const statusClasses = computed(() => {
 
 const primaryServices = computed(() => props.companyProfile.services_preview || []);
 const hours = computed(() => props.companyProfile.hours_summary || []);
+const reviews = computed(() => props.companyProfile.reviews || { average: null, count: 0, items: [] });
 const display = computed(() => props.companyProfile.display || {
     show_hours: true,
     show_services: true,
@@ -76,6 +77,11 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
                                 <p class="max-w-2xl text-sm sm:text-base leading-relaxed text-white/90">
                                     {{ companyProfile.description || 'Confira os serviços, horários e profissionais disponíveis para agendar seu atendimento.' }}
                                 </p>
+                                <div v-if="reviews.count" class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold backdrop-blur-sm">
+                                    <span class="text-amber-300" aria-hidden="true">★</span>
+                                    <strong>{{ Number(reviews.average).toFixed(1) }}</strong>
+                                    <span class="text-white/75">{{ reviews.count }} avaliação{{ reviews.count === 1 ? '' : 'ões' }}</span>
+                                </div>
                             </div>
                         </div>
 
@@ -227,5 +233,65 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
                 </div>
             </section>
         </div>
+
+        <section v-if="(display.show_reviews ?? true) && reviews.count" class="card shadow-sm">
+            <div class="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                    <p class="text-xs font-extrabold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text-muted)' }">Experiências reais</p>
+                    <h2 class="mt-1 text-xl font-black" :style="{ color: 'var(--text-heading)' }">{{ companyProfile.reviews_title || 'O que os clientes dizem' }}</h2>
+                    <p class="mt-1 text-xs opacity-70" :style="{ color: 'var(--text-muted)' }">{{ companyProfile.reviews_subtitle || 'Avaliações de atendimentos concluídos nesta empresa.' }}</p>
+                </div>
+                <div class="flex items-center gap-3 rounded-2xl px-4 py-3" :style="{ backgroundColor: 'var(--primary-light)' }">
+                    <span class="text-3xl font-black" :style="{ color: 'var(--primary)' }">{{ Number(reviews.average).toFixed(1) }}</span>
+                    <div>
+                        <div class="flex gap-0.5 text-amber-400" :aria-label="`${reviews.average} de 5 estrelas`">
+                            <i v-for="star in 5" :key="star" class="fa-star text-xs" :class="star <= Math.round(reviews.average) ? 'fa-solid' : 'fa-regular'"></i>
+                        </div>
+                        <p class="mt-0.5 text-[11px] font-bold" :style="{ color: 'var(--text-muted)' }">{{ reviews.count }} avaliação{{ reviews.count === 1 ? '' : 'ões' }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <article
+                    v-for="review in reviews.items"
+                    :key="review.id"
+                    class="flex flex-col rounded-2xl border p-4 shadow-xs"
+                    :style="{
+                        borderColor: 'var(--border)',
+                        backgroundColor: 'var(--surface-hover, rgba(0,0,0,0.03))',
+                        color: 'var(--text)'
+                    }"
+                >
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <div class="flex gap-0.5 text-amber-400" :aria-label="`${review.rating} de 5 estrelas`">
+                            <i v-for="star in 5" :key="star" class="fa-star text-xs" :class="star <= review.rating ? 'fa-solid' : 'fa-regular'"></i>
+                        </div>
+                        <span class="text-[10px] font-semibold opacity-60" :style="{ color: 'var(--text-muted)' }">{{ review.created_at }}</span>
+                    </div>
+                    <p v-if="review.comment" class="flex-1 text-sm leading-relaxed font-medium" :style="{ color: 'var(--text)' }">“{{ review.comment }}”</p>
+                    <p v-else class="flex-1 text-sm italic opacity-60" :style="{ color: 'var(--text-muted)' }">Cliente avaliou este atendimento com {{ review.rating }} estrelas.</p>
+                    <div class="mt-4 border-t pt-3" :style="{ borderColor: 'var(--border)' }">
+                        <p class="text-xs font-black" :style="{ color: 'var(--text-heading)' }">{{ review.client_name }}</p>
+                        <p v-if="review.service_name" class="mt-0.5 text-[11px] opacity-75 font-medium" :style="{ color: 'var(--text-muted)' }">{{ review.service_name }} · Atendimento verificado</p>
+                    </div>
+                </article>
+            </div>
+
+            <div class="mt-4 pt-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" :style="{ borderColor: 'var(--border)' }">
+                <span class="opacity-75" :style="{ color: 'var(--text-muted)' }">
+                    <i class="fa-solid fa-shield-check text-emerald-500 mr-1"></i>
+                    Todas as avaliações são verificadas de clientes reais que agendaram pelo sistema.
+                </span>
+                <a
+                    href="/cliente"
+                    class="inline-flex items-center gap-1.5 font-bold hover:underline"
+                    :style="{ color: 'var(--primary)' }"
+                >
+                    <span>Já foi atendido aqui? Deixe sua avaliação na Área do Cliente</span>
+                    <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </a>
+            </div>
+        </section>
     </section>
 </template>

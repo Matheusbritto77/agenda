@@ -159,4 +159,9 @@ class User extends Authenticatable
 
         return in_array($permission, $userPermissions, true);
     }
+
+    public function brandingSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\BrandingSetting::class);
+    }
 }
