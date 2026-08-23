@@ -12,6 +12,7 @@ class BlockedSlotService
     public function queryForTenant(?int $tenantId)
     {
         return BlockedTimeSlot::query()
+            ->with('teamMember')
             ->when($tenantId === null, fn ($query) => $query->whereNull('blocked_time_slots.user_id'), fn ($query) => $query->where(function ($subQuery) use ($tenantId): void {
                 $subQuery->where('blocked_time_slots.user_id', $tenantId)
                     ->orWhereNull('blocked_time_slots.user_id');
@@ -32,6 +33,7 @@ class BlockedSlotService
         return Validator::make(
             $data,
             [
+                'team_member_id' => ['nullable', 'integer', 'exists:team_members,id'],
                 'starts_at' => ['required', 'date_format:Y-m-d\TH:i'],
                 'ends_at' => ['required', 'date_format:Y-m-d\TH:i'],
                 'reason' => ['nullable', 'string', 'max:255'],
@@ -58,6 +60,7 @@ class BlockedSlotService
     {
         return BlockedTimeSlot::create([
             'user_id' => $tenantId,
+            'team_member_id' => ! empty($validated['team_member_id']) ? (int) $validated['team_member_id'] : null,
             'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at']),
             'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at']),
             'reason' => $validated['reason'] ?? null,
@@ -67,12 +70,18 @@ class BlockedSlotService
 
     public function update(BlockedTimeSlot $blockedTimeSlot, array $validated, ?bool $isActive = null): BlockedTimeSlot
     {
-        $blockedTimeSlot->update([
+        $updateData = [
             'starts_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['starts_at']),
             'ends_at' => Carbon::createFromFormat('Y-m-d\TH:i', $validated['ends_at']),
             'reason' => $validated['reason'] ?? null,
             'is_active' => $isActive !== null ? $isActive : $blockedTimeSlot->is_active,
-        ]);
+        ];
+
+        if (array_key_exists('team_member_id', $validated)) {
+            $updateData['team_member_id'] = ! empty($validated['team_member_id']) ? (int) $validated['team_member_id'] : null;
+        }
+
+        $blockedTimeSlot->update($updateData);
 
         return $blockedTimeSlot;
     }

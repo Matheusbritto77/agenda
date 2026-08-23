@@ -58,6 +58,16 @@ class TeamMember extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function businessHours(): HasMany
+    {
+        return $this->hasMany(BusinessHour::class, 'team_member_id');
+    }
+
+    public function blockedTimeSlots(): HasMany
+    {
+        return $this->hasMany(BlockedTimeSlot::class, 'team_member_id');
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);

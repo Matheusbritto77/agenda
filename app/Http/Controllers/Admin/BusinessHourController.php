@@ -39,14 +39,21 @@ class BusinessHourController extends Controller
             ->orderByDesc('starts_at')
             ->get();
 
+        $teamMembers = \App\Models\TeamMember::query()
+            ->where('user_id', $tenantId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'job_title', 'avatar_url', 'subdomain', 'is_active']);
+
         if ($request->expectsJson()) {
             return response()->json([
                 'business_hours' => $businessHours,
                 'blocked_slots' => $blockedSlots,
+                'team_members' => $teamMembers,
             ]);
         }
 
-        return Inertia::render('Admin/BusinessHours/Index', compact('businessHours', 'blockedSlots'));
+        return Inertia::render('Admin/BusinessHours/Index', compact('businessHours', 'blockedSlots', 'teamMembers'));
     }
 
     public function store(Request $request)

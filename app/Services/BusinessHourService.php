@@ -14,6 +14,7 @@ class BusinessHourService
     public function queryForTenant(?int $tenantId)
     {
         return BusinessHour::query()
+            ->with('teamMember')
             ->when($tenantId === null, fn ($query) => $query->whereNull('business_hours.user_id'), fn ($query) => $query->where(function ($subQuery) use ($tenantId): void {
                 $subQuery->where('business_hours.user_id', $tenantId)
                     ->orWhereNull('business_hours.user_id');
@@ -35,6 +36,7 @@ class BusinessHourService
         return Validator::make(
             $data,
             [
+                'team_member_id' => ['nullable', 'integer', 'exists:team_members,id'],
                 'day_of_week' => [$isUpdate ? 'nullable' : 'required', 'integer', 'min:0', 'max:6'],
                 'label' => ['nullable', 'string', 'max:255'],
                 'opens_at' => ['required', 'date_format:H:i'],
@@ -86,7 +88,7 @@ class BusinessHourService
         })->validate();
     }
 
-    public function ensureUniqueDayOfWeek(?int $userId, int $dayOfWeek, ?int $ignoreId = null): void
+    public function ensureUniqueDayOfWeek(?int $userId, int $dayOfWeek, ?int $ignoreId = null, ?int $teamMemberId = null): void
     {
         if ($userId === null) {
             return;
@@ -96,25 +98,36 @@ class BusinessHourService
             ->where('business_hours.user_id', $userId)
             ->where('business_hours.day_of_week', $dayOfWeek);
 
+        if ($teamMemberId === null) {
+            $query->whereNull('business_hours.team_member_id');
+        } else {
+            $query->where('business_hours.team_member_id', $teamMemberId);
+        }
+
         if ($ignoreId !== null) {
             $query->whereKeyNot($ignoreId);
         }
 
         if ($query->exists()) {
+            $msg = $teamMemberId
+                ? 'Este profissional já possui cadastro de horário para este dia da semana.'
+                : 'Este dia já possui cadastro de horário de funcionamento padrão.';
             throw ValidationException::withMessages([
-                'day_of_week' => 'Este dia já possui cadastro de horário de funcionamento.',
+                'day_of_week' => $msg,
             ]);
         }
     }
 
     public function create(array $validated, ?int $tenantId, bool $hasBreak = false, bool $isActive = true): BusinessHour
     {
-        $this->ensureUniqueDayOfWeek($tenantId, (int) $validated['day_of_week']);
+        $teamMemberId = ! empty($validated['team_member_id']) ? (int) $validated['team_member_id'] : null;
+        $this->ensureUniqueDayOfWeek($tenantId, (int) $validated['day_of_week'], null, $teamMemberId);
 
         $slotMinutes = $validated['slot_duration_minutes'] ?? $validated['slot_interval_minutes'] ?? 45;
 
         $createData = [
             'user_id' => $tenantId,
+            'team_member_id' => $teamMemberId,
             'day_of_week' => (int) $validated['day_of_week'],
             'label' => $validated['label'] ?? null,
             'opens_at' => Carbon::createFromFormat('H:i', $validated['opens_at'])->format('H:i:s'),
@@ -140,17 +153,24 @@ class BusinessHourService
 
     public function update(BusinessHour $businessHour, array $validated, ?int $tenantId, bool $hasBreak = false, ?bool $isActive = null): BusinessHour
     {
-        if (isset($validated['day_of_week'])) {
+        $teamMemberId = array_key_exists('team_member_id', $validated)
+            ? (! empty($validated['team_member_id']) ? (int) $validated['team_member_id'] : null)
+            : $businessHour->team_member_id;
+
+        if (isset($validated['day_of_week']) || array_key_exists('team_member_id', $validated)) {
+            $dayOfWeek = isset($validated['day_of_week']) ? (int) $validated['day_of_week'] : $businessHour->day_of_week;
             $this->ensureUniqueDayOfWeek(
                 $tenantId,
-                (int) $validated['day_of_week'],
-                (int) $businessHour->id
+                $dayOfWeek,
+                (int) $businessHour->id,
+                $teamMemberId
             );
         }
 
         $slotMinutes = $validated['slot_duration_minutes'] ?? $validated['slot_interval_minutes'] ?? $businessHour->slot_duration_minutes ?? $businessHour->slot_interval_minutes ?? 45;
 
         $updateData = [
+            'team_member_id' => $teamMemberId,
             'day_of_week' => isset($validated['day_of_week']) ? (int) $validated['day_of_week'] : $businessHour->day_of_week,
             'label' => $validated['label'] ?? null,
             'opens_at' => Carbon::createFromFormat('H:i', $validated['opens_at'])->format('H:i:s'),

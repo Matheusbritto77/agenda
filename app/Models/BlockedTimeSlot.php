@@ -15,6 +15,7 @@ class BlockedTimeSlot extends Model
 
     protected $fillable = [
         'user_id',
+        'team_member_id',
         'starts_at',
         'ends_at',
         'reason',
@@ -22,6 +23,7 @@ class BlockedTimeSlot extends Model
     ];
 
     protected $casts = [
+        'team_member_id' => 'integer',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'is_active' => 'boolean',
@@ -44,8 +46,22 @@ class BlockedTimeSlot extends Model
         return $query->where($query->getModel()->getTable() . '.user_id', $tenantId);
     }
 
+    public function scopeForTeamMember(Builder $query, ?int $teamMemberId): Builder
+    {
+        if ($teamMemberId === null) {
+            return $query->whereNull('team_member_id');
+        }
+
+        return $query->where('team_member_id', $teamMemberId);
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function teamMember(): BelongsTo
+    {
+        return $this->belongsTo(TeamMember::class, 'team_member_id');
     }
 }

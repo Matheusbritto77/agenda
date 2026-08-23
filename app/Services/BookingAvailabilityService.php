@@ -41,7 +41,7 @@ class BookingAvailabilityService
                 $service,
                 $date,
                 [],
-                $this->blockedDatesForDate($date, $tenantId)
+                $this->blockedDatesForDate($date, $tenantId, $professional)
             );
         }
 
@@ -57,7 +57,7 @@ class BookingAvailabilityService
                 $service,
                 $date,
                 [],
-                $this->blockedDatesForDate($date, $tenantId)
+                $this->blockedDatesForDate($date, $tenantId, $professional)
             );
         }
 
@@ -70,7 +70,7 @@ class BookingAvailabilityService
                 $service,
                 $date,
                 [],
-                $this->blockedDatesForDate($date, $tenantId)
+                $this->blockedDatesForDate($date, $tenantId, $professional)
             );
         }
 
@@ -122,7 +122,7 @@ class BookingAvailabilityService
             $service,
             $date,
             $availableSlots,
-            $this->blockedDatesForDate($date, $tenantId)
+            $this->blockedDatesForDate($date, $tenantId, $professional)
         );
     }
 
@@ -222,14 +222,31 @@ class BookingAvailabilityService
             ->select(['starts_at', 'ends_at'])
             ->orderBy('starts_at');
 
-        $blockedSlotsQuery->where(function ($query) use ($tenantId): void {
+        $memberId = null;
+        if ($professional instanceof TeamMember) {
+            $memberId = (int) $professional->id;
+        } elseif ($professional instanceof User && ! empty($professional->parent_id)) {
+            $memberId = TeamMember::query()
+                ->where('user_id', $tenantId)
+                ->where('email', $professional->email)
+                ->value('id');
+        }
+
+        $blockedSlotsQuery->where(function ($query) use ($tenantId, $memberId): void {
             if ($tenantId === null) {
                 $query->whereNull('blocked_time_slots.user_id');
-
-                return;
+            } else {
+                $query->where('blocked_time_slots.user_id', $tenantId);
             }
 
-            $query->where('blocked_time_slots.user_id', $tenantId);
+            if ($memberId !== null) {
+                $query->where(function ($q) use ($memberId): void {
+                    $q->whereNull('blocked_time_slots.team_member_id')
+                        ->orWhere('blocked_time_slots.team_member_id', $memberId);
+                });
+            } else {
+                $query->whereNull('blocked_time_slots.team_member_id');
+            }
         });
 
         $blockedSlotsQuery->get()
@@ -320,22 +337,64 @@ class BookingAvailabilityService
      */
     private function businessHoursForContext(?int $tenantId, User|TeamMember|null $professional = null)
     {
-        if ($professional instanceof TeamMember && is_array($professional->business_hours) && $professional->business_hours !== []) {
-            return collect($professional->business_hours)->map(function ($item) use ($tenantId) {
-                if ($item instanceof BusinessHour) {
-                    return $item;
-                }
-                return new BusinessHour((array) $item + ['user_id' => $tenantId]);
-            });
-        }
-
         if ($tenantId === null) {
             return collect();
         }
 
-        return BusinessHour::query()
+        $defaultHours = BusinessHour::query()
             ->where('business_hours.user_id', $tenantId)
+            ->whereNull('business_hours.team_member_id')
             ->get();
+
+        $memberId = null;
+        if ($professional instanceof TeamMember) {
+            $memberId = (int) $professional->id;
+        } elseif ($professional instanceof User && ! empty($professional->parent_id)) {
+            $memberId = TeamMember::query()
+                ->where('user_id', $tenantId)
+                ->where('email', $professional->email)
+                ->value('id');
+        }
+
+        if ($memberId !== null) {
+            $customHours = BusinessHour::query()
+                ->where('business_hours.user_id', $tenantId)
+                ->where('business_hours.team_member_id', $memberId)
+                ->get();
+
+            if ($customHours->isNotEmpty()) {
+                $customDayMap = $customHours->keyBy('day_of_week');
+                $merged = collect();
+
+                foreach ($defaultHours as $default) {
+                    if ($customDayMap->has($default->day_of_week)) {
+                        $merged->push($customDayMap->get($default->day_of_week));
+                    } else {
+                        $merged->push($default);
+                    }
+                }
+
+                foreach ($customHours as $custom) {
+                    if (! $merged->contains('id', $custom->id)) {
+                        $merged->push($custom);
+                    }
+                }
+
+                return $merged;
+            }
+
+            if ($professional instanceof TeamMember && is_array($professional->business_hours) && $professional->business_hours !== []) {
+                return collect($professional->business_hours)->map(function ($item) use ($tenantId) {
+                    if ($item instanceof BusinessHour) {
+                        return $item;
+                    }
+
+                    return new BusinessHour((array) $item + ['user_id' => $tenantId]);
+                });
+            }
+        }
+
+        return $defaultHours;
     }
 
     private function resolveProfessionalCacheKey(User|TeamMember|null $professional): string
@@ -418,13 +477,18 @@ class BookingAvailabilityService
             [
                 'opens_at' => '08:00:00',
                 'closes_at' => '18:00:00',
-                'slot_duration_minutes' => $this->slotStepMinutesFor([], $service),
+                'slot_duration_minutes' => (int) $service->duration_minutes,
                 'is_active' => true,
             ],
         ]);
     }
 
-    private function payloadFor(Service $service, CarbonInterface $date, array $slots, array $blockedDates = []): array
+    /**
+     * @param  array<int, string>  $slots
+     * @param  array<int, array{date:string,reason:?string}>  $blockedDates
+     * @return array{service_id:int,date:string,slots:array<int,string>,blocked_dates:array<int,array{date:string,reason:?string}>}
+     */
+    private function payloadFor(Service $service, CarbonInterface $date, array $slots, array $blockedDates): array
     {
         return [
             'service_id' => $service->id,
@@ -437,10 +501,20 @@ class BookingAvailabilityService
     /**
      * @return array<int, array{date:string,reason:?string}>
      */
-    private function blockedDatesForDate(CarbonInterface $date, ?int $tenantId): array
+    private function blockedDatesForDate(CarbonInterface $date, ?int $tenantId, User|TeamMember|null $professional = null): array
     {
         $startOfDay = $date->copy()->startOfDay();
         $endOfDay = $date->copy()->endOfDay();
+
+        $memberId = null;
+        if ($professional instanceof TeamMember) {
+            $memberId = (int) $professional->id;
+        } elseif ($professional instanceof User && ! empty($professional->parent_id)) {
+            $memberId = TeamMember::query()
+                ->where('user_id', $tenantId)
+                ->where('email', $professional->email)
+                ->value('id');
+        }
 
         $query = BlockedTimeSlot::query()
             ->active()
@@ -448,14 +522,21 @@ class BookingAvailabilityService
             ->select(['starts_at', 'reason'])
             ->orderBy('starts_at');
 
-        $query->where(function ($builder) use ($tenantId): void {
+        $query->where(function ($builder) use ($tenantId, $memberId): void {
             if ($tenantId === null) {
                 $builder->whereNull('blocked_time_slots.user_id');
-
-                return;
+            } else {
+                $builder->where('blocked_time_slots.user_id', $tenantId);
             }
 
-            $builder->where('blocked_time_slots.user_id', $tenantId);
+            if ($memberId !== null) {
+                $builder->where(function ($q) use ($memberId): void {
+                    $q->whereNull('blocked_time_slots.team_member_id')
+                        ->orWhere('blocked_time_slots.team_member_id', $memberId);
+                });
+            } else {
+                $builder->whereNull('blocked_time_slots.team_member_id');
+            }
         });
 
         return $query->get()

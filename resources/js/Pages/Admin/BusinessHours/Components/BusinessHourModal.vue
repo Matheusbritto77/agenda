@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps({
     show: {
@@ -22,6 +22,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    teamMembers: {
+        type: Array,
+        default: () => [],
+    },
+    allBusinessHours: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const emit = defineEmits(['close', 'submit']);
@@ -33,6 +41,30 @@ const normalizedDays = computed(() => {
         shortName: (d.name || d.label || '').substring(0, 3).toUpperCase(),
     }));
 });
+
+const effectiveConfiguredDays = computed(() => {
+    const selectedMemberId = props.form.team_member_id ? Number(props.form.team_member_id) : null;
+    return props.allBusinessHours
+        .filter(h => {
+            const hMemberId = h.team_member_id ? Number(h.team_member_id) : null;
+            return hMemberId === selectedMemberId;
+        })
+        .map(h => h.day_of_week);
+});
+
+const isScopeTeam = computed(() => {
+    return Boolean(props.form.team_member_id);
+});
+
+const setScope = (scope) => {
+    if (scope === 'company') {
+        props.form.team_member_id = null;
+    } else if (scope === 'team') {
+        if (props.teamMembers.length > 0 && !props.form.team_member_id) {
+            props.form.team_member_id = props.teamMembers[0].id;
+        }
+    }
+};
 
 const handleBackdropClick = (event) => {
     if (event.target === event.currentTarget) {
@@ -61,18 +93,18 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
             class="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
             @click="handleBackdropClick"
         >
-            <div class="liquid-glass-card w-full max-w-lg p-6 sm:p-7 space-y-5 relative shadow-2xl" @click.stop>
+            <div class="liquid-glass-card w-full max-w-lg p-6 sm:p-7 space-y-5 relative shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
                 <!-- Modal Header -->
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
-                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-600/30">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-violet-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-600/30 shrink-0">
                             <i class="fa-regular fa-clock"></i>
                         </div>
                         <div>
                             <h3 class="text-base sm:text-lg font-black tracking-tight" style="color: var(--text-heading);">
                                 {{ isEditing ? 'Editar Expediente' : 'Novo Dia de Expediente' }}
                             </h3>
-                            <p class="text-xs opacity-60">Defina os horários de atendimento do dia</p>
+                            <p class="text-xs opacity-60">Defina os horários de atendimento e pausas</p>
                         </div>
                     </div>
                     <button
@@ -86,6 +118,60 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
 
                 <!-- Form -->
                 <form @submit.prevent="$emit('submit')" class="space-y-4">
+                    <!-- Scope Selection (Company vs Team Member) -->
+                    <div v-if="teamMembers.length > 0" class="space-y-2">
+                        <label class="form-label text-xs font-bold uppercase tracking-wider block" style="color: var(--text-heading);">
+                            Aplicar Horário Para
+                        </label>
+                        <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                            <button
+                                type="button"
+                                @click="setScope('company')"
+                                :disabled="isEditing"
+                                :class="[
+                                    'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                    !form.team_member_id
+                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                        : 'opacity-70 hover:opacity-100 text-slate-600 dark:text-slate-400'
+                                ]"
+                            >
+                                <i class="fa-solid fa-building text-xs"></i>
+                                <span>Padrão da Empresa</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="setScope('team')"
+                                :disabled="isEditing"
+                                :class="[
+                                    'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                    form.team_member_id
+                                        ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                                        : 'opacity-70 hover:opacity-100 text-slate-600 dark:text-slate-400'
+                                ]"
+                            >
+                                <i class="fa-solid fa-user text-xs"></i>
+                                <span>Profissional Específico</span>
+                            </button>
+                        </div>
+
+                        <!-- Team Member Picker -->
+                        <div v-if="form.team_member_id" class="pt-1">
+                            <label class="form-label text-xs font-semibold block mb-1 text-slate-600 dark:text-slate-400">
+                                Selecione o Profissional
+                            </label>
+                            <select
+                                v-model="form.team_member_id"
+                                :disabled="isEditing"
+                                class="form-control text-xs sm:text-sm rounded-xl font-bold"
+                                required
+                            >
+                                <option v-for="member in teamMembers" :key="member.id" :value="member.id">
+                                    {{ member.name }} {{ member.job_title ? `(${member.job_title})` : '' }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Day of Week Field -->
                     <div class="space-y-1.5">
                         <label class="form-label text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--text-heading);" for="modal_day_of_week">
@@ -104,9 +190,9 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                                 v-for="day in normalizedDays"
                                 :key="day.key"
                                 :value="String(day.key)"
-                                :disabled="!isEditing && configuredDays.includes(day.key)"
+                                :disabled="!isEditing && effectiveConfiguredDays.includes(day.key)"
                             >
-                                {{ day.name }} {{ (!isEditing && configuredDays.includes(day.key)) ? '(Já configurado)' : '' }}
+                                {{ day.name }} {{ (!isEditing && effectiveConfiguredDays.includes(day.key)) ? '(Já configurado)' : '' }}
                             </option>
                         </select>
                         <span v-if="form.errors?.day_of_week" class="text-xs text-rose-500 mt-1 font-medium block">
@@ -137,7 +223,7 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                                 @click="applyPreset('08:00', '12:00', false)"
                                 class="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-indigo-500 hover:text-indigo-600 transition-all cursor-pointer"
                             >
-                                08h - 12h (Sábado)
+                                08h - 12h (Meio Período)
                             </button>
                         </div>
                     </div>
@@ -184,7 +270,7 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <i class="fa-solid fa-mug-hot text-xs text-amber-500"></i>
-                                <span class="text-xs font-bold" style="color: var(--text-heading);">Intervalo / Almoço</span>
+                                <span class="text-xs font-bold" style="color: var(--text-heading);">Intervalo / Almoço / Café</span>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -205,7 +291,7 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                                     type="time"
                                     id="modal_break_start"
                                     v-model="form.break_opens_at"
-                                    class="form-control text-xs sm:text-sm rounded-xl"
+                                    class="form-control text-xs sm:text-sm rounded-xl font-semibold"
                                     :required="form.has_break"
                                 />
                                 <span v-if="form.errors?.break_opens_at" class="text-xs text-rose-500 mt-1 block">
@@ -221,7 +307,7 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                                     type="time"
                                     id="modal_break_end"
                                     v-model="form.break_closes_at"
-                                    class="form-control text-xs sm:text-sm rounded-xl"
+                                    class="form-control text-xs sm:text-sm rounded-xl font-semibold"
                                     :required="form.has_break"
                                 />
                                 <span v-if="form.errors?.break_closes_at" class="text-xs text-rose-500 mt-1 block">
@@ -240,7 +326,7 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                             class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                         />
                         <label for="modal_hour_active" class="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
-                            Dia ativo para novos agendamentos online
+                            Dia ativo para novos agendamentos
                         </label>
                     </div>
 

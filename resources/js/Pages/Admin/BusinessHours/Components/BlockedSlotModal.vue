@@ -14,6 +14,10 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    teamMembers: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const emit = defineEmits(['close', 'submit']);
@@ -25,15 +29,25 @@ const handleBackdropClick = (event) => {
 };
 
 const reasonPresets = [
-    'Feriado',
+    'Feriado Nacional',
     'Reforma / Manutenção',
-    'Folga da Equipe',
+    'Folga / Férias',
     'Treinamento / Evento',
-    'Imprevisto',
+    'Imprevisto / Emergência',
 ];
 
 const setReason = (r) => {
     props.form.reason = r;
+};
+
+const setScope = (scope) => {
+    if (scope === 'company') {
+        props.form.team_member_id = null;
+    } else if (scope === 'team') {
+        if (props.teamMembers.length > 0 && !props.form.team_member_id) {
+            props.form.team_member_id = props.teamMembers[0].id;
+        }
+    }
 };
 
 const setQuickRange = (type) => {
@@ -90,11 +104,11 @@ const setQuickRange = (type) => {
             class="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
             @click="handleBackdropClick"
         >
-            <div class="liquid-glass-card w-full max-w-lg p-6 sm:p-7 space-y-5 relative shadow-2xl" @click.stop>
+            <div class="liquid-glass-card w-full max-w-lg p-6 sm:p-7 space-y-5 relative shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
                 <!-- Header -->
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
-                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-rose-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-rose-500/30">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-rose-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-rose-500/30 shrink-0">
                             <i class="fa-solid fa-ban"></i>
                         </div>
                         <div>
@@ -115,6 +129,57 @@ const setQuickRange = (type) => {
 
                 <!-- Form -->
                 <form @submit.prevent="$emit('submit')" class="space-y-4">
+                    <!-- Scope Selection (Company vs Team Member) -->
+                    <div v-if="teamMembers.length > 0" class="space-y-2">
+                        <label class="form-label text-xs font-bold uppercase tracking-wider block" style="color: var(--text-heading);">
+                            Aplicar Bloqueio Para
+                        </label>
+                        <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                            <button
+                                type="button"
+                                @click="setScope('company')"
+                                :class="[
+                                    'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                    !form.team_member_id
+                                        ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm'
+                                        : 'opacity-70 hover:opacity-100 text-slate-600 dark:text-slate-400'
+                                ]"
+                            >
+                                <i class="fa-solid fa-building text-xs"></i>
+                                <span>Toda a Empresa</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="setScope('team')"
+                                :class="[
+                                    'py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer',
+                                    form.team_member_id
+                                        ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm'
+                                        : 'opacity-70 hover:opacity-100 text-slate-600 dark:text-slate-400'
+                                ]"
+                            >
+                                <i class="fa-solid fa-user text-xs"></i>
+                                <span>Profissional Específico</span>
+                            </button>
+                        </div>
+
+                        <!-- Team Member Picker -->
+                        <div v-if="form.team_member_id" class="pt-1">
+                            <label class="form-label text-xs font-semibold block mb-1 text-slate-600 dark:text-slate-400">
+                                Selecione o Profissional
+                            </label>
+                            <select
+                                v-model="form.team_member_id"
+                                class="form-control text-xs sm:text-sm rounded-xl font-bold"
+                                required
+                            >
+                                <option v-for="member in teamMembers" :key="member.id" :value="member.id">
+                                    {{ member.name }} {{ member.job_title ? `(${member.job_title})` : '' }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Reason -->
                     <div class="space-y-1.5">
                         <label class="form-label text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--text-heading);" for="block_reason">

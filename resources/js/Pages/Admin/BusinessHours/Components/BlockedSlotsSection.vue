@@ -8,6 +8,10 @@ defineProps({
         type: Boolean,
         default: false,
     },
+    selectedMember: {
+        type: Object,
+        default: null,
+    },
 });
 
 defineEmits(['open-create-block', 'open-edit-block', 'open-delete-block']);
@@ -30,13 +34,13 @@ const formatDateTime = (value) => {
         <div class="p-5 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style="border-color: var(--border);">
             <div>
                 <h3 class="text-base sm:text-lg font-extrabold" style="color: var(--text-heading);">Bloqueios Especiais & Feriados</h3>
-                <p class="text-xs opacity-60">Impeça agendamentos em datas festivas, folgas ou eventos particulares</p>
+                <p class="text-xs opacity-60">Impeça agendamentos em datas festivas, folgas particulares ou intervalos de profissionais</p>
             </div>
             <button
                 v-if="canManageBlocks"
                 type="button"
                 @click="$emit('open-create-block')"
-                class="btn btn-primary text-xs py-2 px-3.5 self-start sm:self-auto"
+                class="btn btn-primary text-xs py-2 px-3.5 self-start sm:self-auto cursor-pointer"
             >
                 <i class="fa-solid fa-plus text-xs"></i>
                 <span>Novo Bloqueio</span>
@@ -56,6 +60,7 @@ const formatDateTime = (value) => {
                 <thead>
                     <tr>
                         <th>Motivo / Título</th>
+                        <th>Aplicado Para</th>
                         <th>Início do Bloqueio</th>
                         <th>Término do Bloqueio</th>
                         <th>Status</th>
@@ -68,6 +73,22 @@ const formatDateTime = (value) => {
                             <div class="font-bold text-sm" style="color: var(--text-heading);">
                                 {{ block.reason || 'Bloqueio de Horário' }}
                             </div>
+                        </td>
+                        <td>
+                            <span
+                                v-if="block.team_member || block.team_member_id"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+                            >
+                                <i class="fa-solid fa-user text-[10px]"></i>
+                                <span>{{ block.team_member?.name || `Profissional #${block.team_member_id}` }}</span>
+                            </span>
+                            <span
+                                v-else
+                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                            >
+                                <i class="fa-solid fa-building text-[10px]"></i>
+                                <span>Toda a Empresa</span>
+                            </span>
                         </td>
                         <td>
                             <div class="text-xs sm:text-sm font-medium">
@@ -90,7 +111,7 @@ const formatDateTime = (value) => {
                                     v-if="canManageBlocks"
                                     type="button"
                                     @click="$emit('open-edit-block', block)"
-                                    class="w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-500 transition-all"
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-500 transition-all cursor-pointer"
                                     title="Editar bloqueio"
                                 >
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
@@ -99,7 +120,7 @@ const formatDateTime = (value) => {
                                     v-if="canManageBlocks"
                                     type="button"
                                     @click="$emit('open-delete-block', block)"
-                                    class="w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-500 transition-all"
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center opacity-60 hover:opacity-100 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-500 transition-all cursor-pointer"
                                     title="Excluir bloqueio"
                                 >
                                     <i class="fa-solid fa-trash text-xs"></i>
