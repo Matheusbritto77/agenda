@@ -141,7 +141,7 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:services.create')->get('/services/create', [ServiceController::class, 'create'])->name('services.create');
     Route::middleware('permission:services.create')->post('/services', [ServiceController::class, 'store'])->name('services.store');
     Route::middleware('permission:services.edit')->get('/services/{service}/edit', [ServiceController::class, 'edit'])->name('services.edit');
-    Route::middleware('permission:services.edit')->put('/services/{service}', [ServiceController::class, 'update'])->name('services.update');
+    Route::middleware('permission:services.edit')->match(['put', 'post'], '/services/{service}', [ServiceController::class, 'update'])->name('services.update');
     Route::middleware('permission:services.delete')->delete('/services/{service}', [ServiceController::class, 'destroy'])->name('services.destroy');
     Route::middleware('permission:services.delete')->patch('/services/{service}/toggle-status', [ServiceController::class, 'toggleStatus'])->name('services.toggle-status');
 
@@ -155,7 +155,7 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     // Team CRUD & Toggle
     Route::middleware('permission:team.view')->get('/team', [TeamMemberController::class, 'index'])->name('team.index');
     Route::middleware('permission:team.create')->post('/team', [TeamMemberController::class, 'store'])->name('team.store');
-    Route::middleware('permission:team.edit')->put('/team/{teamMember}', [TeamMemberController::class, 'update'])->name('team.update');
+    Route::middleware('permission:team.edit')->match(['put', 'post'], '/team/{teamMember}', [TeamMemberController::class, 'update'])->name('team.update');
     Route::middleware('permission:team.delete')->delete('/team/{teamMember}', [TeamMemberController::class, 'destroy'])->name('team.destroy');
     Route::middleware('permission:team.delete')->patch('/team/{teamMember}/toggle-status', [TeamMemberController::class, 'toggleStatus'])->name('team.toggle-status');
     Route::middleware('permission:team.edit')->post('/team/{teamMember}/reset-password', [TeamMemberController::class, 'resetPassword'])->name('team.reset-password');

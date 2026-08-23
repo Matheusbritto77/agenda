@@ -81,6 +81,13 @@ class TeamMemberController extends Controller
             'role_title' => $roleTitle,
         ];
 
+        if ($member) {
+            $rawMemberAvatar = $member->getRawOriginal('avatar_url') ?? $member->avatar_url;
+            if ($rawMemberAvatar) {
+                $updateData['avatar_url'] = $rawMemberAvatar;
+            }
+        }
+
         if (! empty($validated['password'] ?? null)) {
             $updateData['password'] = $userPassword;
             $updateData['must_reset_password'] = false;
@@ -267,15 +274,18 @@ class TeamMemberController extends Controller
                 'service_commissions' => ['nullable', 'array'],
             ])->validate();
 
-            $avatarUrl = $teamMember->avatar_url;
-
-            if ($request->filled('avatar_url')) {
-                $avatarUrl = $validated['avatar_url'];
-            }
+            $avatarUrl = $teamMember->getRawOriginal('avatar_url');
 
             if ($request->hasFile('avatar')) {
                 \App\Support\StorageHelper::delete($teamMember->avatar_url);
                 $avatarUrl = $request->file('avatar')->store('team/avatars', 'public');
+            } elseif (array_key_exists('avatar_url', $validated)) {
+                if (empty($validated['avatar_url'])) {
+                    \App\Support\StorageHelper::delete($teamMember->avatar_url);
+                    $avatarUrl = null;
+                } elseif (filter_var($validated['avatar_url'], FILTER_VALIDATE_URL) && ! str_contains($validated['avatar_url'], '/storage/')) {
+                    $avatarUrl = $validated['avatar_url'];
+                }
             }
 
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;

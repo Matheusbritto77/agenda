@@ -111,6 +111,7 @@ const openEditModal = (member) => {
     editForm.role_id = member.role_id || 'professional';
     editForm.email = member.email || '';
     editForm.phone = member.phone || '';
+    editForm.avatar = null;
     editForm.avatar_url = member.avatar_url || '';
     editForm.commission_rate = Number(member.commission_rate || 0);
     editForm.service_commissions = { ...(member.service_commissions || {}) };
@@ -144,6 +145,7 @@ const closeCreateModal = () => {
 const closeEditModal = () => {
     showEditModal.value = false;
     editingMember.value = null;
+    editForm.avatar = null;
     document.body.classList.remove('overflow-hidden');
 };
 
@@ -160,25 +162,30 @@ const closeResetModal = () => {
 };
 
 const handleCreateFileChange = (file) => {
+    createForm.avatar = file || null;
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => { createAvatarPreview.value = e.target.result; };
         reader.readAsDataURL(file);
-        createForm.avatar = file;
+    } else {
+        createAvatarPreview.value = '';
     }
 };
 
 const handleEditFileChange = (file) => {
+    editForm.avatar = file || null;
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => { editAvatarPreview.value = e.target.result; };
         reader.readAsDataURL(file);
-        editForm.avatar = file;
+    } else {
+        editAvatarPreview.value = editingMember.value?.avatar_url || '';
     }
 };
 
 const submitCreate = () => {
     createForm.post(route('admin.team.store'), {
+        forceFormData: true,
         onSuccess: () => { closeCreateModal(); createForm.reset(); },
         preserveScroll: true,
     });
@@ -190,6 +197,7 @@ const submitEdit = () => {
         ...data,
         _method: 'PUT',
     })).post(route('admin.team.update', editingMember.value.id), {
+        forceFormData: true,
         onSuccess: () => { closeEditModal(); },
         preserveScroll: true,
     });
