@@ -172,7 +172,13 @@ class BookingAvailabilityService
             ])
             ->leftJoin('services', 'services.id', '=', 'appointments.service_id')
             ->where('appointments.appointment_date', $date->toDateString())
-            ->whereIn('appointments.status', ['pending', 'confirmed'])
+            ->where(function ($query): void {
+                $query->whereIn('appointments.status', ['confirmed', 'completed'])
+                    ->orWhere(function ($subQuery): void {
+                        $subQuery->where('appointments.status', 'pending')
+                            ->where('appointments.payment_status', '!=', 'pending');
+                    });
+            })
             ->orderBy('appointments.appointment_time');
 
         if ($professional instanceof TeamMember) {

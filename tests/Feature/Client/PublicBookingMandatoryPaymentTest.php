@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\PaymentSetting;
 use App\Models\Service;
 use App\Models\User;
+use App\Services\BookingAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -46,7 +47,7 @@ class PublicBookingMandatoryPaymentTest extends TestCase
         }
     }
 
-    public function test_booking_with_active_payment_setting_creates_pix_payment(): void
+    public function test_booking_with_active_payment_setting_creates_pending_appointment_that_does_not_occupy_slot(): void
     {
         $service = Service::create([
             'user_id' => $this->tenant->id,
@@ -86,9 +87,11 @@ class PublicBookingMandatoryPaymentTest extends TestCase
             ],
         ]);
 
+        // 1. Appointment is saved as PENDING initially
         $this->assertDatabaseHas('appointments', [
             'user_id' => $this->tenant->id,
             'client_name' => 'João Silva',
+            'status' => 'pending',
             'payment_status' => 'pending',
         ]);
 
@@ -98,17 +101,25 @@ class PublicBookingMandatoryPaymentTest extends TestCase
             'status' => 'pending',
             'amount' => 75.00,
         ]);
+
+        // 2. Pending unpaid appointment does NOT occupy the slot
+        $availabilityService = app(BookingAvailabilityService::class);
+        $availabilityService->clearCache();
+        $slots = $availabilityService->slotsFor($service, $targetDate)['slots'];
+        $this->assertContains('14:00', $slots, 'Pending unpaid appointment should not occupy slot 14:00');
     }
 
-    public function test_mercadopago_webhook_confirms_appointment_safely(): void
+    public function test_mercadopago_webhook_confirms_appointment_safely_and_occupies_slot(): void
     {
         $service = Service::create([
             'user_id' => $this->tenant->id,
             'name' => 'Corte Simples',
-            'duration_minutes' => 30,
+            'duration_minutes' => 60,
             'price' => 50.00,
             'is_active' => true,
         ]);
+
+        $targetDate = Carbon::now()->addDays(2)->format('Y-m-d');
 
         $appointment = Appointment::create([
             'user_id' => $this->tenant->id,
@@ -116,9 +127,9 @@ class PublicBookingMandatoryPaymentTest extends TestCase
             'client_name' => 'Lucas Santos',
             'client_email' => 'lucas@example.com',
             'client_phone' => '11988887777',
-            'appointment_date' => '2026-08-25',
+            'appointment_date' => $targetDate,
             'appointment_time' => '14:00',
-            'status' => 'confirmed',
+            'status' => 'pending',
             'payment_status' => 'pending',
         ]);
 
@@ -157,5 +168,11 @@ class PublicBookingMandatoryPaymentTest extends TestCase
         $appointment->refresh();
         $this->assertEquals('paid', $appointment->payment_status);
         $this->assertEquals('confirmed', $appointment->status);
+
+        // Now that it is confirmed, the slot MUST be occupied
+        $availabilityService = app(BookingAvailabilityService::class);
+        $availabilityService->clearCache();
+        $slots = $availabilityService->slotsFor($service, $targetDate)['slots'];
+        $this->assertNotContains('14:00', $slots, 'Confirmed paid appointment must occupy slot 14:00');
     }
 }

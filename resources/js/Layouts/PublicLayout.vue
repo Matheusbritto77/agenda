@@ -100,13 +100,30 @@ watch(() => props.title, (newTitle) => {
 
 watch(() => props.branding?.favicon_url, (newFavicon) => {
     if (newFavicon) {
-        const link = document.getElementById('dynamic-favicon') || document.querySelector("link[rel*='icon']");
-        if (link) {
-            link.href = newFavicon;
+        const faviconLinks = Array.from(document.querySelectorAll("link[rel~='icon']"));
+        const link = document.getElementById('dynamic-favicon') || document.createElement('link');
+
+        faviconLinks.forEach((faviconLink) => {
+            if (faviconLink !== link) {
+                faviconLink.remove();
+            }
+        });
+
+        link.id = 'dynamic-favicon';
+        link.rel = 'icon';
+        link.href = newFavicon;
+
+        if (!link.isConnected) {
+            document.head.appendChild(link);
         }
-        const appleLink = document.getElementById('dynamic-apple-touch-icon') || document.querySelector("link[rel*='apple-touch-icon']");
-        if (appleLink) {
-            appleLink.href = newFavicon;
+
+        const appleLink = document.getElementById('dynamic-apple-touch-icon') || document.createElement('link');
+        appleLink.id = 'dynamic-apple-touch-icon';
+        appleLink.rel = 'apple-touch-icon';
+        appleLink.href = newFavicon;
+
+        if (!appleLink.isConnected) {
+            document.head.appendChild(appleLink);
         }
     }
 }, { immediate: true });

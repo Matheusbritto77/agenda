@@ -13,7 +13,10 @@
                 $tenantId = $user->parent_id ?: $user->id;
                 $tenant = \App\Models\User::find($tenantId);
             }
-            $tenantBranding = $tenant ? \App\Models\BrandingSetting::where('user_id', $tenant->id)->first() : null;
+            $brandingOwnerId = $tenant ? ($tenant->parent_id ?: $tenant->id) : null;
+            $tenantBranding = $brandingOwnerId
+                ? \App\Models\BrandingSetting::where('user_id', $brandingOwnerId)->first()
+                : null;
             $tenantFaviconUrl = $tenantBranding?->favicon_url;
         @endphp
 

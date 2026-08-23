@@ -48,4 +48,51 @@ class BrandingFaviconTest extends TestCase
         $this->assertNull($branding->settings['favicon_path'] ?? null);
         $this->assertNull($branding->favicon_url);
     }
+
+    public function test_public_company_page_renders_the_saved_custom_favicon(): void
+    {
+        $tenant = User::factory()->create([
+            'subdomain' => 'clinica-favicon',
+        ]);
+
+        $branding = BrandingSetting::create([
+            'user_id' => $tenant->id,
+            'settings' => [
+                'favicon_path' => 'branding/favicons/company-icon.png',
+            ],
+        ]);
+
+        $response = $this->get('http://clinica-favicon.localhost/');
+
+        $response->assertOk();
+        $response->assertSee('id="dynamic-favicon"', false);
+        $response->assertSee('href="'.$branding->favicon_url.'"', false);
+        $response->assertDontSee('href="/favicon.svg"', false);
+        $response->assertDontSee('href="/favicon.png"', false);
+    }
+
+    public function test_public_professional_page_uses_the_company_favicon(): void
+    {
+        $company = User::factory()->create([
+            'subdomain' => 'clinica-company',
+        ]);
+        $professional = User::factory()->create([
+            'parent_id' => $company->id,
+            'subdomain' => 'profissional-favicon',
+        ]);
+
+        $branding = BrandingSetting::create([
+            'user_id' => $company->id,
+            'settings' => [
+                'favicon_path' => 'branding/favicons/company-icon.png',
+            ],
+        ]);
+
+        $response = $this->get('http://profissional-favicon.localhost/');
+
+        $response->assertOk();
+        $response->assertSee('id="dynamic-favicon"', false);
+        $response->assertSee('href="'.$branding->favicon_url.'"', false);
+        $response->assertDontSee('href="/favicon.svg"', false);
+    }
 }

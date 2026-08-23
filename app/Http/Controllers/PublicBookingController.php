@@ -593,7 +593,7 @@ class PublicBookingController extends Controller
                 'client_phone' => $validated['client_phone'] ?? $validated['customer_phone'],
                 'appointment_date' => $validated['appointment_date'],
                 'appointment_time' => $validated['appointment_time'],
-                'status' => 'confirmed',
+                'status' => $paymentEnabled ? 'pending' : 'confirmed',
                 'payment_status' => $paymentEnabled ? 'pending' : ($payNow ? 'pending' : 'none'),
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $company->id,
