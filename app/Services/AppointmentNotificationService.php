@@ -57,7 +57,7 @@ class AppointmentNotificationService
             ->unique();
 
         foreach ($recipients as $email) {
-            $this->sendOnDemandSafely($email, $notification);
+            $this->sendOnDemandSafely($email, clone $notification);
         }
     }
 
