@@ -121,10 +121,11 @@ class ClientPortalController extends Controller
                 'client_account_id' => $client->id,
                 'rating' => $validated['rating'],
                 'comment' => $this->sanitizeText($validated['comment'] ?? null),
+                'is_public' => false,
             ]
         );
 
-        return back()->with('success', 'Avaliação salva. Obrigado por compartilhar sua experiência!');
+        return back()->with('success', 'Avaliação de atendimento enviada com sucesso para a empresa e profissional!');
     }
 
     private function earnedBadges(int $completed): array

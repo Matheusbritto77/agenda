@@ -218,6 +218,7 @@ class PublicBookingController extends Controller
             ])
             ->values();
         $reviewsQuery = AppointmentReview::query()
+            ->where('is_public', true)
             ->whereHas('appointment', fn ($query) => $query
                 ->where('appointments.user_id', $company->id)
                 ->where('appointments.status', 'completed'));

@@ -156,6 +156,7 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:appointments.view')->get('/appointments/events', [AppointmentController::class, 'events'])->name('appointments.events');
     Route::middleware('permission:appointments.view')->get('/appointments/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
     Route::middleware('permission:appointments.edit')->patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
+    Route::middleware('permission:appointments.edit')->patch('/reviews/{review}/toggle-public', [AppointmentController::class, 'toggleReviewPublic'])->name('appointments.reviews.toggle-public');
 
     // Team CRUD & Toggle
     Route::middleware('permission:team.view')->get('/team', [TeamMemberController::class, 'index'])->name('team.index');

@@ -69,7 +69,7 @@ class AppointmentController extends Controller
             $tenantId = $this->tenantId($request);
             $query = Appointment::query()
                 ->where('appointments.user_id', $tenantId)
-                ->with(['service', 'teamMember']);
+                ->with(['service', 'teamMember', 'review']);
 
             if ($request->filled('status')) {
                 $query->where('status', strtolower(trim((string) $request->status)));
@@ -352,6 +352,13 @@ class AppointmentController extends Controller
             ] : null,
             'status' => $appointment->status,
             'notes' => $appointment->notes,
+            'review' => $appointment->review ? [
+                'id' => $appointment->review->id,
+                'rating' => (int) $appointment->review->rating,
+                'comment' => $appointment->review->comment,
+                'is_public' => (bool) $appointment->review->is_public,
+                'created_at' => $appointment->review->created_at?->format('d/m/Y H:i'),
+            ] : null,
             'appointment_datetime' => $appointment->appointment_datetime?->toIso8601String(),
         ];
     }
@@ -385,8 +392,44 @@ class AppointmentController extends Controller
             ] : null,
             'status' => $appointment->status,
             'notes' => $appointment->notes,
+            'review' => $appointment->review ? [
+                'id' => $appointment->review->id,
+                'rating' => (int) $appointment->review->rating,
+                'comment' => $appointment->review->comment,
+                'is_public' => (bool) $appointment->review->is_public,
+                'created_at' => $appointment->review->created_at?->format('d/m/Y H:i'),
+            ] : null,
             'appointment_datetime' => $appointment->appointment_datetime?->toIso8601String(),
         ];
+    }
+
+    public function toggleReviewPublic(Request $request, \App\Models\AppointmentReview $review)
+    {
+        $tenantId = $this->tenantId($request);
+        abort_unless((int) $review->appointment->user_id === (int) $tenantId, 403);
+
+        $review->update([
+            'is_public' => ! $review->is_public,
+        ]);
+
+        $message = $review->is_public 
+            ? 'Avaliação aprovada para exibição pública na página da empresa!' 
+            : 'Avaliação mantida como feedback interno do atendimento.';
+
+        if ($request->expectsJson()) {
+            return $this->jsonSuccess($request, $message, [
+                'is_public' => $review->is_public,
+                'review' => [
+                    'id' => $review->id,
+                    'rating' => (int) $review->rating,
+                    'comment' => $review->comment,
+                    'is_public' => (bool) $review->is_public,
+                    'created_at' => $review->created_at?->format('d/m/Y H:i'),
+                ],
+            ]);
+        }
+
+        return back()->with('success', $message);
     }
 
     private function formatCalendarEvent(Appointment $appointment): array
@@ -417,6 +460,12 @@ class AppointmentController extends Controller
                 ] : null,
                 'status' => $appointment->status,
                 'notes' => $appointment->notes,
+                'review' => $appointment->review ? [
+                    'id' => $appointment->review->id,
+                    'rating' => (int) $appointment->review->rating,
+                    'comment' => $appointment->review->comment,
+                    'is_public' => (bool) $appointment->review->is_public,
+                ] : null,
             ],
         ];
     }

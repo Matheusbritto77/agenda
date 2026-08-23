@@ -161,18 +161,21 @@ class PublicBookingEndpointsTest extends TestCase
             'client_account_id' => $maria->id,
             'rating' => 5,
             'comment' => 'Atendimento excelente e pontual.',
+            'is_public' => true,
         ]);
         AppointmentReview::create([
             'appointment_id' => $secondCompleted->id,
             'client_account_id' => $joao->id,
             'rating' => 4,
             'comment' => 'Gostei muito do resultado.',
+            'is_public' => true,
         ]);
         AppointmentReview::create([
             'appointment_id' => $notCompleted->id,
             'client_account_id' => $maria->id,
             'rating' => 1,
             'comment' => 'Esta avaliação não pode ser publicada.',
+            'is_public' => false,
         ]);
 
         $response = $this->get('http://studio.agendae.app/');

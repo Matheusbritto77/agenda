@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { router } from '@inertiajs/vue3';
 
 const props = defineProps({
     show: {
@@ -22,6 +23,23 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'status-change']);
 
+const togglingPublic = ref(false);
+
+const togglePublic = (review) => {
+    if (!review?.id || togglingPublic.value) return;
+    togglingPublic.value = true;
+    router.patch(route('appointments.reviews.toggle-public', review.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            review.is_public = !review.is_public;
+            togglingPublic.value = false;
+        },
+        onFinish: () => {
+            togglingPublic.value = false;
+        },
+    });
+};
+
 const whatsAppUrl = computed(() => {
     if (!props.appointment?.customer_phone) return '#';
     const cleanPhone = props.appointment.customer_phone.replace(/\D/g, '');
@@ -42,7 +60,7 @@ const handleBackdropClick = (event) => {
             class="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
             @click="handleBackdropClick"
         >
-            <div class="liquid-glass-card w-full max-w-xl p-6 sm:p-7 space-y-6 relative" @click.stop>
+            <div class="liquid-glass-card w-full max-w-xl p-6 sm:p-7 space-y-6 relative max-h-[90vh] overflow-y-auto" @click.stop>
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-600/30">
@@ -113,6 +131,42 @@ const handleBackdropClick = (event) => {
                     <div v-if="appointment.notes" class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-1 sm:col-span-2">
                         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Observações</span>
                         <p class="text-xs text-slate-600 dark:text-slate-300 italic">{{ appointment.notes }}</p>
+                    </div>
+
+                    <!-- Customer Review / Internal Evaluation Section -->
+                    <div v-if="appointment.review" class="p-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 dark:bg-amber-500/10 space-y-2.5 sm:col-span-2">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-0.5 text-amber-400 text-sm">
+                                    <i v-for="s in 5" :key="s" class="fa-star text-xs" :class="s <= appointment.review.rating ? 'fa-solid' : 'fa-regular'"></i>
+                                </div>
+                                <span class="text-xs font-black text-slate-900 dark:text-white">{{ appointment.review.rating }}.0 de 5</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="appointment.review.is_public ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/20'">
+                                    {{ appointment.review.is_public ? 'Público na Empresa' : 'Feedback Interno' }}
+                                </span>
+                            </div>
+
+                            <button
+                                v-if="canUpdateStatus"
+                                type="button"
+                                @click="togglePublic(appointment.review)"
+                                :disabled="togglingPublic"
+                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border"
+                                :class="appointment.review.is_public ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20'"
+                            >
+                                <i :class="appointment.review.is_public ? 'fa-solid fa-eye-slash' : 'fa-solid fa-share-nodes'"></i>
+                                <span>{{ appointment.review.is_public ? 'Tornar Apenas Interno' : 'Destacar na Página Pública' }}</span>
+                            </button>
+                        </div>
+
+                        <p v-if="appointment.review.comment" class="text-xs sm:text-sm text-slate-700 dark:text-slate-200 italic leading-relaxed">
+                            "{{ appointment.review.comment }}"
+                        </p>
+                        <p v-else class="text-xs text-slate-400 italic">Cliente avaliou este serviço sem comentário adicional.</p>
+                        
+                        <span v-if="appointment.review.created_at" class="text-[10px] text-slate-400 block">
+                            Avaliado em {{ appointment.review.created_at }}
+                        </span>
                     </div>
                 </div>
 

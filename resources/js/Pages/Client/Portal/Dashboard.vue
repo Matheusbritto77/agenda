@@ -436,9 +436,9 @@ const firstName = computed(() => {
                                     <div>
                                         <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                                             <i class="fa-solid fa-star text-amber-400"></i>
-                                            <span>{{ appointment.review ? 'Editar sua avaliação' : 'Como foi sua experiência neste atendimento?' }}</span>
+                                            <span>{{ appointment.review ? 'Editar sua avaliação' : 'Avaliação do Atendimento & Serviço' }}</span>
                                         </h4>
-                                        <p class="text-xs text-slate-500">Sua avaliação ajuda a empresa a melhorar e auxilia novos clientes.</p>
+                                        <p class="text-xs text-slate-500">Seu feedback é enviado diretamente para a administração do estabelecimento e para o profissional responsável.</p>
                                     </div>
 
                                     <!-- Interactive Star Rating Picker -->
