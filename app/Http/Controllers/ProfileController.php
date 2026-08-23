@@ -148,6 +148,16 @@ class ProfileController extends Controller
                     'appointments.view_all' => 'Ver agenda de toda a equipe',
                 ],
             ],
+            'clients' => [
+                'title' => 'Área do Cliente & Avaliações',
+                'icon' => 'fa-solid fa-users-viewfinder',
+                'permissions' => [
+                    'clients.view' => 'Visualizar a Área do Cliente',
+                    'clients.edit' => 'Editar dados de contato no histórico',
+                    'clients.reviews' => 'Moderar avaliações',
+                    'clients.view_all' => 'Ver clientes de toda a equipe',
+                ],
+            ],
             'services' => [
                 'title' => 'Serviços & Valores',
                 'icon' => 'fa-solid fa-scissors',

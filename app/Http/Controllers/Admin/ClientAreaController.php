@@ -211,7 +211,7 @@ class ClientAreaController extends Controller
         return $this->scopeAppointments(Appointment::query(), $tenantId, $teamMemberId);
     }
 
-    private function scopeAppointments(Builder $query, int $tenantId, ?int $teamMemberId): Builder
+    private function scopeAppointments($query, int $tenantId, ?int $teamMemberId)
     {
         $query->where('appointments.user_id', $tenantId);
 

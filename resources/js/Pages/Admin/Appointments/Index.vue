@@ -180,6 +180,7 @@ onUnmounted(() => {
             :appointment="selectedAppointment"
             :status-form="statusForm"
             :can-update-status="hasPermission('appointments.edit')"
+            :can-manage-reviews="hasPermission('clients.reviews')"
             @close="closeDetailModal"
             @status-change="submitStatusChange"
         />

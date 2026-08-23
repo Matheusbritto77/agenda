@@ -161,7 +161,7 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:appointments.view')->get('/appointments/events', [AppointmentController::class, 'events'])->name('appointments.events');
     Route::middleware('permission:appointments.view')->get('/appointments/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
     Route::middleware('permission:appointments.edit')->patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
-    Route::middleware('permission:appointments.edit')->patch('/reviews/{review}/toggle-public', [AppointmentController::class, 'toggleReviewPublic'])->name('appointments.reviews.toggle-public');
+    Route::middleware('permission:clients.reviews')->patch('/reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('appointments.reviews.toggle-public');
 
     // Company client relationship, history and review management
     Route::middleware('permission:clients.view')->get('/client-area', [ClientAreaController::class, 'index'])->name('client-area.index');

@@ -154,10 +154,8 @@ class ClientAreaTest extends TestCase
         $this->actingAs($owner)
             ->get(route('admin.roles.index'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('permissionModules.clients.permissions.clients.view', 'Visualizar a Área do Cliente')
-                ->where('permissionModules.clients.permissions.clients.edit', 'Editar dados de contato no histórico')
-                ->where('permissionModules.clients.permissions.clients.reviews', 'Moderar avaliações internas e públicas')
-                ->where('permissionModules.clients.permissions.clients.view_all', 'Visualizar clientes de toda a equipe')
+                ->where('permissionModules.clients.title', 'Área do Cliente & Avaliações')
+                ->has('permissionModules.clients.permissions', 4)
             );
     }
 

@@ -7,7 +7,7 @@ import AdminManualBookingModal from './Admin/AdminManualBookingModal.vue';
 
 const page = usePage();
 const sidebarOpen = ref(false);
-const isDarkMode = ref(true);
+const isDarkMode = ref(false);
 const showManualBookingModal = ref(false);
 
 const toggleSidebar = () => {
@@ -45,7 +45,7 @@ const closeManualBookingModal = () => {
 
 onMounted(() => {
     document.body.classList.remove('overflow-hidden');
-    const savedTheme = localStorage.getItem('agendae_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('agendae_theme') || 'light';
     isDarkMode.value = savedTheme === 'dark';
     applyTheme(savedTheme);
 

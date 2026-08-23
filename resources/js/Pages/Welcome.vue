@@ -19,7 +19,7 @@ defineProps({
 });
 
 const mobileMenuOpen = ref(false);
-const isDarkMode = ref(true);
+const isDarkMode = ref(false);
 
 function toggleTheme() {
     isDarkMode.value = !isDarkMode.value;
@@ -34,7 +34,7 @@ function toggleTheme() {
 }
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('agendae_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('agendae_theme') || 'light';
     isDarkMode.value = (savedTheme === 'dark');
     if (isDarkMode.value) {
         document.documentElement.classList.add('dark');

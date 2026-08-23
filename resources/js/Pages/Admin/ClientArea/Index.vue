@@ -242,7 +242,7 @@ const paginationLabel = (label) => {
                 </div>
 
                 <div v-if="clients.last_page > 1" class="flex flex-wrap justify-center gap-2">
-                    <Link v-for="link in clients.links" :key="link.label" :href="link.url || '#'" preserve-scroll class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link>
+                    <Link v-for="link in clients.links" :key="link.label" :href="link.url || '#'" preserve-scroll preserve-state class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link>
                 </div>
             </section>
 
@@ -266,7 +266,7 @@ const paginationLabel = (label) => {
                     </article>
                 </div>
                 <div v-else class="glass-card-3d rounded-3xl p-10 text-center"><i class="fa-solid fa-comments text-4xl text-amber-400 mb-3"></i><h3 class="font-black text-lg">Nenhuma avaliação de serviço</h3><p class="text-sm opacity-60 mt-1">Estes feedbacks são internos por padrão e só aparecem publicamente após moderação.</p></div>
-                <div v-if="serviceReviews.last_page > 1" class="flex flex-wrap justify-center gap-2"><Link v-for="link in serviceReviews.links" :key="link.label" :href="link.url || '#'" preserve-scroll class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link></div>
+                <div v-if="serviceReviews.last_page > 1" class="flex flex-wrap justify-center gap-2"><Link v-for="link in serviceReviews.links" :key="link.label" :href="link.url || '#'" preserve-scroll preserve-state class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link></div>
             </section>
 
             <section v-if="activeTab === 'company-reviews'" class="space-y-4">
@@ -280,7 +280,7 @@ const paginationLabel = (label) => {
                     </article>
                 </div>
                 <div v-else class="glass-card-3d rounded-3xl p-10 text-center"><i class="fa-solid fa-building-circle-check text-4xl text-cyan-400 mb-3"></i><h3 class="font-black text-lg">Nenhuma avaliação da empresa</h3><p class="text-sm opacity-60 mt-1">Quando clientes avaliarem o estabelecimento, os comentários aparecerão aqui.</p></div>
-                <div v-if="companyReviews.last_page > 1" class="flex flex-wrap justify-center gap-2"><Link v-for="link in companyReviews.links" :key="link.label" :href="link.url || '#'" preserve-scroll class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link></div>
+                <div v-if="companyReviews.last_page > 1" class="flex flex-wrap justify-center gap-2"><Link v-for="link in companyReviews.links" :key="link.label" :href="link.url || '#'" preserve-scroll preserve-state class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link></div>
             </section>
         </div>
 

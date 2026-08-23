@@ -19,6 +19,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    canManageReviews: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const emit = defineEmits(['close', 'status-change']);
@@ -28,7 +32,7 @@ const togglingPublic = ref(false);
 const togglePublic = (review) => {
     if (!review?.id || togglingPublic.value) return;
     togglingPublic.value = true;
-    router.patch(route('appointments.reviews.toggle-public', review.id), {}, {
+    router.patch(route('admin.appointments.reviews.toggle-public', review.id), {}, {
         preserveScroll: true,
         onSuccess: () => {
             review.is_public = !review.is_public;
@@ -147,7 +151,7 @@ const handleBackdropClick = (event) => {
                             </div>
 
                             <button
-                                v-if="canUpdateStatus"
+                                v-if="canManageReviews"
                                 type="button"
                                 @click="togglePublic(appointment.review)"
                                 :disabled="togglingPublic"

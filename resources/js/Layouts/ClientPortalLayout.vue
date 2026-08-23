@@ -7,7 +7,7 @@ defineProps({
 });
 
 const page = usePage();
-const isDarkMode = ref(true);
+const isDarkMode = ref(false);
 
 const clientUser = computed(() => page.props.clientAuth?.user || page.props.client || {});
 const clientInitials = computed(() => {
@@ -38,7 +38,7 @@ const toggleTheme = () => {
 };
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('agendae_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('agendae_theme') || 'light';
     isDarkMode.value = savedTheme === 'dark';
     applyTheme(savedTheme);
 });

@@ -43,11 +43,11 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-        <!-- Dark / Light Theme Immediate Init to prevent FOUC -->
+        <!-- Dark / Light Theme Immediate Init to prevent FOUC (Default: Light Mode) -->
         <script>
             try {
                 const savedTheme = localStorage.getItem('agendae_theme');
-                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                if (savedTheme === 'dark') {
                     document.documentElement.classList.add('dark');
                     document.documentElement.setAttribute('data-theme', 'dark');
                 } else {

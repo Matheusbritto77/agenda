@@ -9,7 +9,7 @@ const props = defineProps({
     },
 });
 
-const isDark = ref(true);
+const isDark = ref(false);
 
 const toggleTheme = () => {
     isDark.value = !isDark.value;
@@ -25,7 +25,7 @@ const toggleTheme = () => {
 };
 
 onMounted(() => {
-    const savedTheme = localStorage.getItem('agendae_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('agendae_theme') || 'light';
     isDark.value = savedTheme === 'dark';
     if (isDark.value) {
         document.documentElement.classList.add('dark');
