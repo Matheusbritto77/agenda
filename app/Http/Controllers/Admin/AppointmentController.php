@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\TeamMember;
-use App\Notifications\AppointmentCompletedForAdmin;
-use App\Notifications\AppointmentCompletedForClient;
+use App\Services\AppointmentNotificationService;
 use App\Services\ClientPortalProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -175,8 +173,11 @@ class AppointmentController extends Controller
         }
     }
 
-    public function updateStatus(Request $request, Appointment $appointment)
-    {
+    public function updateStatus(
+        Request $request,
+        Appointment $appointment,
+        AppointmentNotificationService $notifications
+    ) {
         try {
             $tenantId = $this->tenantId($request);
             if ($appointment->user_id && (int) $appointment->user_id !== $tenantId) {
@@ -197,7 +198,7 @@ class AppointmentController extends Controller
             ]);
 
             if ($validated['status'] === 'completed' && $previousStatus !== 'completed') {
-                $this->sendCompletionNotifications($appointment->fresh('service'));
+                $notifications->sendCompletion($appointment->fresh(['service', 'tenant', 'teamMember']));
             }
 
             if ($request->expectsJson()) {
@@ -319,23 +320,6 @@ class AppointmentController extends Controller
             }
 
             throw $e;
-        }
-    }
-
-    private function sendCompletionNotifications(Appointment $appointment): void
-    {
-        try {
-            Notification::route('mail', $appointment->client_email)
-                ->notify(new AppointmentCompletedForClient($appointment));
-
-            $adminEmail = config('mail.admin_notification_address');
-
-            if (is_string($adminEmail) && $adminEmail !== '') {
-                Notification::route('mail', $adminEmail)
-                    ->notify(new AppointmentCompletedForAdmin($appointment));
-            }
-        } catch (Throwable $e) {
-            $this->reportThrowable($e);
         }
     }
 

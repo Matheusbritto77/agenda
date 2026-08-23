@@ -4,20 +4,21 @@ namespace App\Services;
 
 use App\Models\Appointment;
 use App\Models\ClientAccount;
-use App\Notifications\AppointmentConfirmedForClient;
-use App\Notifications\ClientAccountCreated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Throwable;
 
 class ClientPortalProvisioningService
 {
+    public function __construct(private readonly AppointmentNotificationService $notifications) {}
+
     public function provisionFor(Appointment $appointment): ?ClientAccount
     {
         $email = Str::lower(trim((string) $appointment->client_email));
 
         if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            $this->notifications->sendBookingConfirmation($appointment);
+
             return null;
         }
 
@@ -50,21 +51,8 @@ class ClientPortalProvisioningService
         });
 
         $appointment->refresh();
-        $this->sendSafely($account, new AppointmentConfirmedForClient($appointment));
-
-        if ($temporaryPassword !== null) {
-            $this->sendSafely($account, new ClientAccountCreated($temporaryPassword));
-        }
+        $this->notifications->sendBookingConfirmation($appointment, $account, $temporaryPassword);
 
         return $account;
-    }
-
-    private function sendSafely(ClientAccount $account, object $notification): void
-    {
-        try {
-            $account->notify($notification);
-        } catch (Throwable $exception) {
-            report($exception);
-        }
     }
 }

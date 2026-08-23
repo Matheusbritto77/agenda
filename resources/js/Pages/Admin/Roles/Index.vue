@@ -201,7 +201,7 @@ onMounted(onMountedFn);
 
                     <div class="glass-card-3d p-5 rounded-2xl flex items-center gap-4">
                         <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xl shrink-0">
-                            <i class="fa-solid fa-shield-check"></i>
+                            <i class="fa-solid fa-user-shield"></i>
                         </div>
                         <div>
                             <span class="text-xs font-semibold uppercase tracking-wider opacity-60">Administradores</span>

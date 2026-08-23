@@ -159,7 +159,7 @@ const successMessage = computed(() => page.props.flash?.success);
                     <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Selecione e ative o modo de direcionamento que o seu cliente usará para agendar.</p>
                 </div>
                 <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    <i class="fa-solid fa-shield-check text-xs"></i>
+                    <i class="fa-solid fa-shield-halved text-xs"></i>
                     <span>Certificado SSL Incluso</span>
                 </div>
             </div>

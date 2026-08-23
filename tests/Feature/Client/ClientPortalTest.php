@@ -5,7 +5,11 @@ namespace Tests\Feature\Client;
 use App\Models\Appointment;
 use App\Models\ClientAccount;
 use App\Models\Service;
+use App\Models\TeamMember;
 use App\Models\User;
+use App\Notifications\AppointmentCompletedForBusiness;
+use App\Notifications\AppointmentCompletedForClient;
+use App\Notifications\AppointmentConfirmedForBusiness;
 use App\Notifications\AppointmentConfirmedForClient;
 use App\Notifications\ClientAccountCreated;
 use App\Services\ClientPortalProvisioningService;
@@ -25,7 +29,7 @@ class ClientPortalTest extends TestCase
             ->assertRedirect(route('client.login'));
     }
 
-    public function test_confirming_an_appointment_creates_client_access_and_sends_two_notifications(): void
+    public function test_confirming_an_appointment_creates_client_access_and_notifies_client_and_company(): void
     {
         Notification::fake();
         [$company, $appointment] = $this->appointment();
@@ -43,6 +47,64 @@ class ClientPortalTest extends TestCase
 
         Notification::assertSentTo($account, AppointmentConfirmedForClient::class);
         Notification::assertSentTo($account, ClientAccountCreated::class);
+        Notification::assertSentOnDemand(
+            AppointmentConfirmedForBusiness::class,
+            fn ($notification, $channels, $notifiable): bool => $notifiable->routeNotificationFor('mail') === $company->email
+        );
+    }
+
+    public function test_confirmation_is_also_sent_to_the_linked_professional_without_duplicates(): void
+    {
+        Notification::fake();
+        [$company, $appointment] = $this->appointment();
+        $company->update(['email' => 'empresa@example.com']);
+        $professional = TeamMember::create([
+            'user_id' => $company->id,
+            'name' => 'Profissional Exemplo',
+            'email' => 'profissional@example.com',
+            'is_active' => true,
+        ]);
+        $appointment->update(['team_member_id' => $professional->id]);
+
+        app(ClientPortalProvisioningService::class)->provisionFor($appointment);
+
+        Notification::assertSentOnDemandTimes(AppointmentConfirmedForBusiness::class, 2);
+        foreach (['empresa@example.com', 'profissional@example.com'] as $email) {
+            Notification::assertSentOnDemand(
+                AppointmentConfirmedForBusiness::class,
+                fn ($notification, $channels, $notifiable): bool => $notifiable->routeNotificationFor('mail') === $email
+            );
+        }
+    }
+
+    public function test_completion_notifies_client_company_and_linked_professional(): void
+    {
+        Notification::fake();
+        [$company, $appointment] = $this->appointment();
+        $company->update(['email' => 'empresa@example.com']);
+        $professional = TeamMember::create([
+            'user_id' => $company->id,
+            'name' => 'Profissional Exemplo',
+            'email' => 'profissional@example.com',
+            'is_active' => true,
+        ]);
+        $appointment->update(['team_member_id' => $professional->id]);
+
+        $this->actingAs($company)
+            ->patch(route('admin.appointments.update-status', $appointment), ['status' => 'completed'])
+            ->assertRedirect();
+
+        Notification::assertSentOnDemand(
+            AppointmentCompletedForClient::class,
+            fn ($notification, $channels, $notifiable): bool => $notifiable->routeNotificationFor('mail') === 'cliente@example.com'
+        );
+        Notification::assertSentOnDemandTimes(AppointmentCompletedForBusiness::class, 2);
+        foreach (['empresa@example.com', 'profissional@example.com'] as $email) {
+            Notification::assertSentOnDemand(
+                AppointmentCompletedForBusiness::class,
+                fn ($notification, $channels, $notifiable): bool => $notifiable->routeNotificationFor('mail') === $email
+            );
+        }
     }
 
     public function test_existing_account_is_reused_and_past_appointments_are_linked(): void

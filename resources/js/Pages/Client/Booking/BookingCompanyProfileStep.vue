@@ -324,7 +324,7 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
 
             <div class="mt-4 pt-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" :style="{ borderColor: 'var(--border)' }">
                 <span class="opacity-75" :style="{ color: 'var(--text-muted)' }">
-                    <i class="fa-solid fa-shield-check text-emerald-500 mr-1"></i>
+                    <i class="fa-solid fa-shield-halved text-emerald-500 mr-1"></i>
                     Todas as avaliações são verificadas de clientes reais que agendaram pelo sistema.
                 </span>
                 <a
