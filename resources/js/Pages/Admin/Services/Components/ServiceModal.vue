@@ -98,14 +98,16 @@ const setDuration = (mins) => {
                                 <i class="fa-solid fa-brazilian-real-sign text-emerald-500 mr-1 text-[11px]"></i>
                                 Preço (R$) <span class="text-rose-500">*</span>
                             </label>
-                            <div class="relative">
-                                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold opacity-50">R$</span>
+                            <div class="flex items-stretch rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:border-indigo-500 overflow-hidden transition-all">
+                                <span class="px-3.5 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 border-r border-slate-200 dark:border-slate-700 flex items-center justify-center select-none">
+                                    R$
+                                </span>
                                 <input
                                     type="number"
                                     step="0.01"
                                     min="0"
                                     v-model="form.price"
-                                    class="form-control pl-9 text-xs sm:text-sm rounded-xl font-bold"
+                                    class="w-full bg-transparent border-0 px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 focus:ring-0 focus:outline-none"
                                     placeholder="50.00"
                                     required
                                 />
