@@ -291,15 +291,18 @@ const submitBooking = (withPayment) => {
             };
 
             const details = page?.props?.paymentDetails || page?.props?.flash?.paymentDetails;
-            if (details) {
-                paymentDetails.value = details;
-                paymentLoading.value = false;
-                isPaying.value = true;
-                pollPaymentStatus(details.payment_id);
-            } else if (!mustPay) {
-                isPaying.value = false;
-                paymentLoading.value = false;
-                showSuccessModal.value = true;
+            if (mustPay) {
+                if (details) {
+                    paymentDetails.value = details;
+                    paymentLoading.value = false;
+                    isPaying.value = true;
+                    pollPaymentStatus(details.payment_id);
+                } else {
+                    paymentLoading.value = false;
+                    isPaying.value = false;
+                    submitNoticeType.value = 'error';
+                    submitNotice.value = page?.props?.flash?.error || 'Não foi possível gerar a cobrança PIX. Tente novamente.';
+                }
             } else {
                 paymentLoading.value = false;
                 isPaying.value = false;
@@ -318,6 +321,7 @@ const submitBooking = (withPayment) => {
             paymentLoading.value = false;
             submitNoticeType.value = 'error';
             submitNotice.value =
+                errors?.payment ||
                 errors?.appointment_time ||
                 errors?.service_id ||
                 errors?.client_name ||
@@ -355,19 +359,22 @@ const flashType = computed(() => {
 const pollPaymentStatus = (paymentId) => {
     if (!paymentId) return;
     clearInterval(paymentPollInterval);
+    paymentStatus.value = 'pending';
     paymentPollInterval = setInterval(() => {
         fetch(route('payment.status', paymentId))
             .then(r => r.json())
             .then(d => {
                 const status = d.data?.status || d.status;
-                paymentStatus.value = status;
                 if (status === 'approved' || d.data?.is_approved) {
-                    clearInterval(paymentPollInterval);
                     paymentStatus.value = 'approved';
+                    clearInterval(paymentPollInterval);
                     setTimeout(() => {
                         isPaying.value = false;
                         showSuccessModal.value = true;
                     }, 1200);
+                } else if (status === 'cancelled' || status === 'rejected') {
+                    paymentStatus.value = status;
+                    clearInterval(paymentPollInterval);
                 }
             })
             .catch(() => {});

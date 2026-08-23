@@ -88,6 +88,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
+                'booking_success' => fn () => $request->session()->get('booking_success'),
+                'paymentDetails' => fn () => $request->session()->get('paymentDetails'),
             ],
             'publicBookingUrl' => $user ? $user->publicBookingUrl() : null,
         ];

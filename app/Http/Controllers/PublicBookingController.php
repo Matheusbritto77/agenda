@@ -640,6 +640,10 @@ class PublicBookingController extends Controller
                     ];
                 } catch (\Throwable $e) {
                     Log::error('Erro ao gerar pagamento PIX automático: ' . $e->getMessage());
+                    $appointment->delete();
+                    throw ValidationException::withMessages([
+                        'payment' => 'Não foi possível gerar o código PIX com o Mercado Pago. Verifique as credenciais da integração ou tente novamente mais tarde.',
+                    ]);
                 }
             }
 

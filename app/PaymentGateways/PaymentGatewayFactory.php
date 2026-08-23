@@ -13,10 +13,6 @@ class PaymentGatewayFactory
             return new NullGateway();
         }
 
-        if (app()->environment('testing') || (isset($setting->credentials['access_token']) && str_starts_with($setting->credentials['access_token'], 'TEST-'))) {
-            return new NullGateway();
-        }
-
         return match ($setting->gateway) {
             'mercadopago' => new MercadoPagoGateway($setting),
             default => new NullGateway(),
