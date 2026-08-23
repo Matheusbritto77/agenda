@@ -88,31 +88,27 @@ const applyPreset = (opens, closes, hasBreak = false, breakOpens = '', breakClos
                 <form @submit.prevent="$emit('submit')" class="space-y-4">
                     <!-- Day of Week Field -->
                     <div class="space-y-1.5">
-                        <label class="form-label text-xs font-bold uppercase tracking-wider block" style="color: var(--text-heading);" for="modal_day_of_week">
-                            Dia da Semana <span class="text-rose-500">*</span>
+                        <label class="form-label text-xs font-bold uppercase tracking-wider flex items-center gap-1.5" style="color: var(--text-heading);" for="modal_day_of_week">
+                            <i class="fa-solid fa-calendar-day text-indigo-500 text-xs"></i>
+                            <span>Dia da Semana <span class="text-rose-500">*</span></span>
                         </label>
-                        <div class="relative">
-                            <select
-                                id="modal_day_of_week"
-                                v-model="form.day_of_week"
-                                :disabled="isEditing"
-                                class="form-control text-xs sm:text-sm rounded-xl font-semibold pl-10"
-                                required
+                        <select
+                            id="modal_day_of_week"
+                            v-model="form.day_of_week"
+                            :disabled="isEditing"
+                            class="form-control text-xs sm:text-sm rounded-xl font-semibold"
+                            required
+                        >
+                            <option value="" disabled>Selecione um dia da semana</option>
+                            <option
+                                v-for="day in normalizedDays"
+                                :key="day.key"
+                                :value="String(day.key)"
+                                :disabled="!isEditing && configuredDays.includes(day.key)"
                             >
-                                <option value="" disabled>Selecione um dia da semana</option>
-                                <option
-                                    v-for="day in normalizedDays"
-                                    :key="day.key"
-                                    :value="String(day.key)"
-                                    :disabled="!isEditing && configuredDays.includes(day.key)"
-                                >
-                                    {{ day.name }} {{ (!isEditing && configuredDays.includes(day.key)) ? '(Já configurado)' : '' }}
-                                </option>
-                            </select>
-                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none opacity-50">
-                                <i class="fa-solid fa-calendar-day text-xs"></i>
-                            </div>
-                        </div>
+                                {{ day.name }} {{ (!isEditing && configuredDays.includes(day.key)) ? '(Já configurado)' : '' }}
+                            </option>
+                        </select>
                         <span v-if="form.errors?.day_of_week" class="text-xs text-rose-500 mt-1 font-medium block">
                             {{ form.errors.day_of_week }}
                         </span>

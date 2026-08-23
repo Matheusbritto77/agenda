@@ -234,17 +234,48 @@ const submitDeleteBlock = () => {
     });
 };
 
+const closeCreateBusinessHourModal = () => {
+    showCreateBusinessHourModal.value = false;
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeEditBusinessHourModal = () => {
+    showEditBusinessHourModal.value = false;
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeDeleteBusinessHourModal = () => {
+    showDeleteBusinessHourModal.value = false;
+    deleteHourData.value = null;
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeCreateBlockModal = () => {
+    showCreateBlockModal.value = false;
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeEditBlockModal = () => {
+    showEditBlockModal.value = false;
+    document.body.classList.remove('overflow-hidden');
+};
+
+const closeDeleteBlockModal = () => {
+    showDeleteBlockModal.value = false;
+    deleteBlockData.value = null;
+    document.body.classList.remove('overflow-hidden');
+};
+
 onMounted(() => {
     document.body.classList.remove('overflow-hidden');
     window.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            showCreateBusinessHourModal.value = false;
-            showEditBusinessHourModal.value = false;
-            showDeleteBusinessHourModal.value = false;
-            showCreateBlockModal.value = false;
-            showEditBlockModal.value = false;
-            showDeleteBlockModal.value = false;
-            document.body.classList.remove('overflow-hidden');
+            closeCreateBusinessHourModal();
+            closeEditBusinessHourModal();
+            closeDeleteBusinessHourModal();
+            closeCreateBlockModal();
+            closeEditBlockModal();
+            closeDeleteBlockModal();
         }
     });
 });
@@ -293,7 +324,7 @@ onUnmounted(() => {
             :form="createBusinessHourForm"
             :all-days="allDays"
             :configured-days="configuredDays"
-            @close="showCreateBusinessHourModal = false"
+            @close="closeCreateBusinessHourModal"
             @submit="submitCreateBusinessHour"
         />
 
@@ -304,7 +335,7 @@ onUnmounted(() => {
             :form="editBusinessHourForm"
             :all-days="allDays"
             :configured-days="configuredDays"
-            @close="showEditBusinessHourModal = false"
+            @close="closeEditBusinessHourModal"
             @submit="submitEditBusinessHour"
         />
 
@@ -313,7 +344,7 @@ onUnmounted(() => {
             :show="showDeleteBusinessHourModal"
             title="Excluir Expediente"
             :message="`Tem certeza de que deseja excluir o horário de ${deleteHourData?.day_name} (${deleteHourData?.period})?`"
-            @close="showDeleteBusinessHourModal = false"
+            @close="closeDeleteBusinessHourModal"
             @confirm="submitDeleteBusinessHour"
         />
 
@@ -322,7 +353,7 @@ onUnmounted(() => {
             :show="showCreateBlockModal"
             :is-editing="false"
             :form="createBlockForm"
-            @close="showCreateBlockModal = false"
+            @close="closeCreateBlockModal"
             @submit="submitCreateBlock"
         />
 
@@ -331,7 +362,7 @@ onUnmounted(() => {
             :show="showEditBlockModal"
             :is-editing="true"
             :form="editBlockForm"
-            @close="showEditBlockModal = false"
+            @close="closeEditBlockModal"
             @submit="submitEditBlock"
         />
 
@@ -340,7 +371,7 @@ onUnmounted(() => {
             :show="showDeleteBlockModal"
             title="Excluir Bloqueio"
             :message="`Tem certeza de que deseja remover o bloqueio '${deleteBlockData?.reason}'?`"
-            @close="showDeleteBlockModal = false"
+            @close="closeDeleteBlockModal"
             @confirm="submitDeleteBlock"
         />
     </AdminLayout>
