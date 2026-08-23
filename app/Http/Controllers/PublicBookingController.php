@@ -266,6 +266,8 @@ class PublicBookingController extends Controller
             'hours_summary' => array_values($hoursSummary),
             'services_count' => $services->count(),
             'services_preview' => $servicesForProfile,
+            'professionals_count' => $teamMembers->count(),
+            'professionals_preview' => $teamMembers->values()->all(),
             'reviews' => [
                 'average' => $reviewsAverage,
                 'count' => $reviewsCount,
@@ -376,21 +378,23 @@ class PublicBookingController extends Controller
 
     private function publicTeamMembersForTenant(User $company): Collection
     {
-        $userMembers = $company->teamMembers()->orderBy('role_title')->orderBy('name')->get();
-
-        if ($userMembers->isNotEmpty()) {
-            return $userMembers
-                ->map(fn (User $member): array => $this->presentProfessional($member))
-                ->values();
-        }
-
-        return TeamMember::query()
+        $teamMembers = TeamMember::query()
             ->where('user_id', $company->id)
             ->where('is_active', true)
             ->orderBy('job_title')
             ->orderBy('name')
-            ->get()
-            ->map(fn (TeamMember $member): array => $this->presentProfessional($member))
+            ->get();
+
+        if ($teamMembers->isNotEmpty()) {
+            return $teamMembers
+                ->map(fn (TeamMember $member): array => $this->presentProfessional($member))
+                ->values();
+        }
+
+        $userMembers = $company->teamMembers()->orderBy('role_title')->orderBy('name')->get();
+
+        return $userMembers
+            ->map(fn (User $member): array => $this->presentProfessional($member))
             ->values();
     }
 
@@ -474,7 +478,7 @@ class PublicBookingController extends Controller
             'name' => $member->name,
             'job_title' => $member->role_title ?? 'Especialista',
             'role_title' => $member->role_title,
-            'avatar_url' => null,
+            'avatar_url' => $member->avatar_url,
             'subdomain' => $member->subdomain,
             'custom_domain' => $member->custom_domain,
             'active_domain_type' => $member->active_domain_type,

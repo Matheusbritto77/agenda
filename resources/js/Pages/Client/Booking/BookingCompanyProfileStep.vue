@@ -23,6 +23,8 @@ const statusClasses = computed(() => {
 });
 
 const primaryServices = computed(() => props.companyProfile.services_preview || []);
+const primaryProfessionals = computed(() => props.companyProfile.professionals_preview || []);
+const getInitials = (name) => (name || 'P').substring(0, 2).toUpperCase();
 const hours = computed(() => props.companyProfile.hours_summary || []);
 const reviews = computed(() => props.companyProfile.reviews || { average: null, count: 0, items: [] });
 const display = computed(() => props.companyProfile.display || {
@@ -146,7 +148,7 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
                         <div>
                             <p class="text-xs font-extrabold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text)' }">Profissionais</p>
                             <p class="text-sm font-black" :style="{ color: 'var(--text-heading)' }">
-                                {{ showProfessionalStep ? `${companyProfile.professionals_count} para escolher` : 'Atendimento direto' }}
+                                {{ (companyProfile.professionals_count || primaryProfessionals.length) > 0 ? `${companyProfile.professionals_count || primaryProfessionals.length} para escolher` : 'Atendimento direto' }}
                             </p>
                             <p class="text-xs opacity-75 mt-1" :style="{ color: 'var(--text-muted)' }">
                                 {{ showProfessionalStep ? 'Seleção feita ao agendar.' : 'Sem etapa de profissional.' }}
@@ -156,6 +158,48 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
                 </div>
             </div>
         </div>
+
+        <!-- Team Showcase Section -->
+        <section v-if="display.show_professionals && primaryProfessionals.length" class="card shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-base font-black" :style="{ color: 'var(--text-heading)' }">Nossa Equipe</h2>
+                    <p class="text-xs opacity-70" :style="{ color: 'var(--text-muted)' }">Especialistas prontos para lhe atender.</p>
+                </div>
+                <button
+                    type="button"
+                    @click="$emit('start-booking')"
+                    class="h-9 w-9 rounded-xl inline-flex items-center justify-center transition-opacity hover:opacity-90 cursor-pointer shadow-sm"
+                    :style="{ backgroundColor: 'var(--primary)', color: 'var(--btn-text, #ffffff)' }"
+                    aria-label="Agendar atendimento"
+                >
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                <div
+                    v-for="pro in primaryProfessionals"
+                    :key="pro.id"
+                    @click="$emit('start-booking', pro)"
+                    class="p-3.5 rounded-2xl border transition-all hover:scale-102 cursor-pointer flex items-center gap-3 shadow-xs"
+                    :style="{
+                        borderColor: 'var(--border, #e2e8f0)',
+                        backgroundColor: 'var(--surface-hover, rgba(0,0,0,0.02))'
+                    }"
+                >
+                    <div class="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center font-bold text-sm shrink-0 shadow-md" :style="{ background: 'var(--primary-gradient)', color: 'var(--btn-text, #ffffff)' }">
+                        <img v-if="pro.avatar_url" :src="pro.avatar_url" :alt="pro.name" class="w-full h-full object-cover" />
+                        <span v-else>{{ getInitials(pro.name) }}</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h4 class="font-extrabold text-sm truncate" :style="{ color: 'var(--text-heading)' }">{{ pro.name }}</h4>
+                        <p class="text-xs font-semibold truncate" :style="{ color: 'var(--primary)' }">{{ pro.job_title || 'Especialista' }}</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs opacity-40" :style="{ color: 'var(--text-muted)' }"></i>
+                </div>
+            </div>
+        </section>
 
         <div class="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
             <!-- Featured Services -->

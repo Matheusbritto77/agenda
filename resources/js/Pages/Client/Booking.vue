@@ -204,12 +204,16 @@ const nextMonth = () => {
 };
 
 const selectProfessional = (pro) => {
-    chosenProfessionalId.value = pro.id;
-    bookingForm.professional_id = pro.id;
+    chosenProfessionalId.value = pro?.id ?? null;
+    bookingForm.professional_id = pro?.id ?? null;
     currentStep.value = stepType.service;
 };
 
-const startBooking = () => {
+const startBooking = (pro = null) => {
+    if (pro && pro.id) {
+        selectProfessional(pro);
+        return;
+    }
     currentStep.value = firstBookingStep.value;
 };
 
