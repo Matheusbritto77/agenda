@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { ref, computed } from 'vue';
+
+const props = defineProps({
     activeProfessional: {
         type: Object,
         default: null,
@@ -39,6 +41,58 @@ defineProps({
 });
 
 defineEmits(['prev-step', 'submit-booking']);
+
+const couponInput = ref('');
+const couponLoading = ref(false);
+const couponError = ref('');
+const appliedCoupon = ref(null);
+
+const finalPrice = computed(() => {
+    const original = Number(props.selectedService?.price || 0);
+    if (!appliedCoupon.value) return original;
+    return Math.max(0, original - appliedCoupon.value.discount_amount);
+});
+
+const applyCoupon = async () => {
+    if (!couponInput.value.trim()) return;
+    couponLoading.value = true;
+    couponError.value = '';
+    try {
+        const response = await fetch(route('booking.coupons.validate'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            },
+            body: JSON.stringify({
+                code: couponInput.value.trim(),
+                service_id: props.selectedService?.id,
+                client_email: props.bookingForm?.client_email || props.bookingForm?.customer_email || '',
+            }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.valid) {
+            appliedCoupon.value = data;
+            props.bookingForm.coupon_code = data.code;
+        } else {
+            couponError.value = data.message || 'Cupom inválido ou não aplicável.';
+            appliedCoupon.value = null;
+            props.bookingForm.coupon_code = '';
+        }
+    } catch (e) {
+        couponError.value = 'Erro ao verificar cupom. Tente novamente.';
+    } finally {
+        couponLoading.value = false;
+    }
+};
+
+const removeCoupon = () => {
+    appliedCoupon.value = null;
+    couponInput.value = '';
+    couponError.value = '';
+    props.bookingForm.coupon_code = '';
+};
 
 const formatDateLong = (dateStr) => {
     if (!dateStr) return '';
@@ -80,8 +134,57 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
 
                 <div class="space-y-0.5 sm:col-span-2">
                     <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Valor a Pagar</span>
-                    <p class="text-base font-black" :style="{ color: 'var(--primary)' }">R$ {{ formatCurrency(selectedService?.price) }}</p>
+                    <div class="flex items-baseline gap-2">
+                        <p class="text-base sm:text-lg font-black" :style="{ color: 'var(--primary)' }">
+                            R$ {{ formatCurrency(finalPrice) }}
+                        </p>
+                        <span v-if="appliedCoupon" class="text-xs text-slate-400 line-through">
+                            R$ {{ formatCurrency(selectedService?.price) }}
+                        </span>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Coupon Input Block -->
+            <div class="pt-3 border-t border-indigo-500/20 space-y-2">
+                <label class="text-[11px] font-extrabold uppercase tracking-wider block opacity-80" :style="{ color: 'var(--text-heading)' }">
+                    <i class="fa-solid fa-ticket text-indigo-500 mr-1"></i> Possui cupom de desconto?
+                </label>
+                <div v-if="!appliedCoupon" class="flex gap-2">
+                    <input
+                        type="text"
+                        v-model="couponInput"
+                        placeholder="Digite o código (ex: VIP10)"
+                        class="form-control text-xs uppercase font-bold tracking-wider rounded-xl flex-1"
+                        @keydown.enter.prevent="applyCoupon"
+                    />
+                    <button
+                        type="button"
+                        @click="applyCoupon"
+                        :disabled="couponLoading || !couponInput.trim()"
+                        class="btn btn-outline text-xs px-3.5 py-2 rounded-xl font-bold cursor-pointer shrink-0"
+                    >
+                        <i v-if="couponLoading" class="fa-solid fa-spinner fa-spin"></i>
+                        <span v-else>Aplicar</span>
+                    </button>
+                </div>
+                <div v-else class="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check text-emerald-600 dark:text-emerald-400"></i>
+                        <span class="font-extrabold text-emerald-800 dark:text-emerald-200">
+                            Cupom <strong>{{ appliedCoupon.code }}</strong> aplicado: -{{ appliedCoupon.formatted_discount_amount }}
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        @click="removeCoupon"
+                        class="text-rose-500 hover:text-rose-700 text-xs font-bold px-2 py-1 rounded cursor-pointer"
+                        title="Remover cupom"
+                    >
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+                <p v-if="couponError" class="text-xs text-rose-500 font-medium">{{ couponError }}</p>
             </div>
         </div>
 

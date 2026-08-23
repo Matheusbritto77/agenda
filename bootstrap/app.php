@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'must.reset.password' => EnsurePasswordReset::class,
+            'ensure.password.changed' => EnsurePasswordReset::class,
             'permission' => CheckPermission::class,
             'client.password.reset' => EnsureClientPasswordReset::class,
         ]);

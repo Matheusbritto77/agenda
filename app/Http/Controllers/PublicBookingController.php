@@ -7,6 +7,7 @@ use App\Models\AppointmentReview;
 use App\Models\BlockedTimeSlot;
 use App\Models\BrandingSetting;
 use App\Models\BusinessHour;
+use App\Models\Coupon;
 use App\Models\PaymentSetting;
 use App\Models\Service;
 use App\Models\TeamMember;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Services\BookingAvailabilityService;
 use App\Services\ClientPortalProvisioningService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -534,6 +536,70 @@ class PublicBookingController extends Controller
             });
     }
 
+    public function validateCoupon(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveTenant($request);
+        $company = $tenant->parent ?? $tenant;
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:50'],
+            'service_id' => ['required', 'integer'],
+            'client_email' => ['nullable', 'email'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+        $service = Service::where('user_id', $company->id)->find($validated['service_id']);
+
+        if (! $service) {
+            return response()->json(['valid' => false, 'message' => 'Serviço não encontrado.'], 404);
+        }
+
+        $coupon = Coupon::query()
+            ->where('user_id', $company->id)
+            ->where('code', $code)
+            ->first();
+
+        if (! $coupon) {
+            return response()->json(['valid' => false, 'message' => 'Cupom não encontrado ou inválido.'], 422);
+        }
+
+        if (! $coupon->is_valid) {
+            return response()->json(['valid' => false, 'message' => 'Este cupom está inativo ou expirou.'], 422);
+        }
+
+        if ($coupon->client_account_id !== null) {
+            $clientEmail = trim((string) ($validated['client_email'] ?? ''));
+            if ($clientEmail === '' || $coupon->clientAccount?->email !== $clientEmail) {
+                return response()->json(['valid' => false, 'message' => 'Este cupom é exclusivo para outro cliente.'], 422);
+            }
+        }
+
+        $servicePrice = (float) $service->price;
+        if ($coupon->min_spend !== null && $servicePrice < (float) $coupon->min_spend) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Valor mínimo do serviço para este cupom é de R$ ' . number_format((float) $coupon->min_spend, 2, ',', '.'),
+            ], 422);
+        }
+
+        $discount = $coupon->calculateDiscount($servicePrice);
+        $finalPrice = max(0, $servicePrice - $discount);
+
+        return response()->json([
+            'valid' => true,
+            'code' => $coupon->code,
+            'description' => $coupon->description,
+            'discount_type' => $coupon->discount_type,
+            'discount_value' => (float) $coupon->discount_value,
+            'formatted_discount' => $coupon->formatted_discount,
+            'discount_amount' => $discount,
+            'formatted_discount_amount' => 'R$ ' . number_format($discount, 2, ',', '.'),
+            'original_price' => $servicePrice,
+            'final_price' => $finalPrice,
+            'formatted_final_price' => 'R$ ' . number_format($finalPrice, 2, ',', '.'),
+        ]);
+    }
+
     public function store(
         Request $request,
         BookingAvailabilityService $availabilityService,
@@ -575,6 +641,7 @@ class PublicBookingController extends Controller
                 'client_phone' => ['required_without:customer_phone', 'nullable', 'string', 'max:20'],
                 'customer_phone' => ['required_without:client_phone', 'nullable', 'string', 'max:20'],
                 'notes' => ['nullable', 'string', 'max:2000'],
+                'coupon_code' => ['nullable', 'string', 'max:50'],
             ]);
 
             $service = $this->publicServicesQuery($company)->findOrFail($validated['service_id']);
@@ -595,6 +662,29 @@ class PublicBookingController extends Controller
                 ]);
             }
 
+            $couponCode = strtoupper(trim((string) ($request->input('coupon_code') ?? '')));
+            $discountAmount = 0.0;
+            $appliedCoupon = null;
+
+            if ($couponCode !== '') {
+                $coupon = Coupon::query()
+                    ->where('user_id', $company->id)
+                    ->where('code', $couponCode)
+                    ->first();
+
+                if ($coupon && $coupon->is_valid) {
+                    $servicePrice = (float) $service->price;
+                    if ($coupon->min_spend === null || $servicePrice >= (float) $coupon->min_spend) {
+                        $clientEmail = $validated['client_email'] ?? $validated['customer_email'];
+                        if ($coupon->client_account_id === null || $coupon->clientAccount?->email === $clientEmail) {
+                            $discountAmount = $coupon->calculateDiscount($servicePrice);
+                            $appliedCoupon = $coupon;
+                            $coupon->increment('uses_count');
+                        }
+                    }
+                }
+            }
+
             $paymentSetting = PaymentSetting::query()
                 ->where('user_id', $company->id)
                 ->where('gateway', 'mercadopago')
@@ -603,6 +693,12 @@ class PublicBookingController extends Controller
             $paymentEnabled = $paymentSetting ? (bool) $paymentSetting->is_active : false;
             $payNow = $paymentEnabled || $request->boolean('pay_now') || $request->input('payment_method') === 'pix';
             $resolvedTeamMemberId = $this->resolveAppointmentTeamMemberId($selectedProfessional, $company, $validated);
+
+            $notes = $validated['notes'] ?? null;
+            if ($appliedCoupon && $discountAmount > 0) {
+                $couponNote = "[Cupom: {$appliedCoupon->code} (-R$ " . number_format($discountAmount, 2, ',', '.') . ")]";
+                $notes = $notes ? ($notes . ' | ' . $couponNote) : $couponNote;
+            }
 
             $appointment = Appointment::create([
                 'service_id' => $service->id,
@@ -614,7 +710,7 @@ class PublicBookingController extends Controller
                 'appointment_time' => $validated['appointment_time'],
                 'status' => $paymentEnabled ? 'pending' : 'confirmed',
                 'payment_status' => $paymentEnabled ? 'pending' : ($payNow ? 'pending' : 'none'),
-                'notes' => $validated['notes'] ?? null,
+                'notes' => $notes,
                 'user_id' => $company->id,
             ]);
 
@@ -622,7 +718,7 @@ class PublicBookingController extends Controller
             if ($paymentEnabled) {
                 try {
                     $gateway = \App\PaymentGateways\PaymentGatewayFactory::make($paymentSetting);
-                    $amount = (float) $service->price;
+                    $amount = max(0, (float) $service->price - $discountAmount);
                     $description = "Agendamento: " . $service->name . " - " . $appointment->client_name;
                     $payerEmail = $appointment->client_email ?: 'cliente@agendae.app';
                     $pixExpirationMinutes = $paymentSetting->settings['pix_expiration_minutes'] ?? 30;

@@ -120,6 +120,42 @@ class ClientPortalController extends Controller
 
         $completedCount = $scopedAppointments->where('status', 'completed')->count();
 
+        $activeCompanyId = $activeCompany ? $activeCompany['id'] : null;
+
+        $couponsQuery = \App\Models\Coupon::query()
+            ->where('is_active', true)
+            ->where(function ($q): void {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now()->toDateString());
+            })
+            ->where(function ($q) use ($client): void {
+                $q->whereNull('client_account_id')
+                    ->orWhere('client_account_id', $client->id);
+            });
+
+        if ($activeCompanyId) {
+            $couponsQuery->where('user_id', $activeCompanyId);
+        } else {
+            $companyIds = $companies->pluck('id')->filter()->all();
+            if (! empty($companyIds)) {
+                $couponsQuery->whereIn('user_id', $companyIds);
+            }
+        }
+
+        $coupons = $couponsQuery->with('user:id,name')->get()->map(fn (\App\Models\Coupon $c): array => [
+            'id' => $c->id,
+            'code' => $c->code,
+            'description' => $c->description,
+            'discount_type' => $c->discount_type,
+            'discount_value' => (float) $c->discount_value,
+            'formatted_discount' => $c->formatted_discount,
+            'min_spend' => $c->min_spend !== null ? (float) $c->min_spend : null,
+            'expires_at' => $c->expires_at?->format('d/m/Y'),
+            'company_id' => $c->user_id,
+            'company_name' => $c->user?->name ?? 'Empresa',
+            'is_exclusive' => $c->client_account_id === $client->id,
+        ])->values();
+
         return Inertia::render('Client/Portal/Dashboard', [
             'client' => [
                 'name' => $client->name,
@@ -130,9 +166,11 @@ class ClientPortalController extends Controller
                 'appointments' => $scopedAppointments->count(),
                 'completed' => $completedCount,
                 'companies' => $companies->count(),
+                'coupons' => $coupons->count(),
                 'reviews' => $scopedAppointments->whereNotNull('review')->count(),
             ],
-            'badges' => $this->earnedBadges($completedCount),
+            'badges' => $this->earnedBadges($completedCount, $activeCompany),
+            'coupons' => $coupons,
             'companies' => $companies->map(fn ($comp) => [
                 ...$comp,
                 'is_active' => $activeCompany && $comp['id'] === $activeCompany['id'],
@@ -232,29 +270,50 @@ class ClientPortalController extends Controller
         return back()->with('success', 'Avaliação da empresa enviada com sucesso! Ela será exibida na página pública do estabelecimento.');
     }
 
-    private function earnedBadges(int $completed): array
+    private function earnedBadges(int $completed, ?array $activeCompany = null): array
     {
-        return collect($this->badgeCatalog())
-            ->map(fn (array $badge): array => $badge + ['earned' => $completed >= $badge['minimum']])
+        $catalog = $this->badgeCatalog($activeCompany);
+
+        return collect($catalog)
+            ->map(function (array $badge) use ($completed): array {
+                $min = (int) ($badge['minimum'] ?? 1);
+                $earned = $completed >= $min;
+                $progressPercent = min(100, (int) round(($completed / max(1, $min)) * 100));
+                $remaining = max(0, $min - $completed);
+
+                return $badge + [
+                    'minimum' => $min,
+                    'earned' => $earned,
+                    'progress_percent' => $progressPercent,
+                    'remaining' => $remaining,
+                ];
+            })
             ->values()
             ->all();
     }
 
-    private function highestBadge(int $completed): ?array
+    private function highestBadge(int $completed, ?array $activeCompany = null): ?array
     {
-        return collect($this->badgeCatalog())
-            ->filter(fn (array $badge): bool => $completed >= $badge['minimum'])
+        return collect($this->badgeCatalog($activeCompany))
+            ->filter(fn (array $badge): bool => $completed >= (int) ($badge['minimum'] ?? 1))
             ->last();
     }
 
-    private function badgeCatalog(): array
+    private function badgeCatalog(?array $activeCompany = null): array
     {
+        if ($activeCompany && ! empty($activeCompany['id'])) {
+            $branding = \App\Models\BrandingSetting::where('user_id', $activeCompany['id'])->first();
+            if (! empty($branding?->settings['loyalty_tiers']) && is_array($branding->settings['loyalty_tiers'])) {
+                return $branding->settings['loyalty_tiers'];
+            }
+        }
+
         return [
-            ['name' => 'Primeiro encontro', 'minimum' => 1, 'icon' => 'sparkles'],
-            ['name' => 'Cliente frequente', 'minimum' => 3, 'icon' => 'star'],
-            ['name' => 'Cliente fiel', 'minimum' => 5, 'icon' => 'heart'],
-            ['name' => 'Cliente VIP', 'minimum' => 10, 'icon' => 'crown'],
-            ['name' => 'Embaixador', 'minimum' => 25, 'icon' => 'trophy'],
+            ['name' => 'Primeiro Encontro', 'minimum' => 1, 'icon' => 'sparkles', 'color' => '#6366f1', 'reward' => 'Boas-vindas VIP'],
+            ['name' => 'Cliente Frequente', 'minimum' => 3, 'icon' => 'star', 'color' => '#06b6d4', 'reward' => 'Prioridade nos horários'],
+            ['name' => 'Cliente Fiel', 'minimum' => 5, 'icon' => 'heart', 'color' => '#ec4899', 'reward' => '10% de desconto'],
+            ['name' => 'Cliente VIP', 'minimum' => 10, 'icon' => 'crown', 'color' => '#f59e0b', 'reward' => 'Brinde / Serviço Cortesia'],
+            ['name' => 'Embaixador', 'minimum' => 25, 'icon' => 'trophy', 'color' => '#8b5cf6', 'reward' => 'Tratamento Especial Gratuito'],
         ];
     }
 }

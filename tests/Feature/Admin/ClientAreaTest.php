@@ -193,6 +193,140 @@ class ClientAreaTest extends TestCase
         $this->assertTrue($branding->settings['portal_announcement_enabled']);
     }
 
+    public function test_owner_can_create_update_toggle_and_delete_coupons(): void
+    {
+        $owner = User::factory()->create();
+
+        // Create
+        $response = $this->actingAs($owner)->post(route('admin.client-area.coupons.store'), [
+            'code' => 'PROMO20',
+            'description' => 'Desconto de 20% em todos os serviços',
+            'discount_type' => 'percentage',
+            'discount_value' => 20,
+            'min_spend' => 50,
+            'max_uses' => 100,
+            'is_active' => true,
+        ]);
+        $response->assertRedirect();
+        $this->assertDatabaseHas('coupons', [
+            'user_id' => $owner->id,
+            'code' => 'PROMO20',
+            'discount_value' => 20,
+        ]);
+
+        $coupon = \App\Models\Coupon::where('user_id', $owner->id)->where('code', 'PROMO20')->first();
+
+        // Update
+        $this->actingAs($owner)->put(route('admin.client-area.coupons.update', $coupon), [
+            'code' => 'PROMO25',
+            'description' => 'Desconto atualizado para 25%',
+            'discount_type' => 'percentage',
+            'discount_value' => 25,
+            'is_active' => true,
+        ])->assertRedirect();
+        $this->assertSame('PROMO25', $coupon->fresh()->code);
+
+        // Toggle
+        $this->actingAs($owner)->patch(route('admin.client-area.coupons.toggle', $coupon))->assertRedirect();
+        $this->assertFalse($coupon->fresh()->is_active);
+
+        // Delete
+        $this->actingAs($owner)->delete(route('admin.client-area.coupons.destroy', $coupon))->assertRedirect();
+        $this->assertDatabaseMissing('coupons', ['id' => $coupon->id]);
+    }
+
+    public function test_owner_can_gift_exclusive_coupon_to_client(): void
+    {
+        $owner = User::factory()->create();
+        $client = ClientAccount::create([
+            'name' => 'Cliente Fiel',
+            'email' => 'fiel@cliente.test',
+            'phone' => '11999999999',
+            'password' => Hash::make('password'),
+            'must_reset_password' => false,
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('admin.client-area.coupons.gift'), [
+            'client_account_id' => $client->id,
+            'code' => 'PRESENTEFIEL',
+            'description' => 'Cupom de aniversário',
+            'discount_type' => 'fixed',
+            'discount_value' => 30,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('coupons', [
+            'user_id' => $owner->id,
+            'client_account_id' => $client->id,
+            'code' => 'PRESENTEFIEL',
+            'discount_type' => 'fixed',
+            'discount_value' => 30,
+        ]);
+    }
+
+    public function test_owner_can_customize_loyalty_tiers_and_rewards(): void
+    {
+        $owner = User::factory()->create();
+
+        $tiers = [
+            ['name' => 'Bronze', 'minimum' => 2, 'icon' => 'sparkles', 'color' => '#6366f1', 'reward' => 'Café cortesia'],
+            ['name' => 'Prata', 'minimum' => 5, 'icon' => 'star', 'color' => '#3b82f6', 'reward' => '10% de desconto'],
+            ['name' => 'Ouro VIP', 'minimum' => 10, 'icon' => 'crown', 'color' => '#f59e0b', 'reward' => 'Corte grátis no aniversário'],
+        ];
+
+        $response = $this->actingAs($owner)->post(route('admin.client-area.loyalty-tiers.update'), [
+            'tiers' => $tiers,
+        ]);
+
+        $response->assertRedirect();
+        $branding = \App\Models\BrandingSetting::where('user_id', $owner->id)->first();
+        $this->assertCount(3, $branding->settings['loyalty_tiers']);
+        $this->assertSame('Ouro VIP', $branding->settings['loyalty_tiers'][2]['name']);
+        $this->assertSame('Corte grátis no aniversário', $branding->settings['loyalty_tiers'][2]['reward']);
+    }
+
+    public function test_public_booking_coupon_validation(): void
+    {
+        config([
+            'app.domain' => 'agendae.app',
+            'app.url' => 'https://agendae.app',
+        ]);
+
+        $owner = User::factory()->create([
+            'subdomain' => 'barbearia-top',
+            'active_domain_type' => 'subdomain',
+        ]);
+        $service = Service::create([
+            'user_id' => $owner->id,
+            'name' => 'Corte Masculino',
+            'price' => 100,
+            'duration_minutes' => 30,
+            'slot_duration_minutes' => 30,
+            'is_active' => true,
+        ]);
+
+        $coupon = \App\Models\Coupon::create([
+            'user_id' => $owner->id,
+            'code' => 'DESCONTO15',
+            'discount_type' => 'percentage',
+            'discount_value' => 15,
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson('https://barbearia-top.agendae.app/api/coupons/validate', [
+            'code' => 'DESCONTO15',
+            'service_id' => $service->id,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'valid' => true,
+            'code' => 'DESCONTO15',
+            'discount_amount' => 15.0,
+            'final_price' => 85.0,
+        ]);
+    }
+
     private function createReviewedAppointment(User $owner, string $email, ?TeamMember $teamMember = null): array
     {
         $client = ClientAccount::create([

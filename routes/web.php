@@ -78,6 +78,7 @@ Route::get('/', function (Request $request, PublicBookingController $controller)
 Route::middleware([ResolvePublicBookingTenant::class])->group(function () {
     Route::get('/available-slots', [PublicBookingController::class, 'availableSlots'])->name('booking.slots');
     Route::post('/booking', [PublicBookingController::class, 'store'])->name('booking.store');
+    Route::post('/api/coupons/validate', [PublicBookingController::class, 'validateCoupon'])->name('booking.coupons.validate');
     Route::get('/booking', function () {
         return redirect()->route('booking.index');
     });
@@ -128,7 +129,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Admin Routes (Protected)
-Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', 'ensure.password.changed'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::middleware('permission:reports.revenue,reports.revenue_all,reports.view,reports.view_all')->group(function () {
         Route::get('/financial', [FinancialController::class, 'index'])->name('financial.index');
@@ -165,10 +166,16 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:appointments.edit')->patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
     Route::middleware('permission:clients.reviews')->patch('/reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('appointments.reviews.toggle-public');
 
-    // Company client relationship, history, review management and portal customization
+    // Company client relationship, loyalty, coupons and portal customization
     Route::middleware('permission:clients.view')->get('/client-area', [ClientAreaController::class, 'index'])->name('client-area.index');
     Route::middleware('permission:clients.edit')->patch('/client-area/clients/{client}', [ClientAreaController::class, 'updateClient'])->name('client-area.clients.update');
     Route::middleware('permission:clients.edit')->post('/client-area/customization', [ClientAreaController::class, 'updatePortalCustomization'])->name('client-area.customization.update');
+    Route::middleware('permission:clients.edit')->post('/client-area/coupons', [ClientAreaController::class, 'storeCoupon'])->name('client-area.coupons.store');
+    Route::middleware('permission:clients.edit')->put('/client-area/coupons/{coupon}', [ClientAreaController::class, 'updateCoupon'])->name('client-area.coupons.update');
+    Route::middleware('permission:clients.edit')->delete('/client-area/coupons/{coupon}', [ClientAreaController::class, 'destroyCoupon'])->name('client-area.coupons.destroy');
+    Route::middleware('permission:clients.edit')->patch('/client-area/coupons/{coupon}/toggle', [ClientAreaController::class, 'toggleCoupon'])->name('client-area.coupons.toggle');
+    Route::middleware('permission:clients.edit')->post('/client-area/coupons/gift', [ClientAreaController::class, 'giftCoupon'])->name('client-area.coupons.gift');
+    Route::middleware('permission:clients.edit')->post('/client-area/loyalty-tiers', [ClientAreaController::class, 'updateLoyaltyTiers'])->name('client-area.loyalty-tiers.update');
     Route::middleware('permission:clients.reviews')->patch('/client-area/service-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('client-area.service-reviews.toggle-public');
     Route::middleware('permission:clients.reviews')->patch('/client-area/company-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleCompanyReview'])->name('client-area.company-reviews.toggle-public');
 

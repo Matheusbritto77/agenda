@@ -8,6 +8,7 @@ use App\Models\AppointmentReview;
 use App\Models\BrandingSetting;
 use App\Models\ClientAccount;
 use App\Models\CompanyReview;
+use App\Models\Coupon;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
@@ -133,11 +134,45 @@ class ClientAreaController extends Controller
             'portal_url' => url('/cliente'),
         ];
 
+        $coupons = Coupon::query()
+            ->where('user_id', $tenantId)
+            ->with('clientAccount:id,name,email')
+            ->latest()
+            ->get()
+            ->map(fn (Coupon $coupon): array => [
+                'id' => $coupon->id,
+                'code' => $coupon->code,
+                'description' => $coupon->description,
+                'discount_type' => $coupon->discount_type,
+                'discount_value' => (float) $coupon->discount_value,
+                'formatted_discount' => $coupon->formatted_discount,
+                'min_spend' => $coupon->min_spend !== null ? (float) $coupon->min_spend : null,
+                'max_uses' => $coupon->max_uses,
+                'uses_count' => $coupon->uses_count,
+                'expires_at' => $coupon->expires_at?->format('Y-m-d'),
+                'expires_at_formatted' => $coupon->expires_at?->format('d/m/Y'),
+                'is_active' => (bool) $coupon->is_active,
+                'is_valid' => (bool) $coupon->is_valid,
+                'client_account_id' => $coupon->client_account_id,
+                'client_name' => $coupon->clientAccount?->name,
+                'client_email' => $coupon->clientAccount?->email,
+            ]);
+
+        $loyaltyTiers = $bSettings['loyalty_tiers'] ?? [
+            ['id' => 1, 'name' => 'Primeiro Encontro', 'minimum' => 1, 'icon' => 'sparkles', 'color' => '#6366f1', 'reward' => 'Boas-vindas VIP'],
+            ['id' => 2, 'name' => 'Cliente Frequente', 'minimum' => 3, 'icon' => 'star', 'color' => '#06b6d4', 'reward' => 'Prioridade nos horários'],
+            ['id' => 3, 'name' => 'Cliente Fiel', 'minimum' => 5, 'icon' => 'heart', 'color' => '#ec4899', 'reward' => '10% de desconto'],
+            ['id' => 4, 'name' => 'Cliente VIP', 'minimum' => 10, 'icon' => 'crown', 'color' => '#f59e0b', 'reward' => 'Brinde / Serviço Cortesia'],
+            ['id' => 5, 'name' => 'Embaixador', 'minimum' => 25, 'icon' => 'trophy', 'color' => '#8b5cf6', 'reward' => 'Tratamento Especial Gratuito'],
+        ];
+
         return Inertia::render('Admin/ClientArea/Index', [
             'clients' => $clients,
             'serviceReviews' => $serviceReviews,
             'companyReviews' => $companyReviews,
             'portalCustomization' => $portalCustomization,
+            'coupons' => $coupons,
+            'loyaltyTiers' => $loyaltyTiers,
             'services' => Service::query()
                 ->where('user_id', $tenantId)
                 ->orderBy('name')
@@ -152,6 +187,8 @@ class ClientAreaController extends Controller
                 'clients' => (clone $appointments)->whereNotNull('client_account_id')->distinct()->count('client_account_id'),
                 'appointments' => (clone $appointments)->count(),
                 'completed' => (clone $appointments)->where('status', 'completed')->count(),
+                'coupons' => $coupons->count(),
+                'active_coupons' => $coupons->where('is_valid', true)->count(),
                 'service_reviews' => $reviewsCount,
                 'internal_reviews' => (clone $serviceReviewBase)->internal()->count(),
                 'average_rating' => $reviewsCount > 0 ? round((float) (clone $serviceReviewBase)->avg('rating'), 1) : null,
@@ -228,6 +265,192 @@ class ClientAreaController extends Controller
         $branding->save();
 
         return back()->with('success', 'Personalização da Área do Cliente salva com sucesso!');
+    }
+
+    public function storeCoupon(Request $request): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:50', 'alpha_dash'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'discount_type' => ['required', 'in:percentage,fixed'],
+            'discount_value' => ['required', 'numeric', 'min:0.01', function ($attribute, $value, $fail) use ($request) {
+                if ($request->input('discount_type') === 'percentage' && $value > 100) {
+                    $fail('O desconto em porcentagem não pode ultrapassar 100%.');
+                }
+            }],
+            'min_spend' => ['nullable', 'numeric', 'min:0'],
+            'max_uses' => ['nullable', 'integer', 'min:1'],
+            'expires_at' => ['nullable', 'date'],
+            'client_account_id' => ['nullable', 'exists:client_accounts,id'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+
+        $exists = Coupon::query()
+            ->where('user_id', $tenantId)
+            ->where('code', $code)
+            ->exists();
+
+        if ($exists) {
+            return back()->withErrors(['code' => 'Já existe um cupom com este código.']);
+        }
+
+        Coupon::create([
+            'user_id' => $tenantId,
+            'code' => $code,
+            'description' => $validated['description'] ?? null,
+            'discount_type' => $validated['discount_type'],
+            'discount_value' => $validated['discount_value'],
+            'min_spend' => $validated['min_spend'] ?? null,
+            'max_uses' => $validated['max_uses'] ?? null,
+            'expires_at' => $validated['expires_at'] ?? null,
+            'client_account_id' => $validated['client_account_id'] ?? null,
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+        ]);
+
+        return back()->with('success', "Cupom {$code} criado com sucesso!");
+    }
+
+    public function updateCoupon(Request $request, Coupon $coupon): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+        abort_unless((int) $coupon->user_id === $tenantId, 403);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:50', 'alpha_dash'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'discount_type' => ['required', 'in:percentage,fixed'],
+            'discount_value' => ['required', 'numeric', 'min:0.01', function ($attribute, $value, $fail) use ($request) {
+                if ($request->input('discount_type') === 'percentage' && $value > 100) {
+                    $fail('O desconto em porcentagem não pode ultrapassar 100%.');
+                }
+            }],
+            'min_spend' => ['nullable', 'numeric', 'min:0'],
+            'max_uses' => ['nullable', 'integer', 'min:1'],
+            'expires_at' => ['nullable', 'date'],
+            'client_account_id' => ['nullable', 'exists:client_accounts,id'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+
+        $exists = Coupon::query()
+            ->where('user_id', $tenantId)
+            ->where('code', $code)
+            ->where('id', '!=', $coupon->id)
+            ->exists();
+
+        if ($exists) {
+            return back()->withErrors(['code' => 'Já existe outro cupom com este código.']);
+        }
+
+        $coupon->update([
+            'code' => $code,
+            'description' => $validated['description'] ?? null,
+            'discount_type' => $validated['discount_type'],
+            'discount_value' => $validated['discount_value'],
+            'min_spend' => $validated['min_spend'] ?? null,
+            'max_uses' => $validated['max_uses'] ?? null,
+            'expires_at' => $validated['expires_at'] ?? null,
+            'client_account_id' => $validated['client_account_id'] ?? null,
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+        ]);
+
+        return back()->with('success', "Cupom {$code} atualizado com sucesso!");
+    }
+
+    public function destroyCoupon(Request $request, Coupon $coupon): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+        abort_unless((int) $coupon->user_id === $tenantId, 403);
+
+        $code = $coupon->code;
+        $coupon->delete();
+
+        return back()->with('success', "Cupom {$code} removido com sucesso!");
+    }
+
+    public function toggleCoupon(Request $request, Coupon $coupon): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+        abort_unless((int) $coupon->user_id === $tenantId, 403);
+
+        $coupon->update(['is_active' => ! $coupon->is_active]);
+
+        $status = $coupon->is_active ? 'ativado' : 'desativado';
+        return back()->with('success', "Cupom {$coupon->code} {$status}!");
+    }
+
+    public function giftCoupon(Request $request): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+
+        $validated = $request->validate([
+            'client_account_id' => ['required', 'exists:client_accounts,id'],
+            'code' => ['required', 'string', 'max:50', 'alpha_dash'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'discount_type' => ['required', 'in:percentage,fixed'],
+            'discount_value' => ['required', 'numeric', 'min:0.01'],
+            'expires_at' => ['nullable', 'date'],
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+        $client = ClientAccount::findOrFail($validated['client_account_id']);
+
+        Coupon::create([
+            'user_id' => $tenantId,
+            'code' => $code,
+            'description' => $validated['description'] ?? "Cupom presente exclusivo para {$client->name}",
+            'discount_type' => $validated['discount_type'],
+            'discount_value' => $validated['discount_value'],
+            'max_uses' => 1,
+            'client_account_id' => $client->id,
+            'expires_at' => $validated['expires_at'] ?? now()->addDays(30)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', "Cupom exclusivo {$code} presenteado com sucesso para {$client->name}!");
+    }
+
+    public function updateLoyaltyTiers(Request $request): RedirectResponse
+    {
+        $tenantId = $this->tenantId($request);
+
+        $validated = $request->validate([
+            'tiers' => ['required', 'array', 'min:1'],
+            'tiers.*.name' => ['required', 'string', 'max:50'],
+            'tiers.*.minimum' => ['required', 'integer', 'min:1'],
+            'tiers.*.icon' => ['nullable', 'string', 'max:50'],
+            'tiers.*.color' => ['nullable', 'string', 'max:30'],
+            'tiers.*.reward' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $branding = BrandingSetting::firstOrCreate(['user_id' => $tenantId]);
+        $settings = $branding->settings ?? [];
+
+        $tiers = collect($validated['tiers'])
+            ->sortBy('minimum')
+            ->values()
+            ->map(function ($tier, $idx) {
+                return [
+                    'id' => $idx + 1,
+                    'name' => trim($tier['name']),
+                    'minimum' => (int) $tier['minimum'],
+                    'icon' => $tier['icon'] ?? 'sparkles',
+                    'color' => $tier['color'] ?? '#6366f1',
+                    'reward' => trim($tier['reward'] ?? ''),
+                ];
+            })
+            ->all();
+
+        $settings['loyalty_tiers'] = $tiers;
+        $branding->settings = $settings;
+        $branding->save();
+
+        return back()->with('success', 'Níveis e recompensas de fidelidade atualizados com sucesso!');
     }
 
     public function updateClient(Request $request, ClientAccount $client): RedirectResponse

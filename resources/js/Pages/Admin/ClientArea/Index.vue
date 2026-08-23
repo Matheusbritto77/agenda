@@ -10,6 +10,8 @@ const props = defineProps({
     serviceReviews: { type: Object, default: () => ({ data: [], links: [] }) },
     companyReviews: { type: Object, default: () => ({ data: [], links: [] }) },
     portalCustomization: { type: Object, default: () => ({}) },
+    coupons: { type: Array, default: () => [] },
+    loyaltyTiers: { type: Array, default: () => [] },
     services: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
     stats: { type: Object, default: () => ({}) },
@@ -17,9 +19,13 @@ const props = defineProps({
 });
 
 const activeTab = ref('clients');
+const couponSubTab = ref('coupons');
 const selectedClient = ref(null);
 const showClientModal = ref(false);
 const showEditModal = ref(false);
+const showCouponModal = ref(false);
+const editingCoupon = ref(null);
+const showGiftModal = ref(false);
 const moderationBusy = ref(null);
 
 const hasPermission = (permission) => {
@@ -38,6 +44,138 @@ const editForm = useForm({
     name: '',
     phone: '',
 });
+
+const couponForm = useForm({
+    code: '',
+    description: '',
+    discount_type: 'percentage',
+    discount_value: 10,
+    min_spend: '',
+    max_uses: '',
+    expires_at: '',
+    is_active: true,
+    client_account_id: '',
+});
+
+const giftForm = useForm({
+    client_account_id: '',
+    code: '',
+    description: '',
+    discount_type: 'percentage',
+    discount_value: 15,
+    expires_at: '',
+});
+
+const loyaltyTiersList = ref(props.loyaltyTiers?.length ? JSON.parse(JSON.stringify(props.loyaltyTiers)) : []);
+const loyaltyForm = useForm({ tiers: [] });
+
+const openCreateCoupon = () => {
+    editingCoupon.value = null;
+    couponForm.reset();
+    couponForm.code = 'PROMO' + Math.floor(1000 + Math.random() * 9000);
+    couponForm.discount_type = 'percentage';
+    couponForm.discount_value = 10;
+    couponForm.is_active = true;
+    couponForm.clearErrors();
+    showCouponModal.value = true;
+};
+
+const openEditCoupon = (coupon) => {
+    editingCoupon.value = coupon;
+    couponForm.code = coupon.code;
+    couponForm.description = coupon.description || '';
+    couponForm.discount_type = coupon.discount_type;
+    couponForm.discount_value = coupon.discount_value;
+    couponForm.min_spend = coupon.min_spend || '';
+    couponForm.max_uses = coupon.max_uses || '';
+    couponForm.expires_at = coupon.expires_at || '';
+    couponForm.is_active = coupon.is_active;
+    couponForm.client_account_id = coupon.client_account_id || '';
+    couponForm.clearErrors();
+    showCouponModal.value = true;
+};
+
+const closeCouponModal = () => {
+    showCouponModal.value = false;
+    editingCoupon.value = null;
+    couponForm.reset();
+};
+
+const saveCoupon = () => {
+    if (editingCoupon.value) {
+        couponForm.put(route('admin.client-area.coupons.update', editingCoupon.value.id), {
+            preserveScroll: true,
+            onSuccess: closeCouponModal,
+        });
+    } else {
+        couponForm.post(route('admin.client-area.coupons.store'), {
+            preserveScroll: true,
+            onSuccess: closeCouponModal,
+        });
+    }
+};
+
+const toggleCoupon = (coupon) => {
+    router.patch(route('admin.client-area.coupons.toggle', coupon.id), {}, {
+        preserveScroll: true,
+    });
+};
+
+const deleteCoupon = (coupon) => {
+    if (confirm(`Tem certeza que deseja excluir o cupom ${coupon.code}?`)) {
+        router.delete(route('admin.client-area.coupons.destroy', coupon.id), {
+            preserveScroll: true,
+        });
+    }
+};
+
+const openGiftModal = (client) => {
+    selectedClient.value = client;
+    giftForm.client_account_id = client.id;
+    giftForm.code = 'PRESENTE' + (client.name ? client.name.split(' ')[0].toUpperCase() : 'VIP') + Math.floor(100 + Math.random() * 900);
+    giftForm.description = `Cupom presente especial para ${client.name}`;
+    giftForm.discount_type = 'percentage';
+    giftForm.discount_value = 15;
+    const exp = new Date();
+    exp.setDate(exp.getDate() + 30);
+    giftForm.expires_at = exp.toISOString().split('T')[0];
+    giftForm.clearErrors();
+    showGiftModal.value = true;
+};
+
+const closeGiftModal = () => {
+    showGiftModal.value = false;
+    giftForm.reset();
+};
+
+const submitGiftCoupon = () => {
+    giftForm.post(route('admin.client-area.coupons.gift'), {
+        preserveScroll: true,
+        onSuccess: closeGiftModal,
+    });
+};
+
+const addLoyaltyTier = () => {
+    const nextMin = loyaltyTiersList.value.length ? Math.max(...loyaltyTiersList.value.map(t => t.minimum || 0)) + 5 : 1;
+    loyaltyTiersList.value.push({
+        name: 'Nível ' + (loyaltyTiersList.value.length + 1),
+        minimum: nextMin,
+        icon: 'trophy',
+        color: '#6366f1',
+        reward: 'Desconto / Cortesia especial',
+    });
+};
+
+const removeLoyaltyTier = (idx) => {
+    loyaltyTiersList.value.splice(idx, 1);
+};
+
+const saveLoyaltyTiers = () => {
+    loyaltyForm.tiers = loyaltyTiersList.value;
+    loyaltyForm.post(route('admin.client-area.loyalty-tiers.update'), {
+        preserveScroll: true,
+    });
+};
 
 const customForm = useForm({
     portal_welcome_title: props.portalCustomization?.welcome_title || '',
@@ -99,6 +237,7 @@ const saveCustomization = () => {
 
 const tabs = computed(() => [
     { id: 'clients', label: 'Clientes', icon: 'fa-solid fa-users', count: props.stats.clients || 0 },
+    { id: 'coupons', label: 'Cupons & Fidelidade', icon: 'fa-solid fa-ticket', count: props.coupons?.length || 0 },
     { id: 'service-reviews', label: 'Avaliações por serviço', icon: 'fa-solid fa-star-half-stroke', count: props.stats.service_reviews || 0 },
     { id: 'company-reviews', label: 'Avaliações públicas', icon: 'fa-solid fa-building-circle-check', count: props.companyReviews.total || 0 },
     { id: 'customization', label: 'Personalização do Portal', icon: 'fa-solid fa-wand-magic-sparkles' },
@@ -288,8 +427,11 @@ const paginationLabel = (label) => {
                                     <td><span class="font-black text-emerald-600 dark:text-emerald-400">{{ currency(client.total_spent) }}</span></td>
                                     <td>
                                         <div class="flex justify-end gap-2">
-                                            <button type="button" @click="openClient(client)" class="btn btn-outline !px-3 !py-2 rounded-xl text-xs"><i class="fa-solid fa-clock-rotate-left"></i>Histórico</button>
-                                            <button v-if="hasPermission('clients.edit')" type="button" @click="openEdit(client)" class="btn btn-outline !px-3 !py-2 rounded-xl text-xs"><i class="fa-solid fa-pen"></i>Editar</button>
+                                            <button v-if="hasPermission('clients.edit')" type="button" @click="openGiftModal(client)" class="btn btn-outline !px-3 !py-2 rounded-xl text-xs text-purple-600 dark:text-purple-400 border-purple-300 dark:border-purple-800 hover:bg-purple-500/10">
+                                                <i class="fa-solid fa-gift mr-1"></i>Presentear Cupom
+                                            </button>
+                                            <button type="button" @click="openClient(client)" class="btn btn-outline !px-3 !py-2 rounded-xl text-xs"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Histórico</button>
+                                            <button v-if="hasPermission('clients.edit')" type="button" @click="openEdit(client)" class="btn btn-outline !px-3 !py-2 rounded-xl text-xs"><i class="fa-solid fa-pen mr-1"></i>Editar</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -303,6 +445,224 @@ const paginationLabel = (label) => {
 
                 <div v-if="clients.last_page > 1" class="flex flex-wrap justify-center gap-2">
                     <Link v-for="link in clients.links" :key="link.label" :href="link.url || '#'" preserve-scroll preserve-state class="px-3 py-2 rounded-xl text-xs font-bold border" :class="[link.active ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 dark:border-slate-800', !link.url ? 'opacity-40 pointer-events-none' : '']">{{ paginationLabel(link.label) }}</Link>
+                </div>
+            </section>
+
+            <!-- TAB 2: CUPONS & FIDELIDADE -->
+            <section v-if="activeTab === 'coupons'" class="space-y-6">
+                <!-- Sub-nav bar: Cupons vs Níveis de Fidelidade -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                        <button
+                            type="button"
+                            @click="couponSubTab = 'coupons'"
+                            :class="['px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-2', couponSubTab === 'coupons' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']"
+                        >
+                            <i class="fa-solid fa-ticket"></i>
+                            <span>Cupons de Desconto</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px]" :class="couponSubTab === 'coupons' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-800'">
+                                {{ coupons.length }}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            @click="couponSubTab = 'tiers'"
+                            :class="['px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer flex items-center gap-2', couponSubTab === 'tiers' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white']"
+                        >
+                            <i class="fa-solid fa-trophy"></i>
+                            <span>Regras & Medalhas de Fidelidade</span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px]" :class="couponSubTab === 'tiers' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-800'">
+                                {{ loyaltyTiersList.length }}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div v-if="couponSubTab === 'coupons'" class="flex items-center gap-2">
+                        <button
+                            v-if="hasPermission('clients.edit')"
+                            type="button"
+                            @click="openCreateCoupon"
+                            class="btn btn-primary rounded-xl text-xs font-black flex items-center gap-2"
+                        >
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Novo Cupom</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB 1: CUPONS LIST -->
+                <div v-if="couponSubTab === 'coupons'" class="space-y-4">
+                    <div v-if="coupons.length === 0" class="glass-card-3d rounded-3xl p-10 text-center space-y-3">
+                        <i class="fa-solid fa-ticket text-4xl text-indigo-400 mb-2"></i>
+                        <h3 class="font-black text-lg">Nenhum cupom cadastrado</h3>
+                        <p class="text-sm opacity-60 max-w-sm mx-auto">
+                            Crie cupons de desconto em percentual ou valor fixo para presentear clientes fiéis e atrair novos agendamentos!
+                        </p>
+                        <button
+                            v-if="hasPermission('clients.edit')"
+                            type="button"
+                            @click="openCreateCoupon"
+                            class="btn btn-primary rounded-xl text-xs font-bold mt-2"
+                        >
+                            <i class="fa-solid fa-plus mr-1.5"></i>Criar Primeiro Cupom
+                        </button>
+                    </div>
+
+                    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <article
+                            v-for="coupon in coupons"
+                            :key="coupon.id"
+                            class="glass-card-3d rounded-2xl p-5 space-y-4 flex flex-col justify-between"
+                        >
+                            <div class="space-y-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <span class="px-3 py-1 rounded-xl font-black text-xs tracking-wider uppercase" :class="coupon.is_valid ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25' : 'bg-slate-500/15 text-slate-500'">
+                                        {{ coupon.formatted_discount }}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold" :class="coupon.is_active ? 'bg-indigo-500/15 text-indigo-600 dark:text-cyan-400' : 'bg-rose-500/15 text-rose-500'">
+                                        {{ coupon.is_active ? 'Ativo' : 'Pausado' }}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <h4 class="text-base font-black tracking-wider text-indigo-600 dark:text-cyan-400">
+                                        {{ coupon.code }}
+                                    </h4>
+                                    <p class="text-xs opacity-75 mt-0.5">{{ coupon.description || 'Desconto promocional' }}</p>
+                                </div>
+
+                                <div class="p-3 rounded-xl bg-slate-500/5 text-xs space-y-1">
+                                    <p v-if="coupon.client_name" class="font-bold text-purple-600 dark:text-purple-400">
+                                        <i class="fa-solid fa-user-tag mr-1"></i>Exclusivo para: {{ coupon.client_name }}
+                                    </p>
+                                    <p v-if="coupon.min_spend">
+                                        <i class="fa-solid fa-circle-info text-[10px] mr-1 opacity-50"></i>
+                                        Gasto mínimo: {{ currency(coupon.min_spend) }}
+                                    </p>
+                                    <p>
+                                        <i class="fa-solid fa-chart-pie text-[10px] mr-1 opacity-50"></i>
+                                        Utilizações: <strong>{{ coupon.uses_count }}</strong>{{ coupon.max_uses ? ` de ${coupon.max_uses}` : ' (sem limite)' }}
+                                    </p>
+                                    <p v-if="coupon.expires_at_formatted">
+                                        <i class="fa-solid fa-calendar-xmark text-[10px] mr-1 opacity-50"></i>
+                                        Expira em: {{ coupon.expires_at_formatted }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div v-if="hasPermission('clients.edit')" class="flex items-center justify-between gap-2 pt-3 border-t" style="border-color: var(--border);">
+                                <button
+                                    type="button"
+                                    @click="toggleCoupon(coupon)"
+                                    class="btn btn-outline !px-2.5 !py-1.5 rounded-xl text-xs"
+                                >
+                                    <i :class="coupon.is_active ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
+                                    <span>{{ coupon.is_active ? 'Pausar' : 'Ativar' }}</span>
+                                </button>
+                                <div class="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        @click="openEditCoupon(coupon)"
+                                        class="btn btn-outline !px-2.5 !py-1.5 rounded-xl text-xs"
+                                    >
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="deleteCoupon(coupon)"
+                                        class="btn btn-outline !px-2.5 !py-1.5 rounded-xl text-xs text-rose-500 hover:text-rose-700"
+                                    >
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <!-- SUB-TAB 2: LOYALTY TIERS & BADGES CONFIG -->
+                <div v-else class="space-y-6">
+                    <div class="rounded-3xl border border-indigo-500/25 bg-gradient-to-r from-indigo-900/30 via-slate-900/40 to-slate-950/60 p-5 sm:p-6 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+                        <div class="space-y-1">
+                            <h3 class="text-lg sm:text-xl font-black text-white">Programa de Medalhas & Recompensas por Visitas</h3>
+                            <p class="text-xs sm:text-sm text-slate-300 max-w-2xl">
+                                Defina quantos atendimentos concluídos são necessários para o cliente desbloquear cada nível e informe o benefício que ele ganha (ex: desconto, brinde ou cortesia).
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                @click="addLoyaltyTier"
+                                class="btn btn-outline !text-white !border-white/20 hover:!bg-white/10 rounded-xl text-xs flex items-center gap-2"
+                            >
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <span>Adicionar Nível</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="saveLoyaltyTiers"
+                                :disabled="loyaltyForm.processing"
+                                class="btn btn-primary rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30"
+                            >
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                <span>{{ loyaltyForm.processing ? 'Salvando...' : 'Salvar Regras' }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div
+                            v-for="(tier, idx) in loyaltyTiersList"
+                            :key="idx"
+                            class="glass-card-3d rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center gap-4 justify-between"
+                        >
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg font-black shrink-0">
+                                    {{ {sparkles:'✨', star:'⭐', heart:'💜', crown:'👑', trophy:'🏆', gem:'💎'}[tier.icon] || '🎖️' }}
+                                </div>
+                                <span class="px-2.5 py-1 rounded-xl text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-cyan-400">
+                                    #{{ idx + 1 }}
+                                </span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
+                                <div>
+                                    <label class="form-label text-[10px]">Nome da Medalha / Nível</label>
+                                    <input v-model="tier.name" class="form-control text-xs font-bold" placeholder="Ex: Cliente VIP Ouro" required />
+                                </div>
+                                <div>
+                                    <label class="form-label text-[10px]">Mínimo de Visitas</label>
+                                    <input type="number" min="1" v-model.number="tier.minimum" class="form-control text-xs font-bold" required />
+                                </div>
+                                <div>
+                                    <label class="form-label text-[10px]">Ícone</label>
+                                    <select v-model="tier.icon" class="form-control text-xs font-bold">
+                                        <option value="sparkles">✨ Brilho (sparkles)</option>
+                                        <option value="star">⭐ Estrela (star)</option>
+                                        <option value="heart">💜 Coração (heart)</option>
+                                        <option value="crown">👑 Coroa (crown)</option>
+                                        <option value="trophy">🏆 Troféu (trophy)</option>
+                                        <option value="gem">💎 Diamante (gem)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label text-[10px]">Recompensa / Benefício</label>
+                                    <input v-model="tier.reward" class="form-control text-xs" placeholder="Ex: 10% OFF no corte" />
+                                </div>
+                            </div>
+
+                            <button
+                                v-if="loyaltyTiersList.length > 1"
+                                type="button"
+                                @click="removeLoyaltyTier(idx)"
+                                class="w-8 h-8 rounded-xl hover:bg-rose-500/10 text-rose-500 flex items-center justify-center self-end lg:self-center shrink-0 cursor-pointer"
+                                title="Remover nível"
+                            >
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -757,6 +1117,210 @@ const paginationLabel = (label) => {
                     <div><label class="form-label">Telefone</label><input v-model="editForm.phone" class="form-control" placeholder="(11) 99999-9999" /><p v-if="editForm.errors.phone" class="text-xs text-rose-500 mt-1">{{ editForm.errors.phone }}</p></div>
                     <div class="rounded-xl bg-slate-500/10 p-3 text-xs opacity-70"><i class="fa-solid fa-lock mr-1.5"></i>O e-mail <strong>{{ selectedClient.account_email }}</strong> identifica a conta global do cliente e não pode ser alterado pela empresa.</div>
                     <div class="flex justify-end gap-2"><button type="button" class="btn btn-outline rounded-xl" @click="closeEdit">Cancelar</button><button type="submit" class="btn btn-primary rounded-xl" :disabled="editForm.processing"><i class="fa-solid fa-floppy-disk"></i>{{ editForm.processing ? 'Salvando...' : 'Salvar dados' }}</button></div>
+                </form>
+            </div>
+
+            <!-- MODAL: CRIAR / EDITAR CUPOM -->
+            <div v-if="showCouponModal" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 liquid-glass-backdrop" @click.self="closeCouponModal">
+                <form @submit.prevent="saveCoupon" class="liquid-glass-card w-full max-w-xl p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
+                    <div class="flex items-center justify-between gap-4 border-b pb-3" style="border-color: var(--border);">
+                        <div>
+                            <h3 class="text-lg font-black" style="color: var(--text-heading);">
+                                {{ editingCoupon ? 'Editar Cupom de Desconto' : 'Novo Cupom de Desconto' }}
+                            </h3>
+                            <p class="text-xs opacity-60">Configure o código, tipo de desconto e regras de aplicação.</p>
+                        </div>
+                        <button type="button" @click="closeCouponModal" class="w-8 h-8 rounded-xl hover:bg-slate-500/10 flex items-center justify-center">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="form-label text-xs font-bold block mb-1">Código do Cupom *</label>
+                            <input
+                                v-model="couponForm.code"
+                                type="text"
+                                class="form-control font-black text-sm uppercase tracking-wider"
+                                placeholder="EX: VERAO15"
+                                required
+                            />
+                            <p v-if="couponForm.errors.code" class="text-xs text-rose-500 mt-1">{{ couponForm.errors.code }}</p>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="form-label text-xs font-bold block mb-1">Descrição / Finalidade</label>
+                            <input
+                                v-model="couponForm.description"
+                                type="text"
+                                class="form-control text-xs"
+                                placeholder="Ex: Desconto especial de boas-vindas"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Tipo de Desconto *</label>
+                            <select v-model="couponForm.discount_type" class="form-control text-xs font-bold" required>
+                                <option value="percentage">Porcentagem (%)</option>
+                                <option value="fixed">Valor Fixo (R$)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">
+                                {{ couponForm.discount_type === 'percentage' ? 'Percentual (%) *' : 'Valor (R$) *' }}
+                            </label>
+                            <input
+                                v-model.number="couponForm.discount_value"
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                class="form-control text-xs font-bold"
+                                required
+                            />
+                            <p v-if="couponForm.errors.discount_value" class="text-xs text-rose-500 mt-1">{{ couponForm.errors.discount_value }}</p>
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Valor Mínimo do Serviço (R$)</label>
+                            <input
+                                v-model.number="couponForm.min_spend"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="form-control text-xs"
+                                placeholder="Opcional"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Limite Máximo de Usos</label>
+                            <input
+                                v-model.number="couponForm.max_uses"
+                                type="number"
+                                min="1"
+                                class="form-control text-xs"
+                                placeholder="Ilimitado se vazio"
+                            />
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="form-label text-xs font-bold block mb-1">Data de Validade (Expiração)</label>
+                            <input
+                                v-model="couponForm.expires_at"
+                                type="date"
+                                class="form-control text-xs"
+                            />
+                        </div>
+
+                        <div class="sm:col-span-2 flex items-center gap-2 pt-2">
+                            <input
+                                type="checkbox"
+                                id="coupon_is_active"
+                                v-model="couponForm.is_active"
+                                class="rounded"
+                            />
+                            <label for="coupon_is_active" class="text-xs font-bold cursor-pointer">
+                                Cupom Ativo (disponível para uso)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-4 border-t" style="border-color: var(--border);">
+                        <button type="button" @click="closeCouponModal" class="btn btn-outline text-xs rounded-xl">Cancelar</button>
+                        <button type="submit" :disabled="couponForm.processing" class="btn btn-primary text-xs rounded-xl flex items-center gap-1.5 shadow-md">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                            <span>{{ couponForm.processing ? 'Salvando...' : (editingCoupon ? 'Atualizar Cupom' : 'Criar Cupom') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- MODAL: PRESENTEAR CUPOM EXCLUSIVO AO CLIENTE -->
+            <div v-if="showGiftModal && selectedClient" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 liquid-glass-backdrop" @click.self="closeGiftModal">
+                <form @submit.prevent="submitGiftCoupon" class="liquid-glass-card w-full max-w-lg p-6 space-y-5">
+                    <div class="flex items-start justify-between gap-4 border-b pb-3" style="border-color: var(--border);">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="p-1.5 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400">
+                                    <i class="fa-solid fa-gift"></i>
+                                </span>
+                                <h3 class="text-lg font-black" style="color: var(--text-heading);">Presentear Cupom</h3>
+                            </div>
+                            <p class="text-xs opacity-60 mt-1">
+                                Gere um voucher exclusivo e nominal para <strong>{{ selectedClient.name }}</strong>.
+                            </p>
+                        </div>
+                        <button type="button" @click="closeGiftModal" class="w-8 h-8 rounded-xl hover:bg-slate-500/10 flex items-center justify-center">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Código do Cupom *</label>
+                            <input
+                                v-model="giftForm.code"
+                                type="text"
+                                class="form-control font-black text-sm uppercase tracking-wider"
+                                required
+                            />
+                            <p v-if="giftForm.errors.code" class="text-xs text-rose-500 mt-1">{{ giftForm.errors.code }}</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="form-label text-xs font-bold block mb-1">Tipo de Desconto</label>
+                                <select v-model="giftForm.discount_type" class="form-control text-xs font-bold">
+                                    <option value="percentage">Porcentagem (%)</option>
+                                    <option value="fixed">Valor Fixo (R$)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label text-xs font-bold block mb-1">Valor do Desconto</label>
+                                <input
+                                    v-model.number="giftForm.discount_value"
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    class="form-control text-xs font-bold"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Mensagem / Descrição do Presente</label>
+                            <input
+                                v-model="giftForm.description"
+                                type="text"
+                                class="form-control text-xs"
+                                placeholder="Ex: Presente de aniversário / Cliente especial"
+                            />
+                        </div>
+
+                        <div>
+                            <label class="form-label text-xs font-bold block mb-1">Data de Validade</label>
+                            <input
+                                v-model="giftForm.expires_at"
+                                type="date"
+                                class="form-control text-xs"
+                            />
+                        </div>
+
+                        <div class="p-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-900 dark:text-purple-200">
+                            <i class="fa-solid fa-sparkles mr-1.5 text-purple-500"></i>
+                            Este cupom será exibido imediatamente na Área do Cliente de <strong>{{ selectedClient.name }}</strong> ({{ selectedClient.account_email }}).
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t" style="border-color: var(--border);">
+                        <button type="button" @click="closeGiftModal" class="btn btn-outline text-xs rounded-xl">Cancelar</button>
+                        <button type="submit" :disabled="giftForm.processing" class="btn btn-primary text-xs rounded-xl bg-purple-600 hover:bg-purple-500 text-white flex items-center gap-1.5 shadow-md">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>{{ giftForm.processing ? 'Enviando...' : 'Enviar Cupom Presente' }}</span>
+                        </button>
+                    </div>
                 </form>
             </div>
         </Teleport>

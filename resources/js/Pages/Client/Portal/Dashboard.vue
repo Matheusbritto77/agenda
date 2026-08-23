@@ -20,6 +20,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    coupons: {
+        type: Array,
+        default: () => [],
+    },
     companies: {
         type: Array,
         default: () => [],
@@ -34,6 +38,15 @@ const activeTab = ref('appointments');
 const appointmentFilter = ref('all'); // 'all', 'upcoming', 'completed', 'cancelled'
 const reviewModalOpen = ref(false);
 const activeReviewAppointment = ref(null);
+
+const copiedCouponId = ref(null);
+const copyCouponCode = (coupon) => {
+    navigator.clipboard.writeText(coupon.code);
+    copiedCouponId.value = coupon.id;
+    setTimeout(() => {
+        copiedCouponId.value = null;
+    }, 2500);
+};
 
 const companyReviewModalOpen = ref(false);
 const activeReviewCompany = ref(null);
@@ -407,6 +420,23 @@ const firstName = computed(() => {
                     >
                         <i class="fa-solid fa-award text-xs"></i>
                         <span>Medalhas & Fidelidade</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="activeTab = 'coupons'"
+                        :class="[
+                            'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                            activeTab === 'coupons'
+                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ]"
+                    >
+                        <i class="fa-solid fa-ticket text-xs"></i>
+                        <span>Cupons & Descontos</span>
+                        <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black" :class="activeTab === 'coupons' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'">
+                            {{ coupons.length }}
+                        </span>
                     </button>
                 </div>
 
@@ -814,49 +844,154 @@ const firstName = computed(() => {
             <div v-else-if="activeTab === 'badges'" class="space-y-6">
                 <section class="rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600 p-6 sm:p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden">
                     <div class="relative z-10 space-y-2">
-                        <span class="text-xs font-black uppercase tracking-[0.2em] text-white/80">Programa de Conquistas</span>
-                        <h2 class="text-2xl sm:text-3xl font-black">Suas Medalhas de Fidelidade</h2>
+                        <span class="text-xs font-black uppercase tracking-[0.2em] text-white/80">Programa de Conquistas & Fidelidade</span>
+                        <h2 class="text-2xl sm:text-3xl font-black">
+                            {{ activeCompany ? ('Suas Conquistas em ' + activeCompany.name) : 'Suas Medalhas de Fidelidade' }}
+                        </h2>
                         <p class="text-xs sm:text-sm text-white/80 max-w-xl">
-                            A cada serviço concluído, você desbloqueia novas insígnias de cliente frequente e acumula reconhecimento especial nos estabelecimentos.
+                            A cada atendimento concluído, você acumula progresso para desbloquear novos níveis de cliente VIP e benefícios exclusivos.
                         </p>
                     </div>
                 </section>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     <div
                         v-for="badge in badges"
                         :key="badge.name"
                         :class="[
-                            'rounded-3xl border p-5 text-center transition-all relative overflow-hidden flex flex-col justify-between',
+                            'rounded-3xl border p-5 transition-all relative overflow-hidden flex flex-col justify-between space-y-4',
                             badge.earned
                                 ? 'border-amber-400/40 bg-white dark:bg-slate-900 shadow-md ring-2 ring-amber-400/20'
-                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 opacity-50 grayscale'
+                                : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40'
                         ]"
                     >
                         <div class="space-y-3">
-                            <div class="text-4xl mx-auto py-2">
-                                {{ {sparkles:'✨', star:'⭐', heart:'💜', crown:'👑', trophy:'🏆'}[badge.icon] || '🎖️' }}
+                            <div class="flex items-center justify-between">
+                                <div class="text-3xl p-2 rounded-2xl bg-amber-500/10 w-fit">
+                                    {{ {sparkles:'✨', star:'⭐', heart:'💜', crown:'👑', trophy:'🏆', gem:'💎'}[badge.icon] || '🎖️' }}
+                                </div>
+                                <span
+                                    :class="[
+                                        'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black',
+                                        badge.earned ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                                    ]"
+                                >
+                                    <i :class="badge.earned ? 'fa-solid fa-check' : 'fa-solid fa-lock'" class="text-[9px]"></i>
+                                    <span>{{ badge.earned ? 'Desbloqueado' : 'Bloqueado' }}</span>
+                                </span>
                             </div>
+
                             <div>
                                 <h4 class="font-black text-sm text-slate-900 dark:text-white">{{ badge.name }}</h4>
                                 <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
-                                    {{ badge.minimum }} atendimento(s)
+                                    Meta: {{ badge.minimum }} atendimento(s)
                                 </span>
                             </div>
-                        </div>
 
-                        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                            <span
-                                :class="[
-                                    'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black',
-                                    badge.earned ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                                ]"
-                            >
-                                <i :class="badge.earned ? 'fa-solid fa-check' : 'fa-solid fa-lock'" class="text-[9px]"></i>
-                                <span>{{ badge.earned ? 'Conquistado' : 'Bloqueado' }}</span>
-                            </span>
+                            <!-- Reward info -->
+                            <div v-if="badge.reward" class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] font-extrabold text-amber-800 dark:text-amber-300">
+                                <i class="fa-solid fa-gift text-xs mr-1 text-amber-500"></i>
+                                <span>{{ badge.reward }}</span>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[10px] font-bold text-slate-400">
+                                    <span>Progresso</span>
+                                    <span>{{ badge.progress_percent || (badge.earned ? 100 : 0) }}%</span>
+                                </div>
+                                <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                    <div
+                                        class="h-full rounded-full transition-all duration-500"
+                                        :class="badge.earned ? 'bg-emerald-500' : 'bg-indigo-600'"
+                                        :style="{ width: `${badge.progress_percent || (badge.earned ? 100 : 0)}%` }"
+                                    ></div>
+                                </div>
+                                <p v-if="!badge.earned && badge.remaining" class="text-[10px] text-indigo-600 dark:text-cyan-400 font-bold">
+                                    Falta(m) apenas {{ badge.remaining }} atendimento(s)!
+                                </p>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: CUPONS & DESCONTOS -->
+            <div v-else-if="activeTab === 'coupons'" class="space-y-6">
+                <section class="rounded-3xl bg-gradient-to-br from-purple-600 via-indigo-700 to-cyan-600 p-6 sm:p-8 text-white shadow-xl shadow-purple-600/20 relative overflow-hidden">
+                    <div class="relative z-10 space-y-2">
+                        <span class="text-xs font-black uppercase tracking-[0.2em] text-white/80">Vouchers & Vantagens</span>
+                        <h2 class="text-2xl sm:text-3xl font-black">Seus Cupons de Desconto</h2>
+                        <p class="text-xs sm:text-sm text-white/80 max-w-xl">
+                            Copie o código promocional e utilize no momento do agendamento para garantir descontos especiais em seus serviços.
+                        </p>
+                    </div>
+                </section>
+
+                <div v-if="coupons.length === 0" class="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-12 text-center space-y-3">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 flex items-center justify-center mx-auto text-xl">
+                        <i class="fa-solid fa-ticket"></i>
+                    </div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Nenhum cupom ativo no momento</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mx-auto">Novos cupons e recompensas por visitas serão disponibilizados aqui pelo estabelecimento!</p>
+                </div>
+
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <article
+                        v-for="coupon in coupons"
+                        :key="coupon.id"
+                        class="rounded-3xl border border-indigo-500/30 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 relative overflow-hidden"
+                    >
+                        <div class="space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                                    {{ coupon.formatted_discount }}
+                                </span>
+                                <span v-if="coupon.is_exclusive" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25">
+                                    ⭐ Presente Exclusivo
+                                </span>
+                            </div>
+
+                            <div>
+                                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white">
+                                    {{ coupon.description || 'Desconto no próximo agendamento' }}
+                                </h3>
+                                <span class="text-[11px] font-bold text-slate-400 block mt-0.5">
+                                    {{ coupon.company_name }}
+                                </span>
+                            </div>
+
+                            <!-- Coupon Code Copy Box -->
+                            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] font-bold text-slate-400 block uppercase">Código</span>
+                                    <strong class="text-sm font-black tracking-widest text-indigo-600 dark:text-cyan-400 truncate block">
+                                        {{ coupon.code }}
+                                    </strong>
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="copyCouponCode(coupon)"
+                                    class="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                                    :class="copiedCouponId === coupon.id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'"
+                                >
+                                    <i :class="copiedCouponId === coupon.id ? 'fa-solid fa-check' : 'fa-solid fa-copy'" class="text-xs"></i>
+                                    <span>{{ copiedCouponId === coupon.id ? 'Copiado!' : 'Copiar' }}</span>
+                                </button>
+                            </div>
+
+                            <div class="space-y-1 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                                <p v-if="coupon.min_spend">
+                                    <i class="fa-solid fa-circle-info text-[10px] mr-1 text-slate-400"></i>
+                                    Válido para serviços a partir de R$ {{ coupon.min_spend.toFixed(2).replace('.', ',') }}
+                                </p>
+                                <p v-if="coupon.expires_at">
+                                    <i class="fa-solid fa-calendar-xmark text-[10px] mr-1 text-slate-400"></i>
+                                    Expira em: {{ coupon.expires_at }}
+                                </p>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
 
