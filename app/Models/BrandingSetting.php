@@ -26,6 +26,7 @@ class BrandingSetting extends Model
     protected $appends = [
         'logo_url',
         'banner_url',
+        'favicon_url',
     ];
 
     public function user(): BelongsTo
@@ -43,5 +44,12 @@ class BrandingSetting extends Model
         $bannerPath = $this->settings['banner_path'] ?? null;
 
         return StorageHelper::url($bannerPath);
+    }
+
+    public function getFaviconUrlAttribute(): ?string
+    {
+        $faviconPath = $this->settings['favicon_path'] ?? null;
+
+        return StorageHelper::url($faviconPath);
     }
 }

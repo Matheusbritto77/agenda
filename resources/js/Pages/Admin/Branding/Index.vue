@@ -77,11 +77,14 @@ const form = useForm({
     delete_logo: false,
     banner_file: null,
     delete_banner: false,
+    favicon_file: null,
+    delete_favicon: false,
 });
 
 const saveSuccess = ref(false);
 const logoPreview = ref(props.branding?.logo_url || null);
 const bannerPreview = ref(props.branding?.banner_url || null);
+const faviconPreview = ref(props.branding?.favicon_url || null);
 
 // Synchronize editor tab selection with preview screen
 const switchTab = (tab) => {
@@ -147,6 +150,24 @@ const handleRemoveBanner = () => {
     form.banner_file = null;
     bannerPreview.value = null;
     form.delete_banner = true;
+};
+
+const handleFaviconChange = (file) => {
+    if (file) {
+        form.favicon_file = file;
+        form.delete_favicon = false;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            faviconPreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+const handleRemoveFavicon = () => {
+    form.favicon_file = null;
+    faviconPreview.value = null;
+    form.delete_favicon = true;
 };
 
 const resetToDefault = () => {
@@ -295,10 +316,13 @@ const submit = () => {
                                 :form="form"
                                 :logo-preview="logoPreview"
                                 :banner-preview="bannerPreview"
+                                :favicon-preview="faviconPreview"
                                 @logo-change="handleLogoChange"
                                 @remove-logo="handleRemoveLogo"
                                 @banner-change="handleBannerChange"
                                 @remove-banner="handleRemoveBanner"
+                                @favicon-change="handleFaviconChange"
+                                @remove-favicon="handleRemoveFavicon"
                             />
 
                             <!-- Tab 2: Cores & Estilo -->

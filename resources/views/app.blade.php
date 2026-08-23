@@ -6,11 +6,27 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        @php
+            $tenant = app()->bound('bookingTenant') ? app('bookingTenant') : null;
+            if (! $tenant && auth()->check()) {
+                $user = auth()->user();
+                $tenantId = $user->parent_id ?: $user->id;
+                $tenant = \App\Models\User::find($tenantId);
+            }
+            $tenantBranding = $tenant ? \App\Models\BrandingSetting::where('user_id', $tenant->id)->first() : null;
+            $tenantFaviconUrl = $tenantBranding?->favicon_url;
+        @endphp
+
         <!-- Favicon -->
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
-        <link rel="alternate icon" href="/favicon.ico">
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+        @if ($tenantFaviconUrl)
+            <link rel="icon" id="dynamic-favicon" href="{{ $tenantFaviconUrl }}">
+            <link rel="apple-touch-icon" id="dynamic-apple-touch-icon" href="{{ $tenantFaviconUrl }}">
+        @else
+            <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="/favicon.svg">
+            <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+            <link rel="alternate icon" href="/favicon.ico">
+            <link rel="apple-touch-icon" id="dynamic-apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+        @endif
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

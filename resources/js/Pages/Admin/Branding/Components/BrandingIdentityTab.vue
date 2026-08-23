@@ -14,15 +14,29 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    faviconPreview: {
+        type: String,
+        default: null,
+    },
 });
 
-const emit = defineEmits(['logo-change', 'remove-logo', 'banner-change', 'remove-banner']);
+const emit = defineEmits([
+    'logo-change',
+    'remove-logo',
+    'banner-change',
+    'remove-banner',
+    'favicon-change',
+    'remove-favicon',
+]);
 
 const logoFileInput = ref(null);
 const bannerFileInput = ref(null);
+const faviconFileInput = ref(null);
 const logoError = ref('');
 const bannerError = ref('');
+const faviconError = ref('');
 const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+const maxFaviconSizeBytes = 5 * 1024 * 1024; // 5MB
 
 const onLogoSelected = (e) => {
     const file = e.target.files?.[0];
@@ -46,6 +60,18 @@ const onBannerSelected = (e) => {
         return;
     }
     emit('banner-change', file);
+};
+
+const onFaviconSelected = (e) => {
+    const file = e.target.files?.[0];
+    faviconError.value = '';
+    if (!file) return;
+    if (file.size > maxFaviconSizeBytes) {
+        faviconError.value = 'O arquivo do favicon deve ter no máximo 5 MB.';
+        e.target.value = '';
+        return;
+    }
+    emit('favicon-change', file);
 };
 </script>
 
@@ -75,6 +101,77 @@ const onBannerSelected = (e) => {
                 placeholder="Ex: Agende seu horário com os melhores especialistas da cidade."
             />
             <p class="text-[11px] text-slate-400 mt-1">Frase que aparece em destaque logo no início do agendamento.</p>
+        </div>
+
+        <!-- Favicon Upload & Browser Preview -->
+        <div class="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="form-label text-xs font-bold block mb-0">Favicon da Página Pública</label>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Ícone exibido na aba do navegador e nos favoritos da sua página pública de agendamentos.</p>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+                    Aba do Navegador
+                </span>
+            </div>
+
+            <!-- Realistic Browser Tab Mockup -->
+            <div class="p-3 rounded-xl bg-slate-200/70 dark:bg-slate-950/70 border border-slate-300/60 dark:border-slate-800 flex items-center gap-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm max-w-xs">
+                    <div class="w-4 h-4 rounded overflow-hidden flex items-center justify-center shrink-0">
+                        <img v-if="faviconPreview" :src="faviconPreview" class="w-full h-full object-contain" alt="Favicon preview" />
+                        <img v-else src="/favicon.svg" class="w-full h-full object-contain" alt="Default favicon" />
+                    </div>
+                    <span class="text-[11px] font-bold truncate text-slate-800 dark:text-slate-200">
+                        {{ form.business_name || 'Agendamento Online' }} - Agendae
+                    </span>
+                    <i class="fa-solid fa-xmark text-[9px] text-slate-400 ml-auto"></i>
+                </div>
+                <span class="text-[10px] text-slate-400 hidden sm:inline italic">
+                    (Pré-visualização da aba no navegador)
+                </span>
+            </div>
+
+            <div class="flex items-center gap-4 pt-1">
+                <div class="w-14 h-14 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white flex items-center justify-center overflow-hidden shadow-inner shrink-0 p-2">
+                    <img v-if="faviconPreview" :src="faviconPreview" class="object-contain w-full h-full" alt="Favicon preview" />
+                    <img v-else src="/favicon.svg" class="object-contain w-full h-full opacity-60" alt="Default favicon" />
+                </div>
+                <div class="space-y-1.5">
+                    <input
+                        type="file"
+                        ref="faviconFileInput"
+                        @change="onFaviconSelected"
+                        accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,image/webp,image/jpeg"
+                        class="hidden"
+                        id="favicon_file_input"
+                    />
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            @click="$refs.faviconFileInput.click()"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer shadow-sm"
+                        >
+                            <i class="fa-solid fa-upload text-[11px] mr-1"></i>
+                            {{ faviconPreview ? 'Trocar Favicon' : 'Escolher Favicon' }}
+                        </button>
+                        <button
+                            v-if="faviconPreview"
+                            type="button"
+                            @click="$emit('remove-favicon')"
+                            class="px-3.5 py-2 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900/30 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-950/40 transition-all cursor-pointer"
+                        >
+                            <i class="fa-solid fa-trash text-[11px] mr-1"></i>
+                            Restaurar Padrão
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-tight">
+                        PNG, SVG, ICO ou WEBP (Recomendado: 32x32px, 64x64px ou quadrado, máx: 5MB).
+                    </p>
+                    <p v-if="faviconError" class="text-xs text-rose-500 font-bold mt-1">{{ faviconError }}</p>
+                    <p v-if="form.errors?.favicon_file" class="text-xs text-rose-500 font-bold mt-1">{{ form.errors.favicon_file }}</p>
+                </div>
+            </div>
         </div>
 
         <!-- Logo Upload -->

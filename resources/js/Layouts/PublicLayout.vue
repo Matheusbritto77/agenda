@@ -98,6 +98,19 @@ watch(() => props.title, (newTitle) => {
     document.title = newTitle;
 }, { immediate: true });
 
+watch(() => props.branding?.favicon_url, (newFavicon) => {
+    if (newFavicon) {
+        const link = document.getElementById('dynamic-favicon') || document.querySelector("link[rel*='icon']");
+        if (link) {
+            link.href = newFavicon;
+        }
+        const appleLink = document.getElementById('dynamic-apple-touch-icon') || document.querySelector("link[rel*='apple-touch-icon']");
+        if (appleLink) {
+            appleLink.href = newFavicon;
+        }
+    }
+}, { immediate: true });
+
 onMounted(() => {
     document.documentElement.classList.remove('dark');
     document.documentElement.setAttribute('data-theme', 'light');

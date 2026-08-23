@@ -83,6 +83,8 @@ class BrandingController extends Controller
             'delete_logo' => ['nullable', 'boolean'],
             'banner_file' => ['nullable', 'image', 'max:10240'],
             'delete_banner' => ['nullable', 'boolean'],
+            'favicon_file' => ['nullable', 'file', 'mimes:ico,png,svg,webp,jpg,jpeg', 'max:5120'],
+            'delete_favicon' => ['nullable', 'boolean'],
         ])->validate();
 
         $branding = BrandingSetting::firstOrCreate([
@@ -152,6 +154,15 @@ class BrandingController extends Controller
         } elseif ($request->boolean('delete_banner') === true) {
             \App\Support\StorageHelper::delete($currentSettings['banner_path'] ?? null);
             $settingsData['banner_path'] = null;
+        }
+
+        // Handle Favicon file
+        if ($request->hasFile('favicon_file')) {
+            \App\Support\StorageHelper::delete($currentSettings['favicon_path'] ?? null);
+            $settingsData['favicon_path'] = $request->file('favicon_file')->store('branding/favicons', 'public');
+        } elseif ($request->boolean('delete_favicon') === true) {
+            \App\Support\StorageHelper::delete($currentSettings['favicon_path'] ?? null);
+            $settingsData['favicon_path'] = null;
         }
 
         $updateData['settings'] = $settingsData;
