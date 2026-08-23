@@ -78,8 +78,10 @@ class FinancialController extends Controller
 
         $allAppointments = $appointmentsQuery->get();
 
-        // If logged in as a team member without full admin privileges, show professional specific view
-        if ($teamMember && $user->role !== 'admin' && ! $user->hasPermission('reports.revenue')) {
+        $canViewCompanyReports = ! $user->parent_id || $user->hasPermission('reports.revenue_all') || $user->hasPermission('reports.view_all');
+
+        // If logged in as a team member without full company report privileges, show professional specific view
+        if ($teamMember && ! $canViewCompanyReports) {
             $profAppointments = $allAppointments->where('team_member_id', $teamMember->id);
             $totalRevenue = 0.00;
             $totalCommission = 0.00;

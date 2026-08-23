@@ -77,8 +77,8 @@ class DashboardController extends Controller
         ];
 
         // Appointment KPI cards should match the visible agenda scope.
-        if ($user->hasPermission('appointments.view') || $user->hasPermission('reports.view')) {
-            $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all');
+        if ($user->hasPermission('appointments.view') || $user->hasPermission('reports.view') || $user->hasPermission('reports.view_all')) {
+            $showAll = ! $user->parent_id || $user->hasPermission('appointments.view_all') || $user->hasPermission('reports.view_all');
 
             $scopedAppointments = function () use ($tenantId, $showAll, $teamMember) {
                 $query = Appointment::query()

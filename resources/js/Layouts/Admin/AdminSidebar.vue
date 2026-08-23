@@ -26,12 +26,16 @@ const navItems = computed(() => {
         { name: 'Dashboard Geral', icon: 'fa-solid fa-chart-pie', route: 'admin.dashboard', pattern: 'admin.dashboard' }
     ];
 
-    if (hasPermission('reports.revenue')) {
+    if (hasPermission('reports.revenue') || hasPermission('reports.revenue_all') || hasPermission('reports.view') || hasPermission('reports.view_all')) {
         items.push({ name: 'Financeiro & Comissões', icon: 'fa-solid fa-wallet', route: 'admin.financial.index', pattern: 'admin.financial.*' });
     }
 
     if (hasPermission('appointments.view')) {
         items.push({ name: 'Agendamentos', icon: 'fa-solid fa-calendar-days', route: 'admin.appointments.index', pattern: 'admin.appointments.*' });
+    }
+
+    if (hasPermission('clients.view')) {
+        items.push({ name: 'Área do Cliente', icon: 'fa-solid fa-users-viewfinder', route: 'admin.client-area.index', pattern: 'admin.client-area.*' });
     }
 
     if (hasPermission('services.view')) {

@@ -52,10 +52,11 @@ class HandleInertiaRequests extends Middleware
             // Load stored permissions config using the User model single source of truth
             $allPermissionsList = [
                 'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.view_all',
+                'clients.view', 'clients.edit', 'clients.reviews', 'clients.view_all',
                 'services.view', 'services.create', 'services.edit', 'services.delete', 'services.prices',
                 'schedules.view', 'schedules.manage', 'schedules.breaks', 'schedules.blocks',
                 'team.view', 'team.create', 'team.edit', 'team.delete',
-                'reports.view', 'reports.revenue', 'reports.export',
+                'reports.view', 'reports.view_all', 'reports.revenue', 'reports.revenue_all', 'reports.export',
                 'integrations.view', 'integrations.manage',
                 'branding.view', 'branding.manage',
                 'settings.domain', 'settings.roles',

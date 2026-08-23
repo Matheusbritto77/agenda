@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AppointmentController;
 use App\Http\Controllers\Admin\BlockedTimeSlotController;
 use App\Http\Controllers\Admin\BrandingController;
 use App\Http\Controllers\Admin\BusinessHourController;
+use App\Http\Controllers\Admin\ClientAreaController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\Admin\FinancialController;
@@ -127,12 +128,14 @@ Route::middleware('auth')->group(function () {
 // Admin Routes (Protected)
 Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::middleware('permission:reports.revenue')->group(function () {
+    Route::middleware('permission:reports.revenue,reports.revenue_all,reports.view,reports.view_all')->group(function () {
         Route::get('/financial', [FinancialController::class, 'index'])->name('financial.index');
-        Route::post('/financial/transactions', [FinancialController::class, 'storeTransaction'])->name('financial.transactions.store');
-        Route::put('/financial/transactions/{transaction}', [FinancialController::class, 'updateTransaction'])->name('financial.transactions.update');
-        Route::delete('/financial/transactions/{transaction}', [FinancialController::class, 'destroyTransaction'])->name('financial.transactions.destroy');
-        Route::patch('/financial/transactions/{transaction}/toggle-status', [FinancialController::class, 'toggleTransactionStatus'])->name('financial.transactions.toggle-status');
+        Route::middleware('permission:reports.revenue_all')->group(function () {
+            Route::post('/financial/transactions', [FinancialController::class, 'storeTransaction'])->name('financial.transactions.store');
+            Route::put('/financial/transactions/{transaction}', [FinancialController::class, 'updateTransaction'])->name('financial.transactions.update');
+            Route::delete('/financial/transactions/{transaction}', [FinancialController::class, 'destroyTransaction'])->name('financial.transactions.destroy');
+            Route::patch('/financial/transactions/{transaction}/toggle-status', [FinancialController::class, 'toggleTransactionStatus'])->name('financial.transactions.toggle-status');
+        });
     });
     Route::middleware('permission:schedules.view')->get('/business-hours', [BusinessHourController::class, 'index'])->name('business-hours.index');
     Route::middleware('permission:schedules.manage')->post('/business-hours', [BusinessHourController::class, 'store'])->name('business-hours.store');
@@ -159,6 +162,12 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:appointments.view')->get('/appointments/{appointment}', [AppointmentController::class, 'show'])->name('appointments.show');
     Route::middleware('permission:appointments.edit')->patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
     Route::middleware('permission:appointments.edit')->patch('/reviews/{review}/toggle-public', [AppointmentController::class, 'toggleReviewPublic'])->name('appointments.reviews.toggle-public');
+
+    // Company client relationship, history and review management
+    Route::middleware('permission:clients.view')->get('/client-area', [ClientAreaController::class, 'index'])->name('client-area.index');
+    Route::middleware('permission:clients.edit')->patch('/client-area/clients/{client}', [ClientAreaController::class, 'updateClient'])->name('client-area.clients.update');
+    Route::middleware('permission:clients.reviews')->patch('/client-area/service-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('client-area.service-reviews.toggle-public');
+    Route::middleware('permission:clients.reviews')->patch('/client-area/company-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleCompanyReview'])->name('client-area.company-reviews.toggle-public');
 
     // Team CRUD & Toggle
     Route::middleware('permission:team.view')->get('/team', [TeamMemberController::class, 'index'])->name('team.index');

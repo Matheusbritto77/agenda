@@ -61,11 +61,16 @@ class RolePermissionEnforcementTest extends TestCase
         $response = $this->actingAs($this->subUser)->get(route('admin.roles.index'));
         $response->assertStatus(403);
 
-        // 'professional' does not have 'reports.revenue' permission
+        // 'professional' without reports permissions is blocked from financial
+        $this->owner->update([
+            'role_permissions' => [
+                'professional' => ['schedules.view']
+            ]
+        ]);
         $response = $this->actingAs($this->subUser)->get(route('admin.financial.index'));
         $response->assertStatus(403);
 
-        // 'professional' has 'schedules.view' by default, so they can access business-hours index
+        // 'professional' has 'schedules.view', so they can access business-hours index
         $response = $this->actingAs($this->subUser)->get(route('admin.business-hours.index'));
         $response->assertStatus(200);
 
@@ -78,6 +83,65 @@ class RolePermissionEnforcementTest extends TestCase
 
         $response = $this->actingAs($this->subUser)->get(route('admin.business-hours.index'));
         $response->assertStatus(403);
+    }
+
+    public function test_subuser_with_own_reports_permission_sees_only_own_financial_data(): void
+    {
+        // Grant professional only own reports permissions (reports.revenue, reports.view)
+        $this->owner->update([
+            'role_permissions' => [
+                'professional' => ['reports.view', 'reports.revenue']
+            ]
+        ]);
+
+        $response = $this->actingAs($this->subUser)->get(route('admin.financial.index'));
+        $response->assertStatus(200);
+        // Team member should be passed to the view to restrict to their own data
+        $response->assertInertia(fn ($page) => $page
+            ->has('teamMember')
+            ->where('teamMember.id', $this->member->id)
+        );
+
+        // Subuser without reports.revenue_all cannot create company expense transactions
+        $txResponse = $this->actingAs($this->subUser)->post(route('admin.financial.transactions.store'), [
+            'type' => 'expense',
+            'category' => 'utilidades',
+            'title' => 'Conta de Luz da Barbearia',
+            'amount' => 350.00,
+            'due_date' => '2026-08-30',
+            'status' => 'pending',
+        ]);
+        $txResponse->assertStatus(403);
+    }
+
+    public function test_subuser_with_company_revenue_all_permission_sees_company_wide_data(): void
+    {
+        // Grant professional full company-wide reports permission
+        $this->owner->update([
+            'role_permissions' => [
+                'professional' => ['reports.view_all', 'reports.revenue_all']
+            ]
+        ]);
+
+        $response = $this->actingAs($this->subUser)->get(route('admin.financial.index'));
+        $response->assertStatus(200);
+
+        // With reports.revenue_all, user can create company transactions
+        $txResponse = $this->actingAs($this->subUser)->post(route('admin.financial.transactions.store'), [
+            'type' => 'expense',
+            'category' => 'utilidades',
+            'title' => 'Conta de Luz da Barbearia',
+            'amount' => 350.00,
+            'due_date' => '2026-08-30',
+            'status' => 'pending',
+            'payment_method' => 'pix',
+        ]);
+        $txResponse->assertRedirect();
+        $this->assertDatabaseHas('financial_transactions', [
+            'user_id' => $this->owner->id,
+            'title' => 'Conta de Luz da Barbearia',
+            'amount' => 350.00,
+        ]);
     }
 
     public function test_subuser_cannot_alter_service_prices_without_permission(): void

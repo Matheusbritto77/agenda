@@ -180,12 +180,14 @@ class ProfileController extends Controller
                 ],
             ],
             'reports' => [
-                'title' => 'Relatórios',
+                'title' => 'Relatórios & Métricas',
                 'icon' => 'fa-solid fa-chart-line',
                 'permissions' => [
-                    'reports.view' => 'Visualizar métricas',
-                    'reports.revenue' => 'Visualizar faturamento',
-                    'reports.export' => 'Exportar dados',
+                    'reports.view' => 'Visualizar métricas próprias',
+                    'reports.view_all' => 'Visualizar métricas globais da empresa',
+                    'reports.revenue' => 'Visualizar faturamento e comissões próprias',
+                    'reports.revenue_all' => 'Visualizar faturamento global da empresa',
+                    'reports.export' => 'Exportar dados para Excel / CSV',
                 ],
             ],
             'integrations' => [
