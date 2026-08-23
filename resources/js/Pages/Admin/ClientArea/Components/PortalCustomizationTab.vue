@@ -1,4 +1,6 @@
 <script setup>
+import PortalCustomizationPreview from './PortalCustomizationPreview.vue';
+
 defineProps({
     portalCustomization: {
         type: Object,
@@ -303,117 +305,14 @@ defineEmits(['apply-color-preset', 'handle-logo-upload', 'handle-banner-upload',
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: LIVE PREVIEW -->
-            <div class="lg:col-span-5 space-y-4">
-                <div class="sticky top-20 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-black uppercase tracking-wider opacity-60 flex items-center gap-1.5">
-                            <i class="fa-solid fa-eye text-cyan-500"></i>
-                            Pré-visualização em Tempo Real
-                        </span>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            Ao Vivo
-                        </span>
-                    </div>
-
-                    <!-- Mockup Container -->
-                    <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950 p-3 sm:p-4 shadow-2xl space-y-3 overflow-hidden">
-                        <!-- Mock Header -->
-                        <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 flex items-center justify-between shadow-xs">
-                            <div class="flex items-center gap-2.5 min-w-0">
-                                <div class="w-8 h-8 rounded-xl overflow-hidden border flex items-center justify-center shrink-0" :style="{ backgroundColor: customForm.portal_primary_color }">
-                                    <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-cover" />
-                                    <i v-else class="fa-solid fa-store text-white text-xs"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="text-xs font-black truncate">{{ portalCustomization.company_name }}</p>
-                                    <span class="text-[9px] font-bold text-slate-400 block">Área do Cliente</span>
-                                </div>
-                            </div>
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400">
-                                Cliente VIP
-                            </span>
-                        </div>
-
-                        <!-- Mock Announcement -->
-                        <div
-                            v-if="customForm.portal_announcement_enabled && customForm.portal_announcement"
-                            class="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 text-[11px] font-bold flex items-center gap-2"
-                        >
-                            <i class="fa-solid fa-bullhorn text-xs shrink-0"></i>
-                            <span class="truncate">{{ customForm.portal_announcement }}</span>
-                        </div>
-
-                        <!-- Mock Branded Hero Banner -->
-                        <div
-                            class="rounded-2xl p-4 text-white space-y-3 shadow-lg relative overflow-hidden"
-                            :style="{
-                                background: `linear-gradient(135deg, ${customForm.portal_primary_color} 0%, ${customForm.portal_secondary_color} 100%)`
-                            }"
-                        >
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-white text-slate-900 flex items-center justify-center font-black text-sm shrink-0 overflow-hidden shadow-xs">
-                                    <img v-if="logoPreview" :src="logoPreview" class="w-full h-full object-cover" />
-                                    <i v-else class="fa-solid fa-store text-xs" :style="{ color: customForm.portal_primary_color }"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase bg-black/20 text-white/90">Espaço Ativo</span>
-                                    <h4 class="font-black text-sm truncate">{{ customForm.portal_welcome_title || portalCustomization.company_name }}</h4>
-                                    <p class="text-[10px] text-white/80 truncate">{{ customForm.portal_welcome_subtitle || 'Acompanhe seus horários e conquistas.' }}</p>
-                                </div>
-                            </div>
-
-                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                                <span class="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white text-slate-900 shadow-2xs flex items-center gap-1">
-                                    <i class="fa-solid fa-calendar-plus text-[9px]" :style="{ color: customForm.portal_primary_color }"></i>
-                                    Agendar
-                                </span>
-                                <span v-if="customForm.portal_support_whatsapp" class="px-2.5 py-1 rounded-lg text-[10px] font-black bg-emerald-600 text-white shadow-2xs flex items-center gap-1">
-                                    <i class="fa-brands fa-whatsapp text-[10px]"></i>
-                                    Suporte
-                                </span>
-                                <span v-if="customForm.portal_show_reviews" class="px-2.5 py-1 rounded-lg text-[10px] font-black bg-black/25 text-amber-300 flex items-center gap-1">
-                                    <i class="fa-solid fa-star text-[9px]"></i>
-                                    Avaliar
-                                </span>
-                            </div>
-
-                            <p v-if="customForm.portal_custom_instructions" class="text-[10px] text-white/80 border-t border-white/15 pt-2 flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-info text-[9px]"></i>
-                                <span class="truncate">{{ customForm.portal_custom_instructions }}</span>
-                            </p>
-                        </div>
-
-                        <!-- Mock Loyalty Badge Card -->
-                        <div v-if="customForm.portal_show_loyalty_badges" class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center text-xs">
-                                    <i class="fa-solid fa-trophy"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold">Cliente VIP Ouro</p>
-                                    <span class="text-[9px] text-slate-400">5 de 5 atendimentos concluídos</span>
-                                </div>
-                            </div>
-                            <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600">Conquistada</span>
-                        </div>
-
-                        <!-- Mock Appointment Item -->
-                        <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 space-y-2">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <p class="text-xs font-extrabold">Corte de Cabelo & Barba</p>
-                                    <span v-if="customForm.portal_show_professionals" class="text-[10px] text-slate-400 block">Profissional: Carlos Eduardo</span>
-                                </div>
-                                <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/15 text-emerald-600">Confirmado</span>
-                            </div>
-                            <div class="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 dark:border-slate-800 text-slate-500">
-                                <span>📅 25/08 às 14:00</span>
-                                <strong v-if="customForm.portal_show_service_prices" class="text-slate-900 dark:text-white font-black">R$ 80,00</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- RIGHT COLUMN: ENHANCED LIVE PREVIEW -->
+            <div class="lg:col-span-5">
+                <PortalCustomizationPreview
+                    :custom-form="customForm"
+                    :portal-customization="portalCustomization"
+                    :logo-preview="logoPreview"
+                    :banner-preview="bannerPreview"
+                />
             </div>
         </div>
     </section>

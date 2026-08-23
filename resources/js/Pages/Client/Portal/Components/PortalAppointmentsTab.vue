@@ -78,7 +78,7 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                                     <i class="fa-solid fa-store text-indigo-500 text-xs"></i>
                                     <span>{{ appointment.company }}</span>
                                 </div>
-                                <div v-if="appointment.professional" class="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
+                                <div v-if="appointment.professional && appointment.show_professionals !== false" class="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
                                     <i class="fa-solid fa-user text-xs"></i>
                                     <span>Atendido por: <strong class="text-slate-700 dark:text-slate-300">{{ appointment.professional }}</strong></span>
                                 </div>
@@ -97,7 +97,7 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                                 </div>
                                 <span class="block text-[11px] font-bold text-slate-400 mt-1">Duração: {{ appointment.duration_minutes }} min</span>
                             </div>
-                            <div class="text-right">
+                            <div v-if="appointment.show_service_prices !== false" class="text-right">
                                 <span class="text-base sm:text-lg font-black text-indigo-600 dark:text-cyan-400">{{ appointment.service_price }}</span>
                             </div>
                         </div>

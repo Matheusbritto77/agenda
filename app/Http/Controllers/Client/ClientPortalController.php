@@ -175,30 +175,41 @@ class ClientPortalController extends Controller
                 ...$comp,
                 'is_active' => $activeCompany && $comp['id'] === $activeCompany['id'],
             ])->values(),
-            'appointments' => $scopedAppointments->map(fn (Appointment $appointment): array => [
-                'id' => $appointment->id,
-                'company_id' => $appointment->user_id,
-                'company' => $appointment->tenant?->name ?? 'Empresa',
-                'company_booking_url' => $appointment->tenant?->publicBookingUrl(),
-                'company_logo_url' => $appointment->tenant?->brandingSetting?->logo_url,
-                'service' => $appointment->service?->name ?? 'Serviço',
-                'service_price' => $appointment->service?->formatted_price ?? ('R$ ' . number_format((float) ($appointment->service?->price ?? 0), 2, ',', '.')),
-                'duration_minutes' => $appointment->service?->duration_minutes ?? 30,
-                'professional' => $appointment->teamMember?->name,
-                'professional_job' => $appointment->teamMember?->job_title,
-                'professional_avatar' => $appointment->teamMember?->avatar_url,
-                'date' => $appointment->appointment_date->format('d/m/Y'),
-                'raw_date' => $appointment->appointment_date->format('Y-m-d'),
-                'time' => substr((string) $appointment->appointment_time, 0, 5),
-                'status' => $appointment->status,
-                'notes' => $appointment->notes,
-                'can_review' => $appointment->status === 'completed',
-                'review' => $appointment->review ? [
-                    'rating' => (int) $appointment->review->rating,
-                    'comment' => $appointment->review->comment,
-                    'updated_at' => $appointment->review->updated_at?->format('d/m/Y'),
-                ] : null,
-            ])->values(),
+            'appointments' => $scopedAppointments->map(function (Appointment $appointment): array {
+                $tenantBranding = $appointment->tenant?->brandingSetting;
+                $tSettings = $tenantBranding?->settings ?? [];
+                $showReviews = (bool) ($tSettings['portal_show_reviews'] ?? true);
+                $showProfessionals = (bool) ($tSettings['portal_show_professionals'] ?? true);
+                $showPrices = (bool) ($tSettings['portal_show_service_prices'] ?? true);
+
+                return [
+                    'id' => $appointment->id,
+                    'company_id' => $appointment->user_id,
+                    'company' => $appointment->tenant?->name ?? 'Empresa',
+                    'company_booking_url' => $appointment->tenant?->publicBookingUrl(),
+                    'company_logo_url' => $tenantBranding?->logo_url,
+                    'service' => $appointment->service?->name ?? 'Serviço',
+                    'service_price' => $appointment->service?->formatted_price ?? ('R$ ' . number_format((float) ($appointment->service?->price ?? 0), 2, ',', '.')),
+                    'duration_minutes' => $appointment->service?->duration_minutes ?? 30,
+                    'professional' => $appointment->teamMember?->name,
+                    'professional_job' => $appointment->teamMember?->job_title,
+                    'professional_avatar' => $appointment->teamMember?->avatar_url,
+                    'show_professionals' => $showProfessionals,
+                    'show_service_prices' => $showPrices,
+                    'show_reviews' => $showReviews,
+                    'date' => $appointment->appointment_date->format('d/m/Y'),
+                    'raw_date' => $appointment->appointment_date->format('Y-m-d'),
+                    'time' => substr((string) $appointment->appointment_time, 0, 5),
+                    'status' => $appointment->status,
+                    'notes' => $appointment->notes,
+                    'can_review' => $appointment->status === 'completed' && $showReviews,
+                    'review' => $appointment->review ? [
+                        'rating' => (int) $appointment->review->rating,
+                        'comment' => $appointment->review->comment,
+                        'updated_at' => $appointment->review->updated_at?->format('d/m/Y'),
+                    ] : null,
+                ];
+            })->values(),
         ]);
     }
 

@@ -25,7 +25,19 @@ defineProps({
             </div>
         </section>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div v-if="activeCompany && activeCompany.show_loyalty_badges === false" class="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 p-12 text-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Programa de Medalhas Indisponível</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    O estabelecimento <strong>{{ activeCompany.name }}</strong> optou por não exibir o programa de medalhas de fidelidade no momento.
+                </p>
+            </div>
+        </div>
+
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <div
                 v-for="badge in badges"
                 :key="badge.name"
