@@ -576,7 +576,13 @@ class PublicBookingController extends Controller
                 ]);
             }
 
-            $payNow = $request->boolean('pay_now') || $request->input('payment_method') === 'pix';
+            $paymentSetting = PaymentSetting::query()
+                ->where('user_id', $company->id)
+                ->where('gateway', 'mercadopago')
+                ->first();
+
+            $paymentEnabled = $paymentSetting ? (bool) $paymentSetting->is_active : false;
+            $payNow = $paymentEnabled || $request->boolean('pay_now') || $request->input('payment_method') === 'pix';
             $resolvedTeamMemberId = $this->resolveAppointmentTeamMemberId($selectedProfessional, $company, $validated);
 
             $appointment = Appointment::create([
@@ -588,10 +594,54 @@ class PublicBookingController extends Controller
                 'appointment_date' => $validated['appointment_date'],
                 'appointment_time' => $validated['appointment_time'],
                 'status' => 'confirmed',
-                'payment_status' => $payNow ? 'pending' : 'none',
+                'payment_status' => $paymentEnabled ? 'pending' : ($payNow ? 'pending' : 'none'),
                 'notes' => $validated['notes'] ?? null,
                 'user_id' => $company->id,
             ]);
+
+            $paymentDetails = null;
+            if ($paymentEnabled) {
+                try {
+                    $gateway = \App\PaymentGateways\PaymentGatewayFactory::make($paymentSetting);
+                    $amount = (float) $service->price;
+                    $description = "Agendamento: " . $service->name . " - " . $appointment->client_name;
+                    $payerEmail = $appointment->client_email ?: 'cliente@agendae.app';
+                    $pixExpirationMinutes = $paymentSetting->settings['pix_expiration_minutes'] ?? 30;
+
+                    $gatewayResponse = $gateway->createPixPayment($amount, $description, $payerEmail, [
+                        'appointment_id' => $appointment->id,
+                    ]);
+
+                    $paymentRecord = \App\Models\Payment::create([
+                        'user_id' => $company->id,
+                        'appointment_id' => $appointment->id,
+                        'gateway' => 'mercadopago',
+                        'gateway_payment_id' => $gatewayResponse['gateway_payment_id'],
+                        'method' => 'pix',
+                        'amount' => $amount,
+                        'status' => 'pending',
+                        'pix_qr_code' => $gatewayResponse['pix_qr_code'],
+                        'pix_qr_code_base64' => $gatewayResponse['pix_qr_code_base64'],
+                        'gateway_data' => $gatewayResponse['gateway_data'],
+                        'expires_at' => Carbon::now()->addMinutes($pixExpirationMinutes),
+                    ]);
+
+                    $appointment->update([
+                        'payment_id' => $paymentRecord->id,
+                        'payment_status' => 'pending',
+                    ]);
+
+                    $paymentDetails = [
+                        'payment_id' => $paymentRecord->id,
+                        'pix_copy_paste' => $paymentRecord->pix_qr_code,
+                        'pix_qr_code_base64' => $paymentRecord->pix_qr_code_base64,
+                        'amount' => $paymentRecord->amount,
+                        'expires_at' => $paymentRecord->expires_at ? $paymentRecord->expires_at->toIso8601String() : null,
+                    ];
+                } catch (\Throwable $e) {
+                    Log::error('Erro ao gerar pagamento PIX automático: ' . $e->getMessage());
+                }
+            }
 
             $clientPortal->provisionFor($appointment);
 
@@ -623,6 +673,7 @@ class PublicBookingController extends Controller
                         $selectedProfessional
                     )['slots'],
                     'customer_name' => $appointment->client_name,
+                    'paymentDetails' => $paymentDetails,
                 ], 201);
             }
 
@@ -634,6 +685,7 @@ class PublicBookingController extends Controller
                     'service_name' => $service->name,
                     'datetime' => Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time,
                 ])
+                ->with('paymentDetails', $paymentDetails)
                 ->with('success', $message);
         } catch (ValidationException $e) {
             Log::warning('PublicBookingController::store: ValidationException', [

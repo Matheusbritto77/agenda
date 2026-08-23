@@ -138,6 +138,8 @@ class PaymentController extends Controller
 
         return $this->jsonSuccess($request, 'Status do pagamento consultado.', [
             'status' => $payment->status,
+            'is_approved' => $payment->status === 'approved',
+            'appointment' => $payment->appointment,
         ]);
     }
 

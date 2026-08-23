@@ -27,10 +27,14 @@ class MercadoPagoGateway implements PaymentGatewayInterface
     {
         $client = new PaymentClient();
 
+        $appUrl = rtrim(config('app.url') ?? env('APP_URL') ?? url('/'), '/');
+        $notificationUrl = $appUrl . '/webhooks/mercadopago';
+
         $request = [
             "transaction_amount" => (float) $amount,
             "description" => $description,
             "payment_method_id" => "pix",
+            "notification_url" => $notificationUrl,
             "payer" => [
                 "email" => $payerEmail,
             ],

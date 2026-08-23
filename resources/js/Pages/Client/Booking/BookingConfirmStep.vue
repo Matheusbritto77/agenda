@@ -79,7 +79,7 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 </div>
 
                 <div class="space-y-0.5 sm:col-span-2">
-                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Valor Total</span>
+                    <span class="text-[10px] font-bold uppercase opacity-60" :style="{ color: 'var(--text-muted)' }">Valor a Pagar</span>
                     <p class="text-base font-black" :style="{ color: 'var(--primary)' }">R$ {{ formatCurrency(selectedService?.price) }}</p>
                 </div>
             </div>
@@ -87,9 +87,15 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
 
         <!-- Customer Details Form -->
         <form @submit.prevent="$emit('submit-booking', paymentEnabled)" class="card p-5 sm:p-6 shadow-sm space-y-4">
-            <h4 class="text-sm font-extrabold" :style="{ color: 'var(--text-heading)' }">
-                {{ title }}
-            </h4>
+            <div class="flex items-center justify-between">
+                <h4 class="text-sm font-extrabold" :style="{ color: 'var(--text-heading)' }">
+                    {{ title }}
+                </h4>
+                <span v-if="paymentEnabled" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <i class="fa-brands fa-pix text-[11px]"></i>
+                    <span>Pagamento PIX Obrigatório</span>
+                </span>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-group mb-0">
@@ -155,28 +161,20 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 </button>
 
                 <div class="flex items-center gap-2">
-                    <button
-                        v-if="paymentEnabled"
-                        type="button"
-                        @click="$emit('submit-booking', false)"
-                        :disabled="bookingForm.processing"
-                        class="btn btn-outline py-2.5 px-4 text-xs font-bold rounded-xl cursor-pointer"
-                    >
-                        Agendar sem Pagar
-                    </button>
-
+                    <!-- When PIX payment is enabled, "Agendar sem pagar" is NOT shown. Only "Pagar com PIX & Agendar" is available. -->
                     <button
                         type="submit"
                         :disabled="bookingForm.processing"
-                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                        class="btn btn-primary py-2.5 px-6 text-xs font-bold rounded-xl shadow-md cursor-pointer inline-flex items-center gap-2"
                         :style="{
                             backgroundColor: 'var(--primary)',
                             color: 'var(--btn-text, #ffffff)'
                         }"
                     >
-                        <i v-if="bookingForm.processing" class="fa-solid fa-spinner fa-spin text-xs mr-1"></i>
-                        <i v-else :class="['fa-solid text-xs mr-1', paymentEnabled ? 'fa-wallet' : 'fa-calendar-check']"></i>
-                        <span>{{ bookingForm.processing ? 'Processando...' : (paymentEnabled ? 'Pagar e Confirmar' : confirmButtonLabel) }}</span>
+                        <i v-if="bookingForm.processing" class="fa-solid fa-spinner fa-spin text-xs"></i>
+                        <i v-else-if="paymentEnabled" class="fa-brands fa-pix text-xs"></i>
+                        <i v-else class="fa-solid fa-calendar-check text-xs"></i>
+                        <span>{{ bookingForm.processing ? 'Gerando Pagamento...' : (paymentEnabled ? 'Pagar com PIX & Agendar' : confirmButtonLabel) }}</span>
                     </button>
                 </div>
             </div>

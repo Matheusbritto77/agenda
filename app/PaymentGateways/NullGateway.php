@@ -25,7 +25,7 @@ class NullGateway implements PaymentGatewayInterface
     public function handleWebhook(array $payload): array
     {
         return [
-            'gateway_payment_id' => $payload['id'] ?? 'mock_id',
+            'gateway_payment_id' => (string) ($payload['data']['id'] ?? $payload['id'] ?? 'mock_id'),
             'status' => 'approved',
         ];
     }

@@ -267,9 +267,16 @@ const fetchSlots = (dateStr) => {
 };
 
 const submitBooking = (withPayment) => {
-    bookingForm.pay_now = !!withPayment;
+    const mustPay = withPayment || props.paymentEnabled;
+    bookingForm.pay_now = !!mustPay;
     submitNotice.value = '';
     bookingForm.clearErrors();
+
+    if (mustPay) {
+        paymentLoading.value = true;
+        isPaying.value = true;
+    }
+
     bookingForm.post(route('booking.store'), {
         preserveScroll: true,
         onSuccess: async (page) => {
@@ -283,11 +290,19 @@ const submitBooking = (withPayment) => {
                 message: submitNotice.value,
             };
 
-            if (withPayment && page?.props?.paymentDetails) {
-                paymentDetails.value = page.props.paymentDetails;
+            const details = page?.props?.paymentDetails || page?.props?.flash?.paymentDetails;
+            if (details) {
+                paymentDetails.value = details;
+                paymentLoading.value = false;
                 isPaying.value = true;
-                pollPaymentStatus(page.props.paymentDetails.payment_id);
+                pollPaymentStatus(details.payment_id);
+            } else if (!mustPay) {
+                isPaying.value = false;
+                paymentLoading.value = false;
+                showSuccessModal.value = true;
             } else {
+                paymentLoading.value = false;
+                isPaying.value = false;
                 showSuccessModal.value = true;
             }
 
@@ -299,6 +314,8 @@ const submitBooking = (withPayment) => {
             }
         },
         onError: (errors) => {
+            isPaying.value = false;
+            paymentLoading.value = false;
             submitNoticeType.value = 'error';
             submitNotice.value =
                 errors?.appointment_time ||
@@ -342,13 +359,19 @@ const pollPaymentStatus = (paymentId) => {
         fetch(route('payment.status', paymentId))
             .then(r => r.json())
             .then(d => {
-                paymentStatus.value = d.status;
-                if (d.status === 'approved') {
+                const status = d.data?.status || d.status;
+                paymentStatus.value = status;
+                if (status === 'approved' || d.data?.is_approved) {
                     clearInterval(paymentPollInterval);
-                    setTimeout(() => { isPaying.value = false; }, 2000);
+                    paymentStatus.value = 'approved';
+                    setTimeout(() => {
+                        isPaying.value = false;
+                        showSuccessModal.value = true;
+                    }, 1200);
                 }
-            });
-    }, 4000);
+            })
+            .catch(() => {});
+    }, 2500);
 };
 
 onMounted(() => {
