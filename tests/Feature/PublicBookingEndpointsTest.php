@@ -367,9 +367,11 @@ class PublicBookingEndpointsTest extends TestCase
             'is_active' => true,
         ]);
 
+        $targetBookingDate = Carbon::now()->addDays(1)->format('Y-m-d');
+
         $response = $this->post('http://studio.agendae.app/booking', [
             'service_id' => $service->id,
-            'appointment_date' => '2026-08-22',
+            'appointment_date' => $targetBookingDate,
             'appointment_time' => '14:00',
             'client_name' => 'Maria Silva',
             'client_email' => 'maria@example.com',
@@ -385,7 +387,7 @@ class PublicBookingEndpointsTest extends TestCase
             'client_name' => 'Maria Silva',
             'client_email' => 'maria@example.com',
             'client_phone' => '11988887777',
-            'appointment_date' => '2026-08-22',
+            'appointment_date' => $targetBookingDate,
             'appointment_time' => '14:00',
             'status' => 'confirmed',
             'notes' => 'Primeira visita',

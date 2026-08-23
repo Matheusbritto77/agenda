@@ -192,13 +192,15 @@ class AdminManualBookingTest extends TestCase
             'is_active' => true,
         ]);
 
+        $targetDate = now()->addDays(2)->format('Y-m-d');
+
         Appointment::create([
             'user_id' => $admin->id,
             'service_id' => $service->id,
             'client_name' => 'Cliente Existente',
             'client_email' => 'existente@example.com',
             'client_phone' => '11900000000',
-            'appointment_date' => '2026-08-22',
+            'appointment_date' => $targetDate,
             'appointment_time' => '14:30',
             'status' => 'confirmed',
             'notes' => null,
@@ -211,7 +213,7 @@ class AdminManualBookingTest extends TestCase
                 'client_name' => 'Cliente Novo',
                 'client_email' => 'novo@example.com',
                 'client_phone' => '11911112222',
-                'appointment_date' => '2026-08-22',
+                'appointment_date' => $targetDate,
                 'appointment_time' => '14:30',
                 'status' => 'confirmed',
                 'notes' => 'Tentativa de conflito',
