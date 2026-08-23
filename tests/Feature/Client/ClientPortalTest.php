@@ -165,7 +165,7 @@ class ClientPortalTest extends TestCase
             'password' => Hash::make('password'),
             'must_reset_password' => false,
         ]);
-        [, $first] = $this->appointment(['status' => 'completed']);
+        [$firstCompany, $first] = $this->appointment(['status' => 'completed']);
         [$secondCompany, $second] = $this->appointment([
             'status' => 'confirmed',
             'appointment_date' => now()->addDays(4)->toDateString(),
@@ -175,18 +175,61 @@ class ClientPortalTest extends TestCase
         $first->update(['client_account_id' => $account->id]);
         $second->update(['client_account_id' => $account->id]);
 
+        // Default view: scoped to active company with full companies list
         $this->actingAs($account, 'client')
             ->get(route('client.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Client/Portal/Dashboard')
+                ->where('summary.companies', 2)
+                ->has('companies', 2)
+                ->has('activeCompany')
+            );
+
+        // Explicit view: consolidated across all companies
+        $this->actingAs($account, 'client')
+            ->get(route('client.dashboard', ['empresa' => 'all']))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Client/Portal/Dashboard')
                 ->where('summary.appointments', 2)
                 ->where('summary.completed', 1)
                 ->where('summary.companies', 2)
+                ->where('activeCompany', null)
                 ->has('companies', 2)
                 ->has('appointments', 2)
                 ->where('badges.0.earned', true)
                 ->where('badges.1.earned', false)
+            );
+    }
+
+    public function test_client_can_switch_company_context_via_endpoint(): void
+    {
+        $account = ClientAccount::create([
+            'name' => 'Cliente Multi',
+            'email' => 'cliente.multi@example.com',
+            'password' => Hash::make('password'),
+            'must_reset_password' => false,
+        ]);
+        [$companyA, $aptA] = $this->appointment(['status' => 'completed']);
+        [$companyB, $aptB] = $this->appointment(['status' => 'confirmed']);
+        $companyB->update(['name' => 'Barbearia B']);
+        $aptA->update(['client_account_id' => $account->id]);
+        $aptB->update(['client_account_id' => $account->id]);
+
+        $this->actingAs($account, 'client')
+            ->post(route('client.companies.select', $companyB->id))
+            ->assertRedirect(route('client.dashboard'));
+
+        $this->actingAs($account, 'client')
+            ->get(route('client.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Client/Portal/Dashboard')
+                ->where('activeCompany.id', $companyB->id)
+                ->where('activeCompany.name', 'Barbearia B')
+                ->has('appointments', 1)
+                ->where('appointments.0.id', $aptB->id)
             );
     }
 

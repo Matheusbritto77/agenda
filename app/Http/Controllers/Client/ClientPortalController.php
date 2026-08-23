@@ -14,20 +14,19 @@ use Inertia\Response;
 
 class ClientPortalController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         /** @var ClientAccount $client */
         $client = Auth::guard('client')->user();
 
-        $appointments = Appointment::query()
+        $allAppointments = Appointment::query()
             ->where('client_account_id', $client->id)
             ->with(['service', 'teamMember', 'tenant.brandingSetting', 'review'])
             ->orderByDesc('appointment_date')
             ->orderByDesc('appointment_time')
             ->get();
 
-        $completedCount = $appointments->where('status', 'completed')->count();
-        $companies = $appointments
+        $companies = $allAppointments
             ->groupBy('user_id')
             ->map(function ($companyAppointments) use ($client): array {
                 $tenant = $companyAppointments->first()->tenant;
@@ -51,10 +50,15 @@ class ClientPortalController extends Controller
                 return [
                     'id' => $tenant?->id,
                     'name' => $tenant?->name ?? 'Empresa',
+                    'business_name' => $branding?->settings['business_name'] ?? $tenant?->name ?? 'Empresa',
+                    'tagline' => $branding?->settings['tagline'] ?? null,
                     'booking_url' => $tenant?->publicBookingUrl(),
                     'logo_url' => $branding?->logo_url,
                     'banner_url' => $branding?->banner_url,
+                    'primary_color' => $branding?->primary_color ?? '#6366f1',
+                    'secondary_color' => $branding?->secondary_color ?? '#06b6d4',
                     'services_count' => $completed,
+                    'total_appointments_count' => $companyAppointments->count(),
                     'professionals' => $companyAppointments
                         ->pluck('teamMember.name')
                         ->filter()
@@ -74,21 +78,53 @@ class ClientPortalController extends Controller
             })
             ->values();
 
+        // Determine active company
+        $requestedCompanyId = $request->query('empresa') ?? $request->session()->get('client_active_company_id');
+
+        $activeCompany = null;
+        if ($requestedCompanyId === 'all') {
+            $activeCompany = null;
+            $request->session()->put('client_active_company_id', 'all');
+        } elseif ($requestedCompanyId) {
+            $activeCompany = $companies->firstWhere('id', (int) $requestedCompanyId);
+            if ($activeCompany) {
+                $request->session()->put('client_active_company_id', $activeCompany['id']);
+            }
+        }
+
+        // Default to first company if only 1 exists or if no preference stored
+        if (! $activeCompany && $requestedCompanyId !== 'all' && $companies->isNotEmpty()) {
+            $activeCompany = $companies->first();
+            $request->session()->put('client_active_company_id', $activeCompany['id']);
+        }
+
+        // Filter appointments based on active company
+        $scopedAppointments = $activeCompany
+            ? $allAppointments->where('user_id', $activeCompany['id'])->values()
+            : $allAppointments;
+
+        $completedCount = $scopedAppointments->where('status', 'completed')->count();
+
         return Inertia::render('Client/Portal/Dashboard', [
             'client' => [
                 'name' => $client->name,
                 'email' => $client->email,
             ],
+            'activeCompany' => $activeCompany,
             'summary' => [
-                'appointments' => $appointments->count(),
+                'appointments' => $scopedAppointments->count(),
                 'completed' => $completedCount,
                 'companies' => $companies->count(),
-                'reviews' => $appointments->whereNotNull('review')->count(),
+                'reviews' => $scopedAppointments->whereNotNull('review')->count(),
             ],
             'badges' => $this->earnedBadges($completedCount),
-            'companies' => $companies,
-            'appointments' => $appointments->map(fn (Appointment $appointment): array => [
+            'companies' => $companies->map(fn ($comp) => [
+                ...$comp,
+                'is_active' => $activeCompany && $comp['id'] === $activeCompany['id'],
+            ])->values(),
+            'appointments' => $scopedAppointments->map(fn (Appointment $appointment): array => [
                 'id' => $appointment->id,
+                'company_id' => $appointment->user_id,
                 'company' => $appointment->tenant?->name ?? 'Empresa',
                 'company_booking_url' => $appointment->tenant?->publicBookingUrl(),
                 'company_logo_url' => $appointment->tenant?->brandingSetting?->logo_url,
@@ -111,6 +147,17 @@ class ClientPortalController extends Controller
                 ] : null,
             ])->values(),
         ]);
+    }
+
+    public function selectCompany(Request $request, $company = null): RedirectResponse
+    {
+        if ($company === 'all' || ! $company) {
+            $request->session()->put('client_active_company_id', 'all');
+        } else {
+            $request->session()->put('client_active_company_id', (int) $company);
+        }
+
+        return redirect()->route('client.dashboard');
     }
 
     public function review(Request $request, Appointment $appointment): RedirectResponse

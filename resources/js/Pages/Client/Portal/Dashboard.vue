@@ -8,6 +8,10 @@ const props = defineProps({
         type: Object,
         default: () => ({ name: 'Cliente', email: '' }),
     },
+    activeCompany: {
+        type: Object,
+        default: null,
+    },
     summary: {
         type: Object,
         default: () => ({ appointments: 0, completed: 0, companies: 0, reviews: 0 }),
@@ -76,6 +80,12 @@ const saveCompanyReview = () => {
         onSuccess: () => {
             closeCompanyReviewModal();
         },
+    });
+};
+
+const selectCompany = (companyId) => {
+    router.post(route('client.companies.select', companyId || 'all'), {}, {
+        preserveScroll: true,
     });
 };
 
@@ -168,15 +178,11 @@ const closeReviewModal = () => {
 const filteredAppointments = computed(() => {
     if (appointmentFilter.value === 'all') return props.appointments;
     if (appointmentFilter.value === 'upcoming') {
-        return props.appointments.filter(a => a.status === 'confirmed' || a.status === 'pending');
+        return props.appointments.filter(
+            (apt) => apt.status === 'confirmed' || apt.status === 'pending'
+        );
     }
-    if (appointmentFilter.value === 'completed') {
-        return props.appointments.filter(a => a.status === 'completed');
-    }
-    if (appointmentFilter.value === 'cancelled') {
-        return props.appointments.filter(a => a.status === 'cancelled');
-    }
-    return props.appointments;
+    return props.appointments.filter((apt) => apt.status === appointmentFilter.value);
 });
 
 const statusBadge = (status) => {
@@ -214,8 +220,66 @@ const firstName = computed(() => {
 </script>
 
 <template>
-    <ClientPortalLayout title="Minha Área">
+    <ClientPortalLayout :title="activeCompany ? ('Minha Área - ' + activeCompany.name) : 'Minha Área'" :active-company="activeCompany" :companies="companies">
         <div class="space-y-8">
+            <!-- Active Company Branded Alert / Welcome Space Banner -->
+            <section
+                v-if="activeCompany"
+                class="relative overflow-hidden rounded-3xl border border-indigo-500/30 dark:border-indigo-500/20 bg-gradient-to-r from-indigo-900/40 via-indigo-950/60 to-slate-900/80 p-5 sm:p-6 text-white shadow-xl backdrop-blur-xl transition-all"
+            >
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="w-14 h-14 rounded-2xl overflow-hidden border border-white/20 bg-white text-slate-900 shadow-md shrink-0 flex items-center justify-center font-black text-lg">
+                            <img v-if="activeCompany.logo_url" :src="activeCompany.logo_url" :alt="activeCompany.name" class="w-full h-full object-cover" />
+                            <i v-else class="fa-solid fa-store text-indigo-600 text-xl"></i>
+                        </div>
+                        <div class="min-w-0 space-y-0.5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    <i class="fa-solid fa-check-circle text-[9px] mr-1"></i>
+                                    Espaço Ativo
+                                </span>
+                                <h2 class="text-lg sm:text-xl font-black text-white truncate">
+                                    {{ activeCompany.name }}
+                                </h2>
+                            </div>
+                            <p class="text-xs text-white/80 truncate">
+                                {{ activeCompany.tagline || 'Exibindo seus agendamentos, histórico e fidelidade neste estabelecimento.' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <a
+                            v-if="activeCompany.booking_url"
+                            :href="activeCompany.booking_url"
+                            class="py-2 px-3.5 rounded-xl text-xs font-black bg-white text-slate-900 hover:bg-slate-100 transition-all flex items-center gap-1.5 shadow-sm"
+                        >
+                            <i class="fa-solid fa-calendar-plus text-indigo-600"></i>
+                            <span>Novo Agendamento</span>
+                        </a>
+
+                        <button
+                            type="button"
+                            @click="openCompanyReviewModal(activeCompany)"
+                            class="py-2 px-3.5 rounded-xl text-xs font-black bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-400/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <i class="fa-solid fa-star text-xs"></i>
+                            <span>{{ activeCompany.company_review ? 'Editar Avaliação' : 'Avaliar Empresa' }}</span>
+                        </button>
+
+                        <button
+                            v-if="companies.length > 1"
+                            type="button"
+                            @click="selectCompany('all')"
+                            class="py-2 px-3 rounded-xl text-xs font-bold text-white/80 hover:text-white hover:bg-white/10 border border-white/15 transition-all cursor-pointer"
+                        >
+                            Ver Todas
+                        </button>
+                    </div>
+                </div>
+            </section>
+
             <!-- Hero Profile Banner -->
             <section class="relative overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl shadow-indigo-500/5 backdrop-blur-xl transition-all">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
@@ -233,7 +297,7 @@ const firstName = computed(() => {
                                 </span>
                             </div>
                             <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl">
-                                Gerencie seus agendamentos, acesse as páginas das suas empresas favoritas e compartilhe suas avaliações.
+                                {{ activeCompany ? ('Gerencie seus agendamentos e experiências exclusivas com ' + activeCompany.name + '.') : 'Gerencie seus agendamentos em todos os estabelecimentos que você frequenta.' }}
                             </p>
                         </div>
                     </div>
@@ -657,16 +721,34 @@ const firstName = computed(() => {
 
                         <!-- Card Action Buttons -->
                         <div class="p-5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 space-y-2">
+                            <!-- Switch Portal Context to this company -->
+                            <div
+                                v-if="company.is_active"
+                                class="w-full py-2.5 px-3 rounded-xl text-xs font-black bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 flex items-center justify-center gap-1.5"
+                            >
+                                <i class="fa-solid fa-circle-check text-xs"></i>
+                                <span>Espaço Selecionado (Ativo)</span>
+                            </div>
+                            <button
+                                v-else
+                                type="button"
+                                @click="selectCompany(company.id)"
+                                class="w-full py-2.5 px-3 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                                <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+                                <span>Acessar Espaço Desta Empresa</span>
+                            </button>
+
                             <!-- Direct link to visit the public company page -->
                             <a
                                 v-if="company.booking_url"
                                 :href="company.booking_url"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="w-full py-2.5 px-4 rounded-xl text-xs font-black bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2 shadow-xs"
+                                class="w-full py-2 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2 shadow-2xs"
                             >
                                 <i class="fa-solid fa-globe text-cyan-500"></i>
-                                <span>Visitar Página da Empresa</span>
+                                <span>Página Pública da Empresa</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
                             </a>
 
@@ -674,19 +756,19 @@ const firstName = computed(() => {
                                 <a
                                     v-if="company.booking_url"
                                     :href="company.booking_url"
-                                    class="py-2 px-3 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                                    class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
                                 >
-                                    <i class="fa-solid fa-calendar-plus text-xs"></i>
+                                    <i class="fa-solid fa-calendar-plus text-xs text-indigo-600 dark:text-cyan-400"></i>
                                     <span>Agendar</span>
                                 </a>
 
                                 <button
                                     type="button"
                                     @click="openCompanyReviewModal(company)"
-                                    class="py-2 px-3 rounded-xl text-xs font-black bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    class="py-2 px-3 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                 >
                                     <i class="fa-solid fa-star text-xs"></i>
-                                    <span>{{ company.company_review ? 'Editar Avaliação' : 'Avaliar Empresa' }}</span>
+                                    <span>{{ company.company_review ? 'Editar' : 'Avaliar' }}</span>
                                 </button>
                             </div>
                         </div>

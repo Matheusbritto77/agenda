@@ -1,13 +1,16 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { onMounted, ref, computed } from 'vue';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
+import { onMounted, ref, computed, watch } from 'vue';
 
-defineProps({
+const props = defineProps({
     title: { type: String, default: 'Área do Cliente' },
+    activeCompany: { type: Object, default: null },
+    companies: { type: Array, default: () => [] },
 });
 
 const page = usePage();
 const isDarkMode = ref(false);
+const companyDropdownOpen = ref(false);
 
 const clientUser = computed(() => page.props.clientAuth?.user || page.props.client || {});
 const clientInitials = computed(() => {
@@ -19,6 +22,21 @@ const clientInitials = computed(() => {
         .map(n => n[0])
         .join('')
         .toUpperCase() || 'C';
+});
+
+const effectiveActiveCompany = computed(() => props.activeCompany || page.props.activeCompany || null);
+const effectiveCompanies = computed(() => (props.companies && props.companies.length ? props.companies : page.props.companies) || []);
+
+const customStyles = computed(() => {
+    const comp = effectiveActiveCompany.value;
+    if (!comp) return {};
+    const primary = comp.primary_color || '#6366f1';
+    const secondary = comp.secondary_color || '#06b6d4';
+    return {
+        '--brand-primary': primary,
+        '--brand-secondary': secondary,
+        '--brand-gradient': `linear-gradient(135deg, ${primary} 0%, ${secondary} 100%)`,
+    };
 });
 
 const applyTheme = (theme) => {
@@ -37,17 +55,44 @@ const toggleTheme = () => {
     applyTheme(isDarkMode.value ? 'dark' : 'light');
 };
 
+const selectCompanyContext = (companyId) => {
+    companyDropdownOpen.value = false;
+    router.post(route('client.companies.select', companyId || 'all'), {}, {
+        preserveScroll: true,
+    });
+};
+
+watch(() => effectiveActiveCompany.value?.favicon_url, (newFavicon) => {
+    if (newFavicon) {
+        const link = document.getElementById('dynamic-favicon') || document.createElement('link');
+        link.id = 'dynamic-favicon';
+        link.rel = 'icon';
+        link.href = newFavicon;
+        if (!link.isConnected) document.head.appendChild(link);
+    }
+}, { immediate: true });
+
 onMounted(() => {
     const savedTheme = localStorage.getItem('agendae_theme') || 'light';
     isDarkMode.value = savedTheme === 'dark';
     applyTheme(savedTheme);
+
+    const closeDropdownHandler = (e) => {
+        if (!e.target.closest('#company-switcher-dropdown')) {
+            companyDropdownOpen.value = false;
+        }
+    };
+    window.addEventListener('click', closeDropdownHandler);
 });
 </script>
 
 <template>
-    <Head :title="title + ' - Agendae'" />
+    <Head :title="title + (effectiveActiveCompany ? (' - ' + effectiveActiveCompany.name) : ' - Agendae')" />
 
-    <div class="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 antialiased bg-slate-50 dark:bg-slate-950 relative overflow-x-clip transition-colors duration-300">
+    <div
+        class="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 antialiased bg-slate-50 dark:bg-slate-950 relative overflow-x-clip transition-colors duration-300"
+        :style="customStyles"
+    >
         <!-- Ambient background dynamic glow mesh -->
         <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
             <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[48rem] h-[28rem] bg-indigo-600/15 dark:bg-indigo-600/22 rounded-full blur-[80px] opacity-90"></div>
@@ -56,30 +101,121 @@ onMounted(() => {
         </div>
 
         <!-- Sticky Header Navigation -->
-        <header class="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl transition-colors">
+        <header class="sticky top-0 z-40 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl transition-colors">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
-                <!-- Brand / Logo -->
-                <Link :href="route('client.dashboard')" class="flex items-center gap-3 group transition-transform hover:scale-102">
-                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
-                        <i class="fa-solid fa-calendar-check text-lg"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl font-black tracking-tight text-slate-900 dark:text-white">Agendae</span>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">Área do Cliente</span>
+                <!-- Brand / Company Custom Logo -->
+                <div class="flex items-center gap-3">
+                    <Link :href="route('client.dashboard')" class="flex items-center gap-3 group transition-transform hover:scale-102">
+                        <div
+                            v-if="effectiveActiveCompany?.logo_url"
+                            class="w-10 h-10 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-md shadow-indigo-500/10 group-hover:scale-105 transition-transform shrink-0"
+                        >
+                            <img :src="effectiveActiveCompany.logo_url" :alt="effectiveActiveCompany.name" class="w-full h-full object-cover" />
                         </div>
-                        <span class="block text-[11px] font-medium text-slate-500 dark:text-slate-400">Suas reservas e experiências</span>
-                    </div>
-                </Link>
+                        <div v-else class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform shrink-0">
+                            <i class="fa-solid fa-calendar-check text-lg"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white truncate">
+                                    {{ effectiveActiveCompany ? effectiveActiveCompany.name : 'Agendae' }}
+                                </span>
+                                <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">
+                                    Área do Cliente
+                                </span>
+                            </div>
+                            <span class="block text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                {{ effectiveActiveCompany ? 'Espaço Personalizado do Estabelecimento' : 'Suas reservas e experiências' }}
+                            </span>
+                        </div>
+                    </Link>
+                </div>
 
-                <!-- Right Actions -->
+                <!-- Right Actions: Company Switcher + User Profile + Theme -->
                 <div class="flex items-center gap-2 sm:gap-3">
-                    <!-- User badge -->
-                    <div class="hidden sm:flex items-center gap-3 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/70">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                    <!-- Multi-Company Switcher Selector Dropdown -->
+                    <div v-if="effectiveCompanies.length > 1" id="company-switcher-dropdown" class="relative">
+                        <button
+                            type="button"
+                            @click.stop="companyDropdownOpen = !companyDropdownOpen"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/50 text-xs font-bold transition-all cursor-pointer shadow-xs"
+                            title="Alternar Estabelecimento"
+                        >
+                            <div class="w-5 h-5 rounded-lg overflow-hidden bg-indigo-600 text-white flex items-center justify-center text-[10px] shrink-0">
+                                <img v-if="effectiveActiveCompany?.logo_url" :src="effectiveActiveCompany.logo_url" :alt="effectiveActiveCompany.name" class="w-full h-full object-cover" />
+                                <i v-else class="fa-solid fa-store"></i>
+                            </div>
+                            <span class="max-w-[100px] sm:max-w-[140px] truncate">
+                                {{ effectiveActiveCompany ? effectiveActiveCompany.name : 'Todas as Empresas' }}
+                            </span>
+                            <i class="fa-solid fa-chevron-down text-[10px] opacity-70 transition-transform" :class="{ 'rotate-180': companyDropdownOpen }"></i>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div
+                            v-if="companyDropdownOpen"
+                            class="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl p-2 z-50 space-y-1 backdrop-blur-xl"
+                            @click.stop
+                        >
+                            <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+                                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Seus Estabelecimentos</span>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400">Alterne para ver seus agendamentos em cada empresa:</p>
+                            </div>
+
+                            <div class="max-h-60 overflow-y-auto space-y-1 py-1">
+                                <button
+                                    v-for="company in effectiveCompanies"
+                                    :key="company.id"
+                                    type="button"
+                                    @click="selectCompanyContext(company.id)"
+                                    :class="[
+                                        'w-full flex items-center justify-between gap-3 p-2.5 rounded-xl text-left transition-all cursor-pointer',
+                                        effectiveActiveCompany?.id === company.id
+                                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-black border border-indigo-500/20'
+                                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold'
+                                    ]"
+                                >
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <div class="w-8 h-8 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                                            <img v-if="company.logo_url" :src="company.logo_url" :alt="company.name" class="w-full h-full object-cover" />
+                                            <i v-else class="fa-solid fa-store text-xs text-indigo-500"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-xs truncate">{{ company.name }}</p>
+                                            <span class="text-[10px] text-slate-400 block">{{ company.services_count }} atendimento(s)</span>
+                                        </div>
+                                    </div>
+                                    <i v-if="effectiveActiveCompany?.id === company.id" class="fa-solid fa-check text-indigo-600 dark:text-cyan-400 text-xs"></i>
+                                </button>
+                            </div>
+
+                            <div class="pt-1 border-t border-slate-100 dark:border-slate-800">
+                                <button
+                                    type="button"
+                                    @click="selectCompanyContext('all')"
+                                    :class="[
+                                        'w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer text-xs font-bold',
+                                        !effectiveActiveCompany
+                                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-black'
+                                            : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                    ]"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <i class="fa-solid fa-globe text-xs"></i>
+                                        <span>Todas as Empresas (Visão Global)</span>
+                                    </div>
+                                    <i v-if="!effectiveActiveCompany" class="fa-solid fa-check text-indigo-600 dark:text-cyan-400 text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User profile badge -->
+                    <div class="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/70">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-600 text-white flex items-center justify-center font-black text-[11px] shadow-xs">
                             {{ clientInitials }}
                         </div>
-                        <div class="text-left min-w-0 max-w-[140px]">
+                        <div class="text-left min-w-0 max-w-[120px]">
                             <p class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ clientUser.name }}</p>
                             <p class="text-[10px] text-slate-400 truncate">{{ clientUser.email }}</p>
                         </div>
