@@ -217,20 +217,31 @@ class PublicBookingController extends Controller
                 'image_url' => $service->image_url,
             ])
             ->values();
-        $reviewsQuery = AppointmentReview::query()
+        $companyReviews = \App\Models\CompanyReview::query()
+            ->where('user_id', $company->id)
+            ->where('is_public', true)
+            ->with('clientAccount:id,name')
+            ->latest('company_reviews.created_at')
+            ->orderByDesc('company_reviews.id')
+            ->get()
+            ->map(fn (\App\Models\CompanyReview $review): array => [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'client_name' => $this->abbreviateClientName($review->clientAccount?->name),
+                'service_name' => 'Avaliação do Estabelecimento',
+                'created_at' => $review->created_at->format('d/m/Y'),
+                'sort_key' => $review->id,
+            ]);
+
+        $appointmentPublicReviews = AppointmentReview::query()
             ->where('is_public', true)
             ->whereHas('appointment', fn ($query) => $query
                 ->where('appointments.user_id', $company->id)
-                ->where('appointments.status', 'completed'));
-        $reviewsCount = (clone $reviewsQuery)->count();
-        $reviewsAverage = $reviewsCount > 0
-            ? round((float) (clone $reviewsQuery)->avg('rating'), 1)
-            : null;
-        $reviews = (clone $reviewsQuery)
+                ->where('appointments.status', 'completed'))
             ->with(['clientAccount:id,name', 'appointment.service:id,name'])
             ->latest('appointment_reviews.created_at')
             ->orderByDesc('appointment_reviews.id')
-            ->limit(6)
             ->get()
             ->map(fn (AppointmentReview $review): array => [
                 'id' => $review->id,
@@ -239,8 +250,15 @@ class PublicBookingController extends Controller
                 'client_name' => $this->abbreviateClientName($review->clientAccount?->name),
                 'service_name' => $review->appointment?->service?->name,
                 'created_at' => $review->created_at->format('d/m/Y'),
-            ])
-            ->values();
+                'sort_key' => $review->id,
+            ]);
+
+        $allPublicReviews = $companyReviews->concat($appointmentPublicReviews)->sortByDesc('sort_key')->values();
+        $reviewsCount = $allPublicReviews->count();
+        $reviewsAverage = $reviewsCount > 0
+            ? round((float) $allPublicReviews->avg('rating'), 1)
+            : null;
+        $reviews = $allPublicReviews->take(6)->values();
 
         return [
             'is_company_page' => $isOwnerPage && $selectedProfessional === null,

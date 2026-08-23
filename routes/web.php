@@ -43,6 +43,8 @@ Route::prefix('cliente')->name('client.')->group(function (): void {
         Route::middleware('client.password.reset')->group(function (): void {
             Route::get('/', [ClientPortalController::class, 'index'])->name('dashboard');
             Route::put('/agendamentos/{appointment}/avaliacao', [ClientPortalController::class, 'review'])->name('reviews.store');
+            Route::post('/empresas/{company}/avaliacao', [ClientPortalController::class, 'reviewCompany'])->name('companies.review');
+            Route::put('/empresas/{company}/avaliacao', [ClientPortalController::class, 'reviewCompany'])->name('companies.review.put');
         });
     });
 });

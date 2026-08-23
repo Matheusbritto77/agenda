@@ -29,7 +29,7 @@ class ClientPortalController extends Controller
         $completedCount = $appointments->where('status', 'completed')->count();
         $companies = $appointments
             ->groupBy('user_id')
-            ->map(function ($companyAppointments): array {
+            ->map(function ($companyAppointments) use ($client): array {
                 $tenant = $companyAppointments->first()->tenant;
                 $branding = $tenant?->brandingSetting;
                 $completed = $companyAppointments->where('status', 'completed')->count();
@@ -41,6 +41,11 @@ class ClientPortalController extends Controller
                     ->where('status', 'completed')
                     ->whereNull('review')
                     ->sortByDesc('appointment_date')
+                    ->first();
+
+                $myCompanyReview = \App\Models\CompanyReview::query()
+                    ->where('user_id', $tenant?->id)
+                    ->where('client_account_id', $client->id)
                     ->first();
 
                 return [
@@ -59,6 +64,12 @@ class ClientPortalController extends Controller
                     'latest_completed_id' => $latestCompleted?->id,
                     'reviewable_appointment_id' => $unreviewed?->id ?? $latestCompleted?->id,
                     'has_unreviewed' => $unreviewed !== null,
+                    'company_review' => $myCompanyReview ? [
+                        'id' => $myCompanyReview->id,
+                        'rating' => (int) $myCompanyReview->rating,
+                        'comment' => $myCompanyReview->comment,
+                        'updated_at' => $myCompanyReview->updated_at?->format('d/m/Y'),
+                    ] : null,
                 ];
             })
             ->values();
@@ -126,6 +137,37 @@ class ClientPortalController extends Controller
         );
 
         return back()->with('success', 'Avaliação de atendimento enviada com sucesso para a empresa e profissional!');
+    }
+
+    public function reviewCompany(Request $request, \App\Models\User $company): RedirectResponse
+    {
+        /** @var ClientAccount $client */
+        $client = Auth::guard('client')->user();
+
+        $hasAppointment = Appointment::where('client_account_id', $client->id)
+            ->where('user_id', $company->id)
+            ->exists();
+
+        abort_unless($hasAppointment, 403, 'Você só pode avaliar empresas onde já realizou agendamentos.');
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        \App\Models\CompanyReview::updateOrCreate(
+            [
+                'user_id' => $company->id,
+                'client_account_id' => $client->id,
+            ],
+            [
+                'rating' => $validated['rating'],
+                'comment' => $this->sanitizeText($validated['comment'] ?? null),
+                'is_public' => true,
+            ]
+        );
+
+        return back()->with('success', 'Avaliação da empresa enviada com sucesso! Ela será exibida na página pública do estabelecimento.');
     }
 
     private function earnedBadges(int $completed): array
