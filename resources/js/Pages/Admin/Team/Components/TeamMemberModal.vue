@@ -1,5 +1,6 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     show: {
@@ -28,11 +29,14 @@ const props = defineProps({
     },
     appDomain: {
         type: String,
-        default: 'agendae.app',
+        default: '',
     },
 });
 
 const emit = defineEmits(['close', 'submit', 'file-change', 'url-preview']);
+
+const page = usePage();
+const effectiveDomain = computed(() => props.appDomain || page.props.appDomain || (typeof window !== 'undefined' ? window.location.host.split(':')[0] : 'localhost'));
 
 const activeTab = ref('basic');
 const fileInputRef = ref(null);
@@ -246,7 +250,7 @@ const isServiceSelected = (svcId) => {
                                     class="form-control text-xs sm:text-sm rounded-xl"
                                     placeholder="lucas"
                                 />
-                                <span class="text-xs font-bold text-slate-400">.{{ appDomain }}</span>
+                                <span class="text-xs font-bold text-slate-400">.{{ effectiveDomain }}</span>
                             </div>
                         </div>
                         <div class="form-group mb-0">

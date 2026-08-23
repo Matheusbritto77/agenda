@@ -238,7 +238,7 @@ const submit = () => {
                             ></span>
                         </div>
                         <div class="font-mono text-[11px] sm:text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                            https://<span class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ previewSubdomain }}</span>.agendae.app
+                            https://<span class="text-indigo-600 dark:text-indigo-400 font-extrabold">{{ previewSubdomain }}</span>.{{ $page.props.appDomain || 'localhost' }}
                         </div>
                         <div class="text-[11px] font-semibold"
                              :class="availability.state === 'taken'

@@ -121,11 +121,14 @@ class TeamMemberController extends Controller
             ->orderBy('name')
             ->get();
 
+        $appDomain = (string) (config('app.domain') ?: (parse_url((string) config('app.url', 'http://localhost'), PHP_URL_HOST) ?: 'localhost'));
+
         if ($request->expectsJson()) {
             return response()->json([
                 'team_members' => $teamMembers,
                 'services' => $services,
                 'roles' => RoleCatalog::all(),
+                'app_domain' => $appDomain,
             ]);
         }
 
@@ -133,6 +136,7 @@ class TeamMemberController extends Controller
             'teamMembers' => $teamMembers,
             'services' => $services,
             'roles' => RoleCatalog::all(),
+            'appDomain' => $appDomain,
         ]);
     }
 

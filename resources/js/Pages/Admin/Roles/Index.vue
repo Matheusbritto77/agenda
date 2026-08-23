@@ -384,7 +384,7 @@ onMounted(onMountedFn);
                                                     <div>
                                                         <span class="font-extrabold text-sm block" style="color: var(--text-heading);">{{ member.name }}</span>
                                                         <template v-if="member.subdomain">
-                                                            <span class="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">{{ member.subdomain }}.agendae.app</span>
+                                                            <span class="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold">{{ member.subdomain }}.{{ $page.props.appDomain || 'localhost' }}</span>
                                                         </template>
                                                         <span v-else class="text-[11px] opacity-60">Membro da Equipe</span>
                                                     </div>

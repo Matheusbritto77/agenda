@@ -40,6 +40,14 @@ class TeamMember extends Model
         'service_commissions' => 'array',
     ];
 
+    protected $appends = [
+        'avatar_url',
+        'role_name',
+        'role_badge_color',
+        'role_icon',
+        'public_booking_url',
+    ];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -73,6 +81,11 @@ class TeamMember extends Model
     public function getRoleIconAttribute(): string
     {
         return RoleCatalog::iconFor($this->role_id);
+    }
+
+    public function getPublicBookingUrlAttribute(): string
+    {
+        return $this->publicBookingUrl();
     }
 
     public function publicBookingUrl(string $path = '/'): string

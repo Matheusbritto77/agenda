@@ -1,5 +1,8 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
+
+const props = defineProps({
     teamMembers: {
         type: Array,
         default: () => [],
@@ -18,12 +21,14 @@ defineProps({
     },
     appDomain: {
         type: String,
-        default: 'agendae.app',
+        default: '',
     },
 });
 
 defineEmits(['open-create', 'open-edit', 'open-delete', 'open-reset', 'toggle-status']);
 
+const page = usePage();
+const effectiveDomain = computed(() => props.appDomain || page.props.appDomain || (typeof window !== 'undefined' ? window.location.host.split(':')[0] : 'localhost'));
 const getInitials = (name) => (name || 'A').substring(0, 2).toUpperCase();
 const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 </script>
@@ -88,15 +93,15 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                     </div>
 
                     <!-- Subdomain / Public Link -->
-                    <div v-if="member.subdomain || member.custom_domain" class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                    <div v-if="member.subdomain || member.custom_domain || member.public_booking_url" class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
                         <div class="truncate mr-2">
                             <span class="text-[10px] font-bold text-slate-400 uppercase block">Link Pessoal</span>
                             <span class="font-bold text-indigo-600 dark:text-indigo-400 truncate block">
-                                {{ member.custom_domain || `${member.subdomain}.${appDomain}` }}
+                                {{ member.custom_domain || (member.subdomain ? `${member.subdomain}.${effectiveDomain}` : member.public_booking_url) }}
                             </span>
                         </div>
                         <a
-                            :href="member.custom_domain ? `https://${member.custom_domain}` : `http://${member.subdomain}.${appDomain}`"
+                            :href="member.public_booking_url || (member.custom_domain ? `https://${member.custom_domain}` : `http://${member.subdomain}.${effectiveDomain}`)"
                             target="_blank"
                             class="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:text-indigo-600 text-slate-500 transition-colors shrink-0"
                             title="Abrir página pública"

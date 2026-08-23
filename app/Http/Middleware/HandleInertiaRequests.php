@@ -67,8 +67,14 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $appUrl = (string) config('app.url', 'http://localhost');
+        $parsedHost = parse_url($appUrl, PHP_URL_HOST);
+        $appDomain = (string) (config('app.domain') ?: ($parsedHost ?: 'localhost'));
+
         return [
             ...parent::share($request),
+            'appDomain' => $appDomain,
+            'appUrl' => $appUrl,
             'auth' => [
                 'user' => $user,
                 'canManageRoles' => $canManageRoles,
