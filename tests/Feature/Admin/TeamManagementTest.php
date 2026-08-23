@@ -2,13 +2,12 @@
 
 namespace Tests\Feature\Admin;
 
-use Inertia\Testing\AssertableInertia as Assert;
-use App\Models\Appointment;
 use App\Models\BusinessHour;
 use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class TeamManagementTest extends TestCase
@@ -108,6 +107,51 @@ class TeamManagementTest extends TestCase
             'id' => $member->id,
             'name' => 'Marcos Santos',
             'job_title' => 'Senior Stylist',
+            'subdomain' => 'marcos-pro',
+        ]);
+    }
+
+    public function test_tenant_can_update_professional_without_own_linked_user_blocking_subdomain(): void
+    {
+        $tenant = User::factory()->create();
+        $member = TeamMember::create([
+            'user_id' => $tenant->id,
+            'name' => 'Marcos Teste',
+            'job_title' => 'Junior',
+            'email' => 'marcos@example.com',
+            'subdomain' => 'marcos-pro',
+            'is_active' => true,
+        ]);
+        $linkedUser = User::factory()->create([
+            'parent_id' => $tenant->id,
+            'name' => 'Marcos Teste',
+            'email' => 'marcos@example.com',
+            'subdomain' => 'marcos-pro',
+        ]);
+
+        $response = $this->actingAs($tenant)->put(route('admin.team.update', $member), [
+            'name' => 'Marcos Atualizado',
+            'job_title' => 'Senior Stylist',
+            'email' => 'marcos.novo@example.com',
+            'subdomain' => 'marcos-pro',
+            'is_active' => 1,
+        ]);
+
+        $response
+            ->assertRedirect(route('admin.team.index'))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Dados do profissional atualizados com sucesso!');
+
+        $this->assertDatabaseHas('team_members', [
+            'id' => $member->id,
+            'name' => 'Marcos Atualizado',
+            'email' => 'marcos.novo@example.com',
+            'subdomain' => 'marcos-pro',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $linkedUser->id,
+            'name' => 'Marcos Atualizado',
+            'email' => 'marcos.novo@example.com',
             'subdomain' => 'marcos-pro',
         ]);
     }

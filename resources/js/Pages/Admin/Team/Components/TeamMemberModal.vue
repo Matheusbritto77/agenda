@@ -121,6 +121,17 @@ const isServiceSelected = (svcId) => {
                 </div>
 
                 <form @submit.prevent="$emit('submit')" class="space-y-4 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                    <div
+                        v-if="Object.keys(form.errors || {}).length"
+                        class="rounded-xl border border-rose-300 bg-rose-50 px-4 py-3 text-rose-700 dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-300"
+                        role="alert"
+                    >
+                        <p class="text-xs font-black">Não foi possível salvar os dados:</p>
+                        <ul class="mt-1 list-inside list-disc space-y-0.5 text-xs">
+                            <li v-for="(message, field) in form.errors" :key="field">{{ message }}</li>
+                        </ul>
+                    </div>
+
                     <!-- Tab: Basic Info -->
                     <div v-show="activeTab === 'basic'" class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -262,7 +273,7 @@ const isServiceSelected = (svcId) => {
                             class="btn btn-primary py-2 px-5 text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30"
                             :disabled="form.processing"
                         >
-                            <i class="fa-solid fa-check text-xs"></i>
+                            <i :class="['fa-solid text-xs', form.processing ? 'fa-spinner fa-spin' : 'fa-check']"></i>
                             <span>{{ form.processing ? 'Salvando...' : 'Salvar Dados' }}</span>
                         </button>
                     </div>

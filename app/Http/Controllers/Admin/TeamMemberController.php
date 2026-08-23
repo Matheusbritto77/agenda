@@ -8,10 +8,12 @@ use App\Models\Service;
 use App\Models\TeamMember;
 use App\Models\User;
 use App\Support\RoleCatalog;
+use App\Support\StorageHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Throwable;
@@ -33,31 +35,25 @@ class TeamMemberController extends Controller
      *
      * @param  array<string, mixed>  $validated
      */
-    private function syncUserRecordForMember(array $validated, int $tenantId, ?string $roleId = null, ?TeamMember $member = null): void
-    {
+    private function syncUserRecordForMember(
+        array $validated,
+        int $tenantId,
+        ?string $roleId = null,
+        ?TeamMember $member = null,
+        ?User $linkedUser = null
+    ): void {
         $email = $validated['email'] ?? ($member?->email ?? null);
         if (empty($email)) {
             return;
         }
 
-        // Handle email change to avoid orphaned User accounts
-        $oldEmail = $member ? $member->getOriginal('email') : null;
-        if ($oldEmail && $oldEmail !== $email) {
-            $existingUser = User::where('email', $oldEmail)
-                ->where('parent_id', $tenantId)
-                ->first();
-            if ($existingUser) {
-                $existingUser->update(['email' => $email]);
-            }
-        }
-
         $roleIdChosen = $roleId ?? ($member?->role_id ?? ($validated['role_id'] ?? 'professional'));
         $roleTitle = $this->roleIdToTitle((string) $roleIdChosen);
 
-        $user = User::where('email', $email)->first();
+        $user = $linkedUser ?? User::where('email', $email)->first();
         $userPassword = ! empty($validated['password'] ?? null)
-            ? \Illuminate\Support\Facades\Hash::make((string) $validated['password'])
-            : \Illuminate\Support\Facades\Hash::make('agendae123');
+            ? Hash::make((string) $validated['password'])
+            : Hash::make('agendae123');
 
         if (! $user) {
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim((string) $validated['subdomain'])) : ($member?->subdomain ?? null);
@@ -77,6 +73,7 @@ class TeamMemberController extends Controller
         }
 
         $updateData = [
+            'email' => $email,
             'parent_id' => $tenantId,
             'role_title' => $roleTitle,
         ];
@@ -107,6 +104,7 @@ class TeamMemberController extends Controller
 
         $user->update($updateData);
     }
+
     public function index(Request $request)
     {
         $user = $request->user() ?? auth()->user();
@@ -147,7 +145,7 @@ class TeamMemberController extends Controller
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:' . implode(',', RoleCatalog::ids())],
+                'role_id' => ['nullable', 'string', 'in:'.implode(',', RoleCatalog::ids())],
                 'email' => [
                     'nullable',
                     'email',
@@ -175,13 +173,15 @@ class TeamMemberController extends Controller
                     'regex:/^[a-z0-9-]+$/i',
                     function ($attribute, $value, $fail) {
                         $slug = strtolower(trim($value));
-                        if ($slug === '') return;
-                        $existsInUsers = \App\Models\User::where('subdomain', $slug)->exists();
-                        $existsInMembers = \App\Models\TeamMember::where('subdomain', $slug)->exists();
+                        if ($slug === '') {
+                            return;
+                        }
+                        $existsInUsers = User::where('subdomain', $slug)->exists();
+                        $existsInMembers = TeamMember::where('subdomain', $slug)->exists();
                         if ($existsInUsers || $existsInMembers) {
                             $fail('Este subdomínio já está em uso por outro usuário ou profissional.');
                         }
-                    }
+                    },
                 ],
                 'custom_domain' => ['nullable', 'string', 'max:255'],
                 'bio' => ['nullable', 'string', 'max:1000'],
@@ -255,12 +255,21 @@ class TeamMemberController extends Controller
             $user = $request->user() ?? auth()->user();
             $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
             abort_unless((int) $teamMember->user_id === (int) $tenantId, 404);
+            $linkedUser = $this->linkedUserForMember($teamMember, $tenantId);
 
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:' . implode(',', RoleCatalog::ids())],
-                'email' => ['nullable', 'email', 'max:255'],
+                'role_id' => ['nullable', 'string', 'in:'.implode(',', RoleCatalog::ids())],
+                'email' => [
+                    'nullable',
+                    'email',
+                    'max:255',
+                    Rule::unique('users', 'email')->ignore($linkedUser?->id),
+                    Rule::unique('team_members', 'email')
+                        ->where(fn ($query) => $query->where('user_id', $tenantId))
+                        ->ignore($teamMember->id),
+                ],
                 'phone' => ['nullable', 'string', 'max:50'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
                 'avatar' => ['nullable', 'image', 'max:10240'],
@@ -277,11 +286,11 @@ class TeamMemberController extends Controller
             $avatarUrl = $teamMember->getRawOriginal('avatar_url');
 
             if ($request->hasFile('avatar')) {
-                \App\Support\StorageHelper::delete($teamMember->avatar_url);
+                StorageHelper::delete($teamMember->avatar_url);
                 $avatarUrl = $request->file('avatar')->store('team/avatars', 'public');
             } elseif (array_key_exists('avatar_url', $validated)) {
                 if (empty($validated['avatar_url'])) {
-                    \App\Support\StorageHelper::delete($teamMember->avatar_url);
+                    StorageHelper::delete($teamMember->avatar_url);
                     $avatarUrl = null;
                 } elseif (filter_var($validated['avatar_url'], FILTER_VALIDATE_URL) && ! str_contains($validated['avatar_url'], '/storage/')) {
                     $avatarUrl = $validated['avatar_url'];
@@ -289,7 +298,7 @@ class TeamMemberController extends Controller
             }
 
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;
-            $this->assertGlobalSubdomainIsAvailable($subdomain, $teamMember->id);
+            $this->assertGlobalSubdomainIsAvailable($subdomain, $teamMember->id, $linkedUser?->id);
 
             $teamMember->update([
                 'name' => $validated['name'],
@@ -308,7 +317,7 @@ class TeamMemberController extends Controller
                 'service_commissions' => $validated['service_commissions'] ?? $teamMember->service_commissions,
             ]);
 
-            $this->syncUserRecordForMember($validated, $tenantId, $teamMember->role_id, $teamMember);
+            $this->syncUserRecordForMember($validated, $tenantId, $teamMember->role_id, $teamMember, $linkedUser);
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -356,7 +365,7 @@ class TeamMemberController extends Controller
                         ->delete();
                 }
 
-                \App\Support\StorageHelper::delete($teamMember->avatar_url);
+                StorageHelper::delete($teamMember->avatar_url);
                 $teamMember->delete();
             });
 
@@ -425,6 +434,7 @@ class TeamMemberController extends Controller
                         'message' => 'O profissional precisa ter um e-mail cadastrado para redefinir a senha.',
                     ], 422);
                 }
+
                 return redirect()->back()->with('error', 'O profissional precisa ter um e-mail cadastrado.');
             }
 
@@ -435,16 +445,16 @@ class TeamMemberController extends Controller
                 User::create([
                     'name' => $teamMember->name,
                     'email' => $teamMember->email,
-                    'password' => \Illuminate\Support\Facades\Hash::make('agendae123'),
+                    'password' => Hash::make('agendae123'),
                     'parent_id' => $tenantId,
                     'subdomain' => $teamMember->subdomain,
-                    'active_domain_type' => !empty($teamMember->subdomain) ? 'subdomain' : 'subdomain',
+                    'active_domain_type' => ! empty($teamMember->subdomain) ? 'subdomain' : 'subdomain',
                     'must_reset_password' => true,
                     'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional')),
                 ]);
             } else {
                 $user->update([
-                    'password' => \Illuminate\Support\Facades\Hash::make('agendae123'),
+                    'password' => Hash::make('agendae123'),
                     'must_reset_password' => true,
                     'parent_id' => $tenantId,
                     'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional')),
@@ -469,7 +479,7 @@ class TeamMemberController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
      */
     private function resolveJobTitle(array $validated): ?string
     {
@@ -484,8 +494,23 @@ class TeamMemberController extends Controller
         return $jobTitle === '' ? null : $jobTitle;
     }
 
-    private function assertGlobalSubdomainIsAvailable(?string $subdomain, ?int $ignoreTeamMemberId = null): void
+    private function linkedUserForMember(TeamMember $teamMember, int $tenantId): ?User
     {
+        if (empty($teamMember->email)) {
+            return null;
+        }
+
+        return User::query()
+            ->where('parent_id', $tenantId)
+            ->where('email', $teamMember->email)
+            ->first();
+    }
+
+    private function assertGlobalSubdomainIsAvailable(
+        ?string $subdomain,
+        ?int $ignoreTeamMemberId = null,
+        ?int $ignoreUserId = null
+    ): void {
         if ($subdomain === null || $subdomain === '') {
             return;
         }
@@ -505,6 +530,7 @@ class TeamMemberController extends Controller
 
         $userExists = User::query()
             ->whereRaw('LOWER(subdomain) = ?', [$normalizedSubdomain])
+            ->when($ignoreUserId !== null, fn ($query) => $query->where('id', '!=', $ignoreUserId))
             ->exists();
 
         if ($userExists) {

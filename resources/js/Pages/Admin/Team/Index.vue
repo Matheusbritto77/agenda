@@ -92,6 +92,7 @@ const resetForm = useForm({});
 const toggleForm = useForm({});
 
 const openCreateModal = () => {
+    createForm.clearErrors();
     createForm.reset();
     createForm.role_id = 'professional';
     createForm.commission_rate = 0.00;
@@ -104,6 +105,7 @@ const openCreateModal = () => {
 };
 
 const openEditModal = (member) => {
+    editForm.clearErrors();
     editingMember.value = member;
     editForm.id = member.id;
     editForm.name = member.name || '';
@@ -184,6 +186,7 @@ const handleEditFileChange = (file) => {
 };
 
 const submitCreate = () => {
+    createForm.clearErrors();
     createForm.post(route('admin.team.store'), {
         forceFormData: true,
         onSuccess: () => { closeCreateModal(); createForm.reset(); },
@@ -193,6 +196,7 @@ const submitCreate = () => {
 
 const submitEdit = () => {
     if (!editingMember.value) return;
+    editForm.clearErrors();
     editForm.transform((data) => ({
         ...data,
         _method: 'PUT',
@@ -253,6 +257,23 @@ onUnmounted(() => {
         </template>
 
         <div class="space-y-6">
+            <div
+                v-if="page.props.flash?.success"
+                class="flex items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300"
+                role="status"
+            >
+                <i class="fa-solid fa-circle-check"></i>
+                <span>{{ page.props.flash.success }}</span>
+            </div>
+            <div
+                v-if="page.props.flash?.error"
+                class="flex items-center gap-3 rounded-2xl border border-rose-300 bg-rose-50 px-5 py-4 text-sm font-bold text-rose-800 shadow-sm dark:border-rose-900 dark:bg-rose-950/60 dark:text-rose-300"
+                role="alert"
+            >
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>{{ page.props.flash.error }}</span>
+            </div>
+
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight" style="color: var(--text-heading);">Membros da Equipe</h2>
