@@ -31,10 +31,11 @@ const formatTime = (value) => {
     return value.substring(0, 5);
 };
 
-// When viewing a specific team member, we build a resolved schedule for all 7 days
+// When viewing Company Default, only display pure company hours (team_member_id === null)
+// When viewing a specific Team Member, build the complete resolved 7-day schedule
 const resolvedSchedule = computed(() => {
     if (!props.selectedMember) {
-        return props.businessHours.map(h => ({
+        return props.companyDefaultHours.map(h => ({
             ...h,
             isCustom: false,
             isInherited: false,
@@ -85,25 +86,27 @@ const resolvedSchedule = computed(() => {
             <div>
                 <div class="flex items-center gap-2">
                     <h3 class="text-base sm:text-lg font-extrabold" style="color: var(--text-heading);">
-                        {{ selectedMember ? `Expediente: ${selectedMember.name}` : 'Grade de Expediente da Empresa' }}
+                        {{ selectedMember ? `Expediente: ${selectedMember.name}` : 'Grade de Expediente Padrão da Empresa' }}
                     </h3>
                     <span
                         v-if="selectedMember"
-                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+                        class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
                     >
+                        <i class="fa-solid fa-user-gear text-[10px] mr-1"></i>
                         Profissional
                     </span>
                     <span
                         v-else
-                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                        class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                     >
-                        Padrão Geral
+                        <i class="fa-solid fa-building text-[10px] mr-1"></i>
+                        Padrão da Empresa
                     </span>
                 </div>
-                <p class="text-xs opacity-60 mt-0.5">
+                <p class="text-xs opacity-60 mt-1">
                     {{ selectedMember
-                        ? 'Horários e pausas personalizados para este profissional. Dias não editados herdam o padrão da empresa.'
-                        : 'Dias e horários padrão utilizados por todos os profissionais que não tiverem horário próprio.'
+                        ? 'Defina horários e pausas de café específicas para este profissional. Dias não configurados herdam o padrão da empresa automaticamente.'
+                        : 'Dias e horários de funcionamento base da sua empresa. Todos os profissionais utilizam estes horários por padrão.'
                     }}
                 </p>
             </div>
@@ -111,10 +114,10 @@ const resolvedSchedule = computed(() => {
                 v-if="canManage"
                 type="button"
                 @click="$emit('open-create')"
-                class="btn btn-primary text-xs py-2 px-3.5 self-start sm:self-auto cursor-pointer"
+                class="btn btn-primary text-xs py-2.5 px-4 self-start sm:self-auto cursor-pointer rounded-xl font-bold shadow-md shadow-indigo-600/20 inline-flex items-center gap-1.5"
             >
                 <i class="fa-solid fa-plus text-xs"></i>
-                <span>{{ selectedMember ? 'Personalizar Dia' : 'Novo Dia de Expediente' }}</span>
+                <span>{{ selectedMember ? 'Personalizar Novo Dia' : 'Novo Dia de Expediente' }}</span>
             </button>
         </div>
 
@@ -132,8 +135,8 @@ const resolvedSchedule = computed(() => {
                     <tr>
                         <th>Dia da Semana</th>
                         <th>Horário de Atendimento</th>
-                        <th>Intervalo / Almoço</th>
-                        <th>Escopo / Origem</th>
+                        <th>Intervalo / Almoço / Café</th>
+                        <th>Tipo / Escopo</th>
                         <th>Status</th>
                         <th class="text-right">Ações</th>
                     </tr>
@@ -172,17 +175,17 @@ const resolvedSchedule = computed(() => {
                             <span
                                 v-else-if="hour.isInherited"
                                 class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700"
-                                title="Este profissional está herdando o horário padrão da empresa neste dia."
+                                title="Este dia está usando o horário padrão da empresa."
                             >
                                 <i class="fa-solid fa-building text-[9px]"></i>
-                                <span>Padrão Empresa</span>
+                                <span>Herdado do Padrão</span>
                             </span>
                             <span
                                 v-else
                                 class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500"
                             >
                                 <i class="fa-solid fa-building text-[9px]"></i>
-                                <span>Padrão Geral</span>
+                                <span>Padrão Empresa</span>
                             </span>
                         </td>
                         <td>
@@ -198,8 +201,8 @@ const resolvedSchedule = computed(() => {
                                     v-if="canManage && hour.isInherited"
                                     type="button"
                                     @click="$emit('customize-day', hour)"
-                                    class="btn btn-outline text-[11px] py-1 px-2 rounded-lg font-bold cursor-pointer"
-                                    title="Criar horário personalizado para este dia"
+                                    class="btn btn-outline text-[11px] py-1 px-2.5 rounded-lg font-bold cursor-pointer hover:border-indigo-500 hover:text-indigo-600 transition-all"
+                                    title="Personalizar este dia especificamente para este profissional"
                                 >
                                     <i class="fa-solid fa-plus text-[10px] mr-1"></i>
                                     <span>Personalizar</span>

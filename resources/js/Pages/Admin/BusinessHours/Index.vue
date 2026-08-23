@@ -51,16 +51,19 @@ const allDays = [
     { key: 0, name: 'Domingo' },
 ];
 
-// Active Scope Tab: 'company' or member ID (number)
-const activeTab = ref('company');
+// Main Navigation Tab: 'company' | 'team' | 'blocks'
+const mainTab = ref('company');
+
+// Selected Team Member ID when in 'team' tab
+const selectedMemberId = ref(props.teamMembers.length > 0 ? props.teamMembers[0].id : null);
+
+const selectedMember = computed(() => {
+    if (mainTab.value !== 'team' || !selectedMemberId.value) return null;
+    return props.teamMembers.find(m => m.id === selectedMemberId.value) || null;
+});
 
 const companyDefaultHours = computed(() => {
     return props.businessHours.filter(h => !h.team_member_id);
-});
-
-const selectedMember = computed(() => {
-    if (activeTab.value === 'company') return null;
-    return props.teamMembers.find(m => m.id === activeTab.value) || null;
 });
 
 const memberCustomCountMap = computed(() => {
@@ -73,20 +76,16 @@ const memberCustomCountMap = computed(() => {
     return map;
 });
 
-const filteredBusinessHours = computed(() => {
-    if (activeTab.value === 'company') {
-        return companyDefaultHours.value;
-    }
-    return props.businessHours.filter(h => h.team_member_id === activeTab.value);
+const companyBlocks = computed(() => {
+    return props.blockedSlots.filter(b => !b.team_member_id);
 });
 
-const filteredBlockedSlots = computed(() => {
-    if (activeTab.value === 'company') {
-        return props.blockedSlots.filter(b => !b.team_member_id);
-    }
-    return props.blockedSlots.filter(b => b.team_member_id === activeTab.value || !b.team_member_id);
+const selectedMemberBlocks = computed(() => {
+    if (!selectedMemberId.value) return [];
+    return props.blockedSlots.filter(b => b.team_member_id === selectedMemberId.value);
 });
 
+// Modal States
 const showCreateBusinessHourModal = ref(false);
 const showEditBusinessHourModal = ref(false);
 const showDeleteBusinessHourModal = ref(false);
@@ -157,15 +156,15 @@ const getInitials = (name) => {
 };
 
 const openCreateBusinessHourModal = () => {
-    const currentMemberId = activeTab.value === 'company' ? null : activeTab.value;
+    const targetMemberId = mainTab.value === 'team' ? selectedMemberId.value : null;
     const configuredDayKeys = props.businessHours
-        .filter(h => (h.team_member_id || null) === currentMemberId)
+        .filter(h => (h.team_member_id || null) === targetMemberId)
         .map(h => h.day_of_week);
 
     const firstAvailable = allDays.find(d => !configuredDayKeys.includes(d.key));
 
     createBusinessHourForm.reset();
-    createBusinessHourForm.team_member_id = currentMemberId;
+    createBusinessHourForm.team_member_id = targetMemberId;
     createBusinessHourForm.day_of_week = firstAvailable ? String(firstAvailable.key) : '';
     createBusinessHourForm.opens_at = '08:00';
     createBusinessHourForm.closes_at = '18:00';
@@ -180,7 +179,7 @@ const openCreateBusinessHourModal = () => {
 
 const handleCustomizeDay = (hour) => {
     createBusinessHourForm.reset();
-    createBusinessHourForm.team_member_id = selectedMember.value ? selectedMember.value.id : null;
+    createBusinessHourForm.team_member_id = selectedMemberId.value;
     createBusinessHourForm.day_of_week = String(hour.day_of_week);
     createBusinessHourForm.label = hour.label || '';
     createBusinessHourForm.opens_at = formatTime(hour.opens_at);
@@ -251,7 +250,7 @@ const submitDeleteBusinessHour = () => {
 
 const openCreateBlockModal = () => {
     createBlockForm.reset();
-    createBlockForm.team_member_id = activeTab.value === 'company' ? null : activeTab.value;
+    createBlockForm.team_member_id = mainTab.value === 'team' ? selectedMemberId.value : null;
     showCreateBlockModal.value = true;
     document.body.classList.add('overflow-hidden');
 };
@@ -379,86 +378,209 @@ onUnmounted(() => {
         </template>
 
         <div class="space-y-6">
-            <!-- Tabs: Company vs Team Members -->
-            <div class="p-2 rounded-2xl bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/40 dark:border-slate-700/40 backdrop-blur-md">
-                <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                    <!-- Company Tab -->
+            <!-- Navigation Tabs (Main Level) -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-sm">
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                    <!-- Tab 1: Padrão da Empresa -->
                     <button
                         type="button"
-                        @click="activeTab = 'company'"
+                        @click="mainTab = 'company'"
                         :class="[
-                            'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all duration-200 flex items-center gap-2 shrink-0 cursor-pointer',
-                            activeTab === 'company'
-                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-900/5 dark:shadow-black/20'
+                            'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer',
+                            mainTab === 'company'
+                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white'
                         ]"
                     >
-                        <div class="w-6 h-6 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs">
-                            <i class="fa-solid fa-building"></i>
-                        </div>
+                        <i class="fa-solid fa-building text-xs"></i>
                         <span>Padrão da Empresa</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 font-bold opacity-75">
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 font-bold opacity-80">
                             {{ companyDefaultHours.length }} dias
                         </span>
                     </button>
 
-                    <!-- Team Members Tabs -->
+                    <!-- Tab 2: Equipe & Profissionais -->
                     <button
-                        v-for="member in teamMembers"
-                        :key="member.id"
                         type="button"
-                        @click="activeTab = member.id"
+                        @click="mainTab = 'team'"
                         :class="[
-                            'px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-2 shrink-0 cursor-pointer',
-                            activeTab === member.id
-                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-md shadow-slate-900/5 dark:shadow-black/20'
+                            'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer',
+                            mainTab === 'team'
+                                ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white'
                         ]"
                     >
-                        <div class="w-6 h-6 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                            <img v-if="member.avatar_url" :src="member.avatar_url" :alt="member.name" class="w-full h-full object-cover" />
-                            <span v-else class="text-[9px] font-black text-indigo-600 dark:text-indigo-400">{{ getInitials(member.name) }}</span>
-                        </div>
-                        <span>{{ member.name }}</span>
-                        <span
-                            v-if="memberCustomCountMap[member.id]"
-                            class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-extrabold"
-                            title="Dias personalizados para este profissional"
-                        >
-                            {{ memberCustomCountMap[member.id] }} custom
+                        <i class="fa-solid fa-users text-xs"></i>
+                        <span>Horários por Profissional</span>
+                        <span v-if="teamMembers.length > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-extrabold">
+                            {{ teamMembers.length }}
                         </span>
-                        <span
-                            v-else
-                            class="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 font-medium opacity-60"
-                        >
-                            Padrão
+                    </button>
+
+                    <!-- Tab 3: Bloqueios & Feriados -->
+                    <button
+                        type="button"
+                        @click="mainTab = 'blocks'"
+                        :class="[
+                            'px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center gap-2 shrink-0 cursor-pointer',
+                            mainTab === 'blocks'
+                                ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-white'
+                        ]"
+                    >
+                        <i class="fa-solid fa-ban text-xs"></i>
+                        <span>Bloqueios & Feriados</span>
+                        <span v-if="blockedSlots.length > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 font-extrabold">
+                            {{ blockedSlots.length }}
                         </span>
                     </button>
                 </div>
             </div>
 
-            <!-- Weekly Hours Section -->
-            <WeeklyScheduleTable
-                :business-hours="props.businessHours"
-                :company-default-hours="companyDefaultHours"
-                :selected-member="selectedMember"
-                :days-map="daysMap"
-                :can-manage="hasPermission('schedules.manage')"
-                @open-create="openCreateBusinessHourModal"
-                @open-edit="openEditBusinessHourModal"
-                @open-delete="openDeleteBusinessHourModal"
-                @customize-day="handleCustomizeDay"
-            />
+            <!-- VIEW 1: PADRÃO DA EMPRESA -->
+            <div v-if="mainTab === 'company'" class="space-y-6">
+                <!-- Info Banner -->
+                <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-start sm:items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div class="flex-1 min-w-0 text-xs sm:text-sm">
+                        <p class="font-bold text-indigo-950 dark:text-indigo-200">
+                            Estes são os horários e intervalos padrão da empresa.
+                        </p>
+                        <p class="opacity-75 text-indigo-900/80 dark:text-indigo-300/80 text-xs mt-0.5">
+                            Todos os membros da equipe que não tiverem uma agenda própria configurada na guia "Horários por Profissional" herdarão estes horários.
+                        </p>
+                    </div>
+                </div>
 
-            <!-- Blocked Slots Section -->
-            <BlockedSlotsSection
-                :blocked-slots="filteredBlockedSlots"
-                :selected-member="selectedMember"
-                :can-manage-blocks="hasPermission('schedules.blocks')"
-                @open-create-block="openCreateBlockModal"
-                @open-edit-block="openEditBlockModal"
-                @open-delete-block="openDeleteBlockModal"
-            />
+                <!-- Company Weekly Schedule Table -->
+                <WeeklyScheduleTable
+                    :business-hours="companyDefaultHours"
+                    :company-default-hours="companyDefaultHours"
+                    :selected-member="null"
+                    :days-map="daysMap"
+                    :can-manage="hasPermission('schedules.manage')"
+                    @open-create="openCreateBusinessHourModal"
+                    @open-edit="openEditBusinessHourModal"
+                    @open-delete="openDeleteBusinessHourModal"
+                />
+
+                <!-- Company Blocked Slots -->
+                <BlockedSlotsSection
+                    :blocked-slots="companyBlocks"
+                    :selected-member="null"
+                    :can-manage-blocks="hasPermission('schedules.blocks')"
+                    @open-create-block="openCreateBlockModal"
+                    @open-edit-block="openEditBlockModal"
+                    @open-delete-block="openDeleteBlockModal"
+                />
+            </div>
+
+            <!-- VIEW 2: HORÁRIOS POR PROFISSIONAL -->
+            <div v-else-if="mainTab === 'team'" class="space-y-6">
+                <!-- If No Team Members registered -->
+                <div v-if="teamMembers.length === 0" class="card text-center py-12 px-4 text-slate-500">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto mb-3 text-xl">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h4 class="text-sm font-bold" style="color: var(--text-heading);">Nenhum membro na equipe</h4>
+                    <p class="text-xs opacity-70 mt-1 max-w-md mx-auto">
+                        Cadastre profissionais na aba de Equipe para definir expedientes e pausas de café exclusivas para cada um.
+                    </p>
+                </div>
+
+                <div v-else class="space-y-6">
+                    <!-- Team Member Horizontal Selector -->
+                    <div class="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1">
+                            Selecione o Profissional para gerenciar a agenda
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                            <button
+                                v-for="member in teamMembers"
+                                :key="member.id"
+                                type="button"
+                                @click="selectedMemberId = member.id"
+                                :class="[
+                                    'p-2.5 pr-4 rounded-xl text-xs font-bold transition-all flex items-center gap-3 shrink-0 cursor-pointer border',
+                                    selectedMemberId === member.id
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-600/25'
+                                        : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
+                                ]"
+                            >
+                                <div class="w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center shrink-0">
+                                    <img v-if="member.avatar_url" :src="member.avatar_url" :alt="member.name" class="w-full h-full object-cover" />
+                                    <span v-else class="text-xs font-black" :class="selectedMemberId === member.id ? 'text-white' : 'text-indigo-600 dark:text-indigo-400'">
+                                        {{ getInitials(member.name) }}
+                                    </span>
+                                </div>
+                                <div class="text-left">
+                                    <div class="font-extrabold leading-tight">{{ member.name }}</div>
+                                    <div class="text-[10px] opacity-80 font-normal truncate max-w-[140px]">
+                                        {{ member.job_title || 'Profissional' }}
+                                    </div>
+                                </div>
+                                <span
+                                    v-if="memberCustomCountMap[member.id]"
+                                    :class="[
+                                        'text-[10px] px-2 py-0.5 rounded-full font-black ml-1',
+                                        selectedMemberId === member.id ? 'bg-white text-indigo-700' : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
+                                    ]"
+                                >
+                                    {{ memberCustomCountMap[member.id] }} custom
+                                </span>
+                                <span
+                                    v-else
+                                    :class="[
+                                        'text-[9px] px-1.5 py-0.5 rounded-full font-medium ml-1',
+                                        selectedMemberId === member.id ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                                    ]"
+                                >
+                                    Padrão
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selected Member Schedule Table -->
+                    <WeeklyScheduleTable
+                        v-if="selectedMember"
+                        :business-hours="props.businessHours"
+                        :company-default-hours="companyDefaultHours"
+                        :selected-member="selectedMember"
+                        :days-map="daysMap"
+                        :can-manage="hasPermission('schedules.manage')"
+                        @open-create="openCreateBusinessHourModal"
+                        @open-edit="openEditBusinessHourModal"
+                        @open-delete="openDeleteBusinessHourModal"
+                        @customize-day="handleCustomizeDay"
+                    />
+
+                    <!-- Selected Member Blocked Slots -->
+                    <BlockedSlotsSection
+                        v-if="selectedMember"
+                        :blocked-slots="selectedMemberBlocks"
+                        :selected-member="selectedMember"
+                        :can-manage-blocks="hasPermission('schedules.blocks')"
+                        @open-create-block="openCreateBlockModal"
+                        @open-edit-block="openEditBlockModal"
+                        @open-delete-block="openDeleteBlockModal"
+                    />
+                </div>
+            </div>
+
+            <!-- VIEW 3: TODOS OS BLOQUEIOS -->
+            <div v-else-if="mainTab === 'blocks'" class="space-y-6">
+                <BlockedSlotsSection
+                    :blocked-slots="props.blockedSlots"
+                    :selected-member="null"
+                    :can-manage-blocks="hasPermission('schedules.blocks')"
+                    @open-create-block="openCreateBlockModal"
+                    @open-edit-block="openEditBlockModal"
+                    @open-delete-block="openDeleteBlockModal"
+                />
+            </div>
         </div>
 
         <!-- Create Business Hour Modal -->
