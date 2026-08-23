@@ -105,6 +105,7 @@ const createBusinessHourForm = useForm({
     has_break: false,
     break_opens_at: '12:00',
     break_closes_at: '13:00',
+    breaks: [],
     is_active: true,
 });
 
@@ -118,6 +119,7 @@ const editBusinessHourForm = useForm({
     has_break: false,
     break_opens_at: '12:00',
     break_closes_at: '13:00',
+    breaks: [],
     is_active: true,
 });
 
@@ -169,6 +171,7 @@ const openCreateBusinessHourModal = () => {
     createBusinessHourForm.opens_at = '08:00';
     createBusinessHourForm.closes_at = '18:00';
     createBusinessHourForm.has_break = false;
+    createBusinessHourForm.breaks = [];
     createBusinessHourForm.break_opens_at = '12:00';
     createBusinessHourForm.break_closes_at = '13:00';
     createBusinessHourForm.is_active = true;
@@ -184,10 +187,26 @@ const handleCustomizeDay = (hour) => {
     createBusinessHourForm.label = hour.label || '';
     createBusinessHourForm.opens_at = formatTime(hour.opens_at);
     createBusinessHourForm.closes_at = formatTime(hour.closes_at);
-    const hasBreak = Boolean(hour.break_opens_at && hour.break_closes_at);
-    createBusinessHourForm.has_break = hasBreak;
-    createBusinessHourForm.break_opens_at = hour.break_opens_at ? formatTime(hour.break_opens_at) : '12:00';
-    createBusinessHourForm.break_closes_at = hour.break_closes_at ? formatTime(hour.break_closes_at) : '13:00';
+    
+    let breaksList = [];
+    if (Array.isArray(hour.breaks) && hour.breaks.length > 0) {
+        breaksList = hour.breaks.map(b => ({
+            label: b.label || 'Intervalo',
+            opens_at: formatTime(b.opens_at),
+            closes_at: formatTime(b.closes_at),
+        }));
+    } else if (hour.break_opens_at && hour.break_closes_at) {
+        breaksList = [{
+            label: 'Almoço',
+            opens_at: formatTime(hour.break_opens_at),
+            closes_at: formatTime(hour.break_closes_at),
+        }];
+    }
+    
+    createBusinessHourForm.breaks = breaksList;
+    createBusinessHourForm.has_break = breaksList.length > 0;
+    createBusinessHourForm.break_opens_at = breaksList[0]?.opens_at || '12:00';
+    createBusinessHourForm.break_closes_at = breaksList[0]?.closes_at || '13:00';
     createBusinessHourForm.is_active = Boolean(hour.is_active);
 
     showCreateBusinessHourModal.value = true;
@@ -201,10 +220,26 @@ const openEditBusinessHourModal = (hour) => {
     editBusinessHourForm.label = hour.label || '';
     editBusinessHourForm.opens_at = formatTime(hour.opens_at);
     editBusinessHourForm.closes_at = formatTime(hour.closes_at);
-    const hasBreak = Boolean(hour.break_opens_at && hour.break_closes_at);
-    editBusinessHourForm.has_break = hasBreak;
-    editBusinessHourForm.break_opens_at = hour.break_opens_at ? formatTime(hour.break_opens_at) : '12:00';
-    editBusinessHourForm.break_closes_at = hour.break_closes_at ? formatTime(hour.break_closes_at) : '13:00';
+
+    let breaksList = [];
+    if (Array.isArray(hour.breaks) && hour.breaks.length > 0) {
+        breaksList = hour.breaks.map(b => ({
+            label: b.label || 'Intervalo',
+            opens_at: formatTime(b.opens_at),
+            closes_at: formatTime(b.closes_at),
+        }));
+    } else if (hour.break_opens_at && hour.break_closes_at) {
+        breaksList = [{
+            label: 'Almoço',
+            opens_at: formatTime(hour.break_opens_at),
+            closes_at: formatTime(hour.break_closes_at),
+        }];
+    }
+
+    editBusinessHourForm.breaks = breaksList;
+    editBusinessHourForm.has_break = breaksList.length > 0;
+    editBusinessHourForm.break_opens_at = breaksList[0]?.opens_at || '12:00';
+    editBusinessHourForm.break_closes_at = breaksList[0]?.closes_at || '13:00';
     editBusinessHourForm.is_active = Boolean(hour.is_active);
 
     showEditBusinessHourModal.value = true;

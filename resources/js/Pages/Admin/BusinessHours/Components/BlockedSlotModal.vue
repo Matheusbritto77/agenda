@@ -104,7 +104,7 @@ const setQuickRange = (type) => {
             class="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center p-4 liquid-glass-backdrop"
             @click="handleBackdropClick"
         >
-            <div class="liquid-glass-card w-full max-w-lg p-6 sm:p-7 space-y-5 relative shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+            <div class="liquid-glass-card w-full max-w-2xl p-6 sm:p-8 space-y-6 relative shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
                 <!-- Header -->
                 <div class="flex items-center justify-between pb-4 border-b" style="border-color: var(--border);">
                     <div class="flex items-center gap-3">

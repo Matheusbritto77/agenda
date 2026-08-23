@@ -158,7 +158,18 @@ const resolvedSchedule = computed(() => {
                             </div>
                         </td>
                         <td>
-                            <div v-if="hour.break_opens_at && hour.break_closes_at" class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 font-medium">
+                            <div v-if="hour.breaks && hour.breaks.length > 0" class="space-y-1">
+                                <div
+                                    v-for="(b, bIdx) in hour.breaks"
+                                    :key="bIdx"
+                                    class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 font-medium"
+                                >
+                                    <i class="fa-solid fa-mug-hot text-amber-500 text-[11px]"></i>
+                                    <span>{{ formatTime(b.opens_at) }} às {{ formatTime(b.closes_at) }}</span>
+                                    <span v-if="b.label" class="text-[10px] text-slate-400">({{ b.label }})</span>
+                                </div>
+                            </div>
+                            <div v-else-if="hour.break_opens_at && hour.break_closes_at" class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 font-medium">
                                 <i class="fa-solid fa-mug-hot text-amber-500 text-[11px]"></i>
                                 <span>{{ formatTime(hour.break_opens_at) }} às {{ formatTime(hour.break_closes_at) }}</span>
                             </div>

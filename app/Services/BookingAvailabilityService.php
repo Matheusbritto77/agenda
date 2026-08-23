@@ -79,9 +79,7 @@ class BookingAvailabilityService
         $busyRanges = $this->mergeOverlappingRanges($this->busyRangesForDate($date, $service, $tenantId, $professional));
 
         foreach ($businessHours as $businessHour) {
-            $breakRange = $this->breakRangeForBusinessHour($businessHour, $date);
-
-            if ($breakRange !== null) {
+            foreach ($this->breakRangesForBusinessHour($businessHour, $date) as $breakRange) {
                 $busyRanges[] = $breakRange;
             }
         }
@@ -567,28 +565,50 @@ class BookingAvailabilityService
 
     /**
      * @param  BusinessHour|array<string, mixed>  $businessHour
-     * @return array{start:Carbon,end:Carbon}|null
+     * @return array<int, array{start:Carbon,end:Carbon}>
      */
-    private function breakRangeForBusinessHour(BusinessHour|array $businessHour, CarbonInterface $date): ?array
+    private function breakRangesForBusinessHour(BusinessHour|array $businessHour, CarbonInterface $date): array
     {
-        $breakOpensAt = data_get($businessHour, 'break_opens_at');
-        $breakClosesAt = data_get($businessHour, 'break_closes_at');
+        $ranges = [];
+        $breaks = data_get($businessHour, 'breaks');
 
-        if (! is_string($breakOpensAt) || ! is_string($breakClosesAt) || $breakOpensAt === '' || $breakClosesAt === '') {
-            return null;
+        if (is_array($breaks) && count($breaks) > 0) {
+            foreach ($breaks as $item) {
+                $bOpen = data_get($item, 'opens_at') ?? data_get($item, 'break_opens_at');
+                $bClose = data_get($item, 'closes_at') ?? data_get($item, 'break_closes_at');
+
+                if (is_string($bOpen) && is_string($bClose) && $bOpen !== '' && $bClose !== '') {
+                    $bStart = $this->dateWithTime($date, $bOpen);
+                    $bEnd = $this->dateWithTime($date, $bClose);
+
+                    if ($bEnd->gt($bStart)) {
+                        $ranges[] = [
+                            'start' => $bStart,
+                            'end' => $bEnd,
+                        ];
+                    }
+                }
+            }
         }
 
-        $breakStart = $this->dateWithTime($date, $breakOpensAt);
-        $breakEnd = $this->dateWithTime($date, $breakClosesAt);
+        if (count($ranges) === 0) {
+            $breakOpensAt = data_get($businessHour, 'break_opens_at');
+            $breakClosesAt = data_get($businessHour, 'break_closes_at');
 
-        if ($breakEnd->lessThanOrEqualTo($breakStart)) {
-            return null;
+            if (is_string($breakOpensAt) && is_string($breakClosesAt) && $breakOpensAt !== '' && $breakClosesAt !== '') {
+                $breakStart = $this->dateWithTime($date, $breakOpensAt);
+                $breakEnd = $this->dateWithTime($date, $breakClosesAt);
+
+                if ($breakEnd->gt($breakStart)) {
+                    $ranges[] = [
+                        'start' => $breakStart,
+                        'end' => $breakEnd,
+                    ];
+                }
+            }
         }
 
-        return [
-            'start' => $breakStart,
-            'end' => $breakEnd,
-        ];
+        return $ranges;
     }
 
     private function dateWithTime(CarbonInterface $date, string $time): Carbon

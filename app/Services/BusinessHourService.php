@@ -46,6 +46,10 @@ class BusinessHourService
                 'has_break' => ['nullable', 'boolean'],
                 'break_opens_at' => ['nullable', 'date_format:H:i'],
                 'break_closes_at' => ['nullable', 'date_format:H:i'],
+                'breaks' => ['nullable', 'array'],
+                'breaks.*.opens_at' => ['nullable', 'date_format:H:i'],
+                'breaks.*.closes_at' => ['nullable', 'date_format:H:i'],
+                'breaks.*.label' => ['nullable', 'string', 'max:100'],
                 'is_active' => ['nullable', 'boolean'],
             ]
         )->after(function ($validator) use ($data): void {
@@ -83,6 +87,24 @@ class BusinessHourService
 
                 if ($breakOpens->lt($opens) || $breakCloses->gt($closes)) {
                     $validator->errors()->add('break_opens_at', 'A pausa deve ficar dentro do horário de funcionamento.');
+                }
+            }
+
+            // Validate breaks array
+            if (! empty($data['breaks']) && is_array($data['breaks'])) {
+                foreach ($data['breaks'] as $idx => $b) {
+                    $bOpen = $b['opens_at'] ?? null;
+                    $bClose = $b['closes_at'] ?? null;
+                    if ($bOpen && $bClose) {
+                        $bo = Carbon::createFromFormat('H:i', $bOpen);
+                        $bc = Carbon::createFromFormat('H:i', $bClose);
+                        if ($bc->lessThanOrEqualTo($bo)) {
+                            $validator->errors()->add("breaks.{$idx}.closes_at", 'O término do intervalo deve ser maior que o início.');
+                        }
+                        if ($bo->lt($opens) || $bc->gt($closes)) {
+                            $validator->errors()->add("breaks.{$idx}.opens_at", 'O intervalo deve ficar dentro do horário de expediente.');
+                        }
+                    }
                 }
             }
         })->validate();
@@ -125,6 +147,28 @@ class BusinessHourService
 
         $slotMinutes = $validated['slot_duration_minutes'] ?? $validated['slot_interval_minutes'] ?? 45;
 
+        // Process breaks array
+        $breaksList = [];
+        if (! empty($validated['breaks']) && is_array($validated['breaks'])) {
+            foreach ($validated['breaks'] as $b) {
+                if (! empty($b['opens_at']) && ! empty($b['closes_at'])) {
+                    $breaksList[] = [
+                        'opens_at' => Carbon::createFromFormat('H:i', $b['opens_at'])->format('H:i:s'),
+                        'closes_at' => Carbon::createFromFormat('H:i', $b['closes_at'])->format('H:i:s'),
+                        'label' => $b['label'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        if (empty($breaksList) && $hasBreak && ! empty($validated['break_opens_at']) && ! empty($validated['break_closes_at'])) {
+            $breaksList[] = [
+                'opens_at' => Carbon::createFromFormat('H:i', $validated['break_opens_at'])->format('H:i:s'),
+                'closes_at' => Carbon::createFromFormat('H:i', $validated['break_closes_at'])->format('H:i:s'),
+                'label' => 'Intervalo Principal',
+            ];
+        }
+
         $createData = [
             'user_id' => $tenantId,
             'team_member_id' => $teamMemberId,
@@ -132,6 +176,7 @@ class BusinessHourService
             'label' => $validated['label'] ?? null,
             'opens_at' => Carbon::createFromFormat('H:i', $validated['opens_at'])->format('H:i:s'),
             'closes_at' => Carbon::createFromFormat('H:i', $validated['closes_at'])->format('H:i:s'),
+            'breaks' => ! empty($breaksList) ? $breaksList : null,
             'is_active' => $isActive,
         ];
 
@@ -141,11 +186,11 @@ class BusinessHourService
         if (Schema::hasColumn('business_hours', 'slot_interval_minutes')) {
             $createData['slot_interval_minutes'] = $slotMinutes;
         }
-        if (Schema::hasColumn('business_hours', 'break_opens_at') && $hasBreak && ! empty($validated['break_opens_at'])) {
-            $createData['break_opens_at'] = Carbon::createFromFormat('H:i', $validated['break_opens_at'])->format('H:i:s');
+        if (Schema::hasColumn('business_hours', 'break_opens_at')) {
+            $createData['break_opens_at'] = ! empty($breaksList[0]['opens_at']) ? $breaksList[0]['opens_at'] : null;
         }
-        if (Schema::hasColumn('business_hours', 'break_closes_at') && $hasBreak && ! empty($validated['break_closes_at'])) {
-            $createData['break_closes_at'] = Carbon::createFromFormat('H:i', $validated['break_closes_at'])->format('H:i:s');
+        if (Schema::hasColumn('business_hours', 'break_closes_at')) {
+            $createData['break_closes_at'] = ! empty($breaksList[0]['closes_at']) ? $breaksList[0]['closes_at'] : null;
         }
 
         return BusinessHour::create($createData);
@@ -169,12 +214,35 @@ class BusinessHourService
 
         $slotMinutes = $validated['slot_duration_minutes'] ?? $validated['slot_interval_minutes'] ?? $businessHour->slot_duration_minutes ?? $businessHour->slot_interval_minutes ?? 45;
 
+        // Process breaks array
+        $breaksList = [];
+        if (! empty($validated['breaks']) && is_array($validated['breaks'])) {
+            foreach ($validated['breaks'] as $b) {
+                if (! empty($b['opens_at']) && ! empty($b['closes_at'])) {
+                    $breaksList[] = [
+                        'opens_at' => Carbon::createFromFormat('H:i', $b['opens_at'])->format('H:i:s'),
+                        'closes_at' => Carbon::createFromFormat('H:i', $b['closes_at'])->format('H:i:s'),
+                        'label' => $b['label'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        if (empty($breaksList) && $hasBreak && ! empty($validated['break_opens_at']) && ! empty($validated['break_closes_at'])) {
+            $breaksList[] = [
+                'opens_at' => Carbon::createFromFormat('H:i', $validated['break_opens_at'])->format('H:i:s'),
+                'closes_at' => Carbon::createFromFormat('H:i', $validated['break_closes_at'])->format('H:i:s'),
+                'label' => 'Intervalo Principal',
+            ];
+        }
+
         $updateData = [
             'team_member_id' => $teamMemberId,
             'day_of_week' => isset($validated['day_of_week']) ? (int) $validated['day_of_week'] : $businessHour->day_of_week,
             'label' => $validated['label'] ?? null,
             'opens_at' => Carbon::createFromFormat('H:i', $validated['opens_at'])->format('H:i:s'),
             'closes_at' => Carbon::createFromFormat('H:i', $validated['closes_at'])->format('H:i:s'),
+            'breaks' => ! empty($breaksList) ? $breaksList : null,
             'is_active' => $isActive !== null ? $isActive : $businessHour->is_active,
         ];
 
@@ -185,14 +253,10 @@ class BusinessHourService
             $updateData['slot_interval_minutes'] = $slotMinutes;
         }
         if (Schema::hasColumn('business_hours', 'break_opens_at')) {
-            $updateData['break_opens_at'] = $hasBreak && ! empty($validated['break_opens_at'])
-                ? Carbon::createFromFormat('H:i', $validated['break_opens_at'])->format('H:i:s')
-                : null;
+            $updateData['break_opens_at'] = ! empty($breaksList[0]['opens_at']) ? $breaksList[0]['opens_at'] : null;
         }
         if (Schema::hasColumn('business_hours', 'break_closes_at')) {
-            $updateData['break_closes_at'] = $hasBreak && ! empty($validated['break_closes_at'])
-                ? Carbon::createFromFormat('H:i', $validated['break_closes_at'])->format('H:i:s')
-                : null;
+            $updateData['break_closes_at'] = ! empty($breaksList[0]['closes_at']) ? $breaksList[0]['closes_at'] : null;
         }
 
         $businessHour->update($updateData);

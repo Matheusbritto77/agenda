@@ -22,6 +22,7 @@ class BusinessHour extends Model
         'slot_duration_minutes',
         'break_opens_at',
         'break_closes_at',
+        'breaks',
         'is_active',
     ];
 
@@ -33,6 +34,7 @@ class BusinessHour extends Model
         'slot_duration_minutes' => 'integer',
         'break_opens_at' => 'string',
         'break_closes_at' => 'string',
+        'breaks' => 'array',
         'is_active' => 'boolean',
     ];
 
