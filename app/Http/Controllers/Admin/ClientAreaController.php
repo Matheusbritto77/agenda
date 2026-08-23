@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\AppointmentReview;
+use App\Models\BrandingSetting;
 use App\Models\ClientAccount;
 use App\Models\CompanyReview;
 use App\Models\Service;
 use App\Models\TeamMember;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -108,10 +110,34 @@ class ClientAreaController extends Controller
 
         $reviewsCount = (clone $serviceReviewBase)->count();
 
+        $tenant = User::query()->find($tenantId);
+        $branding = BrandingSetting::query()->where('user_id', $tenantId)->first();
+        $bSettings = $branding?->settings ?? [];
+
+        $portalCustomization = [
+            'welcome_title' => $bSettings['portal_welcome_title'] ?? ('Bem-vindo ao espaço exclusivo de ' . ($tenant?->name ?? 'nosso estabelecimento')),
+            'welcome_subtitle' => $bSettings['portal_welcome_subtitle'] ?? 'Acompanhe seus horários, histórico de atendimentos e conquistas.',
+            'announcement' => $bSettings['portal_announcement'] ?? '',
+            'announcement_enabled' => (bool) ($bSettings['portal_announcement_enabled'] ?? false),
+            'primary_color' => $branding?->primary_color ?? '#6366f1',
+            'secondary_color' => $branding?->secondary_color ?? '#06b6d4',
+            'logo_url' => $branding?->logo_url,
+            'banner_url' => ! empty($bSettings['portal_banner_path']) ? \App\Support\StorageHelper::url($bSettings['portal_banner_path']) : $branding?->banner_url,
+            'show_loyalty_badges' => (bool) ($bSettings['portal_show_loyalty_badges'] ?? true),
+            'show_reviews' => (bool) ($bSettings['portal_show_reviews'] ?? true),
+            'show_professionals' => (bool) ($bSettings['portal_show_professionals'] ?? true),
+            'show_service_prices' => (bool) ($bSettings['portal_show_service_prices'] ?? true),
+            'support_whatsapp' => $bSettings['portal_support_whatsapp'] ?? ($bSettings['whatsapp_number'] ?? ''),
+            'custom_instructions' => $bSettings['portal_custom_instructions'] ?? '',
+            'company_name' => $tenant?->name ?? 'Sua Empresa',
+            'portal_url' => url('/cliente'),
+        ];
+
         return Inertia::render('Admin/ClientArea/Index', [
             'clients' => $clients,
             'serviceReviews' => $serviceReviews,
             'companyReviews' => $companyReviews,
+            'portalCustomization' => $portalCustomization,
             'services' => Service::query()
                 ->where('user_id', $tenantId)
                 ->orderBy('name')
@@ -132,6 +158,76 @@ class ClientAreaController extends Controller
             ],
             'scopeLabel' => $teamMemberId === null ? 'Toda a empresa' : 'Somente meus atendimentos',
         ]);
+    }
+
+    public function updatePortalCustomization(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        if (! $user->hasPermission('clients.edit') && ! $user->hasPermission('branding.manage') && $user->role !== 'admin') {
+            abort(403, 'Você não tem permissão para personalizar a Área do Cliente.');
+        }
+
+        $tenantId = $this->tenantId($request);
+        $branding = BrandingSetting::firstOrCreate(['user_id' => $tenantId]);
+
+        $validated = $request->validate([
+            'portal_welcome_title' => ['nullable', 'string', 'max:120'],
+            'portal_welcome_subtitle' => ['nullable', 'string', 'max:255'],
+            'portal_announcement' => ['nullable', 'string', 'max:300'],
+            'portal_announcement_enabled' => ['nullable', 'boolean'],
+            'portal_primary_color' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'portal_secondary_color' => ['nullable', 'string', 'regex:/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/'],
+            'portal_show_loyalty_badges' => ['nullable', 'boolean'],
+            'portal_show_reviews' => ['nullable', 'boolean'],
+            'portal_show_professionals' => ['nullable', 'boolean'],
+            'portal_show_service_prices' => ['nullable', 'boolean'],
+            'portal_support_whatsapp' => ['nullable', 'string', 'max:30'],
+            'portal_custom_instructions' => ['nullable', 'string', 'max:1000'],
+            'banner_image' => ['nullable', 'image', 'max:5120'],
+            'logo_image' => ['nullable', 'image', 'max:5120'],
+        ]);
+
+        $currentSettings = $branding->settings ?? [];
+
+        // Handle banner image upload
+        if ($request->hasFile('banner_image')) {
+            if (! empty($currentSettings['portal_banner_path'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($currentSettings['portal_banner_path']);
+            }
+            $bannerPath = $request->file('banner_image')->store("brandings/{$tenantId}", 'public');
+            $currentSettings['portal_banner_path'] = $bannerPath;
+        }
+
+        // Handle logo image upload
+        if ($request->hasFile('logo_image')) {
+            if ($branding->logo_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($branding->logo_path);
+            }
+            $branding->logo_path = $request->file('logo_image')->store("brandings/{$tenantId}", 'public');
+        }
+
+        if (! empty($validated['portal_primary_color'])) {
+            $branding->primary_color = $validated['portal_primary_color'];
+        }
+        if (! empty($validated['portal_secondary_color'])) {
+            $branding->secondary_color = $validated['portal_secondary_color'];
+        }
+
+        $currentSettings['portal_welcome_title'] = $validated['portal_welcome_title'] ?? null;
+        $currentSettings['portal_welcome_subtitle'] = $validated['portal_welcome_subtitle'] ?? null;
+        $currentSettings['portal_announcement'] = $validated['portal_announcement'] ?? null;
+        $currentSettings['portal_announcement_enabled'] = $request->boolean('portal_announcement_enabled');
+        $currentSettings['portal_show_loyalty_badges'] = $request->boolean('portal_show_loyalty_badges', true);
+        $currentSettings['portal_show_reviews'] = $request->boolean('portal_show_reviews', true);
+        $currentSettings['portal_show_professionals'] = $request->boolean('portal_show_professionals', true);
+        $currentSettings['portal_show_service_prices'] = $request->boolean('portal_show_service_prices', true);
+        $currentSettings['portal_support_whatsapp'] = $validated['portal_support_whatsapp'] ?? null;
+        $currentSettings['portal_custom_instructions'] = $validated['portal_custom_instructions'] ?? null;
+
+        $branding->settings = $currentSettings;
+        $branding->save();
+
+        return back()->with('success', 'Personalização da Área do Cliente salva com sucesso!');
     }
 
     public function updateClient(Request $request, ClientAccount $client): RedirectResponse

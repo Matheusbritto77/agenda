@@ -165,9 +165,10 @@ Route::middleware(['auth', 'must.reset.password'])->prefix('admin')->name('admin
     Route::middleware('permission:appointments.edit')->patch('/appointments/{appointment}/status', [AppointmentController::class, 'updateStatus'])->name('appointments.update-status');
     Route::middleware('permission:clients.reviews')->patch('/reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('appointments.reviews.toggle-public');
 
-    // Company client relationship, history and review management
+    // Company client relationship, history, review management and portal customization
     Route::middleware('permission:clients.view')->get('/client-area', [ClientAreaController::class, 'index'])->name('client-area.index');
     Route::middleware('permission:clients.edit')->patch('/client-area/clients/{client}', [ClientAreaController::class, 'updateClient'])->name('client-area.clients.update');
+    Route::middleware('permission:clients.edit')->post('/client-area/customization', [ClientAreaController::class, 'updatePortalCustomization'])->name('client-area.customization.update');
     Route::middleware('permission:clients.reviews')->patch('/client-area/service-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleServiceReview'])->name('client-area.service-reviews.toggle-public');
     Route::middleware('permission:clients.reviews')->patch('/client-area/company-reviews/{review}/toggle-public', [ClientAreaController::class, 'toggleCompanyReview'])->name('client-area.company-reviews.toggle-public');
 

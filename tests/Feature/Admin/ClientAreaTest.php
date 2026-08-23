@@ -159,6 +159,40 @@ class ClientAreaTest extends TestCase
             );
     }
 
+    public function test_owner_can_customize_client_portal_settings(): void
+    {
+        $owner = User::factory()->create(['name' => 'Barbearia Premium']);
+
+        $response = $this->actingAs($owner)->post(route('admin.client-area.customization.update'), [
+            'portal_welcome_title' => 'Espaço Exclusivo VIP',
+            'portal_welcome_subtitle' => 'Seus cortes e benefícios na Barbearia Premium',
+            'portal_announcement' => '🎉 Promoção de Aniversário: 10% OFF na próxima visita!',
+            'portal_announcement_enabled' => true,
+            'portal_primary_color' => '#8b5cf6',
+            'portal_secondary_color' => '#ec4899',
+            'portal_show_loyalty_badges' => true,
+            'portal_show_reviews' => true,
+            'portal_show_professionals' => true,
+            'portal_show_service_prices' => true,
+            'portal_support_whatsapp' => '11988887777',
+            'portal_custom_instructions' => 'Por favor, chegue com 10 minutos de antecedência.',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('branding_settings', [
+            'user_id' => $owner->id,
+            'primary_color' => '#8b5cf6',
+            'secondary_color' => '#ec4899',
+        ]);
+
+        $branding = \App\Models\BrandingSetting::where('user_id', $owner->id)->first();
+        $this->assertSame('Espaço Exclusivo VIP', $branding->settings['portal_welcome_title']);
+        $this->assertSame('11988887777', $branding->settings['portal_support_whatsapp']);
+        $this->assertTrue($branding->settings['portal_announcement_enabled']);
+    }
+
     private function createReviewedAppointment(User $owner, string $email, ?TeamMember $teamMember = null): array
     {
         $client = ClientAccount::create([

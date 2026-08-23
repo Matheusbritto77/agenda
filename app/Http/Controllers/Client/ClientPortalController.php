@@ -47,14 +47,29 @@ class ClientPortalController extends Controller
                     ->where('client_account_id', $client->id)
                     ->first();
 
+                $bSettings = $branding?->settings ?? [];
+                $bannerUrl = ! empty($bSettings['portal_banner_path'])
+                    ? \App\Support\StorageHelper::url($bSettings['portal_banner_path'])
+                    : $branding?->banner_url;
+
                 return [
                     'id' => $tenant?->id,
                     'name' => $tenant?->name ?? 'Empresa',
-                    'business_name' => $branding?->settings['business_name'] ?? $tenant?->name ?? 'Empresa',
-                    'tagline' => $branding?->settings['tagline'] ?? null,
+                    'business_name' => $bSettings['business_name'] ?? $tenant?->name ?? 'Empresa',
+                    'welcome_title' => $bSettings['portal_welcome_title'] ?? null,
+                    'welcome_subtitle' => $bSettings['portal_welcome_subtitle'] ?? null,
+                    'announcement' => $bSettings['portal_announcement'] ?? null,
+                    'announcement_enabled' => (bool) ($bSettings['portal_announcement_enabled'] ?? false),
+                    'show_loyalty_badges' => (bool) ($bSettings['portal_show_loyalty_badges'] ?? true),
+                    'show_reviews' => (bool) ($bSettings['portal_show_reviews'] ?? true),
+                    'show_professionals' => (bool) ($bSettings['portal_show_professionals'] ?? true),
+                    'show_service_prices' => (bool) ($bSettings['portal_show_service_prices'] ?? true),
+                    'support_whatsapp' => $bSettings['portal_support_whatsapp'] ?? ($bSettings['whatsapp_number'] ?? null),
+                    'custom_instructions' => $bSettings['portal_custom_instructions'] ?? null,
+                    'tagline' => $bSettings['tagline'] ?? null,
                     'booking_url' => $tenant?->publicBookingUrl(),
                     'logo_url' => $branding?->logo_url,
-                    'banner_url' => $branding?->banner_url,
+                    'banner_url' => $bannerUrl,
                     'primary_color' => $branding?->primary_color ?? '#6366f1',
                     'secondary_color' => $branding?->secondary_color ?? '#06b6d4',
                     'services_count' => $completed,

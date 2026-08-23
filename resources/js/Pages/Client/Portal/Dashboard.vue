@@ -222,6 +222,22 @@ const firstName = computed(() => {
 <template>
     <ClientPortalLayout :title="activeCompany ? ('Minha Área - ' + activeCompany.name) : 'Minha Área'" :active-company="activeCompany" :companies="companies">
         <div class="space-y-8">
+            <!-- Active Company Announcement Alert if Configured -->
+            <div
+                v-if="activeCompany?.announcement_enabled && activeCompany?.announcement"
+                class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-bold flex items-center justify-between gap-3 shadow-xs"
+            >
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm shrink-0">
+                        <i class="fa-solid fa-bullhorn"></i>
+                    </div>
+                    <span class="truncate">{{ activeCompany.announcement }}</span>
+                </div>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                    Aviso
+                </span>
+            </div>
+
             <!-- Active Company Branded Alert / Welcome Space Banner -->
             <section
                 v-if="activeCompany"
@@ -240,11 +256,11 @@ const firstName = computed(() => {
                                     Espaço Ativo
                                 </span>
                                 <h2 class="text-lg sm:text-xl font-black text-white truncate">
-                                    {{ activeCompany.name }}
+                                    {{ activeCompany.welcome_title || activeCompany.name }}
                                 </h2>
                             </div>
                             <p class="text-xs text-white/80 truncate">
-                                {{ activeCompany.tagline || 'Exibindo seus agendamentos, histórico e fidelidade neste estabelecimento.' }}
+                                {{ activeCompany.welcome_subtitle || activeCompany.tagline || 'Exibindo seus agendamentos, histórico e fidelidade neste estabelecimento.' }}
                             </p>
                         </div>
                     </div>
@@ -259,7 +275,19 @@ const firstName = computed(() => {
                             <span>Novo Agendamento</span>
                         </a>
 
+                        <a
+                            v-if="activeCompany.support_whatsapp"
+                            :href="`https://wa.me/${activeCompany.support_whatsapp.replace(/\\D/g, '')}?text=${encodeURIComponent('Olá! Gostaria de uma informação sobre meu agendamento.')}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="py-2 px-3.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center gap-1.5 shadow-sm"
+                        >
+                            <i class="fa-brands fa-whatsapp text-sm"></i>
+                            <span>Suporte</span>
+                        </a>
+
                         <button
+                            v-if="activeCompany.show_reviews !== false"
                             type="button"
                             @click="openCompanyReviewModal(activeCompany)"
                             class="py-2 px-3.5 rounded-xl text-xs font-black bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-400/30 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -277,6 +305,12 @@ const firstName = computed(() => {
                             Ver Todas
                         </button>
                     </div>
+                </div>
+
+                <!-- Custom Instructions / Policy Notice -->
+                <div v-if="activeCompany.custom_instructions" class="mt-4 pt-3 border-t border-white/10 flex items-start gap-2.5 text-xs text-white/80">
+                    <i class="fa-solid fa-circle-info text-cyan-400 mt-0.5 shrink-0"></i>
+                    <span>{{ activeCompany.custom_instructions }}</span>
                 </div>
             </section>
 
