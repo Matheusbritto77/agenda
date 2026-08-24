@@ -4,6 +4,10 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    activeCompany: {
+        type: Object,
+        default: null,
+    },
     copiedCouponId: {
         type: [Number, String, null],
         default: null,
@@ -15,7 +19,10 @@ defineEmits(['copy-coupon']);
 
 <template>
     <div class="space-y-6">
-        <section class="rounded-3xl bg-gradient-to-br from-purple-600 via-indigo-700 to-cyan-600 p-6 sm:p-8 text-white shadow-xl shadow-purple-600/20 relative overflow-hidden">
+        <section
+            class="rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden"
+            :style="{ background: `linear-gradient(135deg, ${activeCompany?.secondary_color || '#8b5cf6'}, ${activeCompany?.primary_color || '#6366f1'})` }"
+        >
             <div class="relative z-10 space-y-2">
                 <span class="text-xs font-black uppercase tracking-[0.2em] text-white/80">Vouchers & Vantagens</span>
                 <h2 class="text-2xl sm:text-3xl font-black">Seus Cupons de Desconto</h2>
@@ -62,7 +69,7 @@ defineEmits(['copy-coupon']);
                     <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <span class="text-[10px] font-bold text-slate-400 block uppercase">Código</span>
-                            <strong class="text-sm font-black tracking-widest text-indigo-600 dark:text-cyan-400 truncate block">
+                            <strong class="text-sm font-black tracking-widest truncate block" :style="{ color: activeCompany?.primary_color || '#6366f1' }">
                                 {{ coupon.code }}
                             </strong>
                         </div>
@@ -70,7 +77,8 @@ defineEmits(['copy-coupon']);
                             type="button"
                             @click="$emit('copy-coupon', coupon)"
                             class="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-                            :class="copiedCouponId === coupon.id ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-500 text-white'"
+                            :class="copiedCouponId === coupon.id ? 'bg-emerald-600 text-white' : 'text-white'"
+                            :style="copiedCouponId === coupon.id ? {} : { backgroundColor: activeCompany?.primary_color || '#6366f1' }"
                         >
                             <i :class="copiedCouponId === coupon.id ? 'fa-solid fa-check' : 'fa-solid fa-copy'" class="text-xs"></i>
                             <span>{{ copiedCouponId === coupon.id ? 'Copiado!' : 'Copiar' }}</span>

@@ -8,6 +8,10 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    activeCompany: {
+        type: Object,
+        default: null,
+    },
     reviewForms: {
         type: Object,
         required: true,
@@ -45,7 +49,8 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                 v-if="companies.length > 0"
                 type="button"
                 @click="$emit('switch-tab', 'companies')"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-all cursor-pointer shadow-md"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-md"
+                :style="{ backgroundColor: activeCompany?.primary_color || '#6366f1' }"
             >
                 <i class="fa-solid fa-building-store"></i>
                 <span>Ver Empresas Visitadas</span>
@@ -75,7 +80,7 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                             <!-- Company & Professional info -->
                             <div class="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
                                 <div class="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200">
-                                    <i class="fa-solid fa-store text-indigo-500 text-xs"></i>
+                                    <i class="fa-solid fa-store text-xs" :style="{ color: activeCompany?.primary_color || '#6366f1' }"></i>
                                     <span>{{ appointment.company }}</span>
                                 </div>
                                 <div v-if="appointment.professional && appointment.show_professionals !== false" class="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
@@ -89,16 +94,16 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                         <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 dark:border-slate-800">
                             <div class="text-left sm:text-right">
                                 <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-black">
-                                    <i class="fa-regular fa-calendar text-indigo-500"></i>
+                                    <i class="fa-regular fa-calendar" :style="{ color: activeCompany?.primary_color || '#6366f1' }"></i>
                                     <span>{{ appointment.date }}</span>
                                     <span class="opacity-40">|</span>
-                                    <i class="fa-regular fa-clock text-indigo-500"></i>
+                                    <i class="fa-regular fa-clock" :style="{ color: activeCompany?.primary_color || '#6366f1' }"></i>
                                     <span>{{ appointment.time }}</span>
                                 </div>
                                 <span class="block text-[11px] font-bold text-slate-400 mt-1">Duração: {{ appointment.duration_minutes }} min</span>
                             </div>
                             <div v-if="appointment.show_service_prices !== false" class="text-right">
-                                <span class="text-base sm:text-lg font-black text-indigo-600 dark:text-cyan-400">{{ appointment.service_price }}</span>
+                                <span class="text-base sm:text-lg font-black" :style="{ color: activeCompany?.primary_color || '#6366f1' }">{{ appointment.service_price }}</span>
                             </div>
                         </div>
                     </div>
@@ -246,7 +251,8 @@ defineEmits(['switch-tab', 'append-compliment', 'save-review']);
                                     <button
                                         type="submit"
                                         :disabled="reviewForms[appointment.id].saving"
-                                        class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
+                                        class="inline-flex items-center gap-2 px-5 py-2 rounded-xl text-white text-xs font-black shadow-md transition-all cursor-pointer disabled:opacity-50"
+                                        :style="{ backgroundColor: activeCompany?.primary_color || '#6366f1' }"
                                     >
                                         <i v-if="reviewForms[appointment.id].saving" class="fa-solid fa-spinner fa-spin"></i>
                                         <i v-else class="fa-solid fa-paper-plane text-xs"></i>

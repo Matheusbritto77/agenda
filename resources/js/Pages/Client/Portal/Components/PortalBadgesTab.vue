@@ -13,7 +13,10 @@ defineProps({
 
 <template>
     <div class="space-y-6">
-        <section class="rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-600 p-6 sm:p-8 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden">
+        <section
+            class="rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden"
+            :style="{ background: `linear-gradient(135deg, ${activeCompany?.primary_color || '#6366f1'}, ${activeCompany?.secondary_color || '#06b6d4'})` }"
+        >
             <div class="relative z-10 space-y-2">
                 <span class="text-xs font-black uppercase tracking-[0.2em] text-white/80">Programa de Conquistas & Fidelidade</span>
                 <h2 class="text-2xl sm:text-3xl font-black">
@@ -86,8 +89,11 @@ defineProps({
                         <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                             <div
                                 class="h-full rounded-full transition-all duration-500"
-                                :class="badge.earned ? 'bg-emerald-500' : 'bg-indigo-600'"
-                                :style="{ width: `${badge.progress_percent || (badge.earned ? 100 : 0)}%` }"
+                                :class="badge.earned ? 'bg-emerald-500' : ''"
+                                :style="{
+                                    width: `${badge.progress_percent || (badge.earned ? 100 : 0)}%`,
+                                    backgroundColor: badge.earned ? undefined : (badge.color || activeCompany?.primary_color || '#6366f1'),
+                                }"
                             ></div>
                         </div>
                         <p v-if="!badge.earned && badge.remaining" class="text-[10px] text-indigo-600 dark:text-cyan-400 font-bold">

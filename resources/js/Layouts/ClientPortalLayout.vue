@@ -26,12 +26,13 @@ const clientInitials = computed(() => {
 
 const effectiveActiveCompany = computed(() => props.activeCompany || page.props.activeCompany || null);
 const effectiveCompanies = computed(() => (props.companies && props.companies.length ? props.companies : page.props.companies) || []);
+const companyCustomization = computed(() => effectiveActiveCompany.value?.portal_customization || effectiveActiveCompany.value || {});
 
 const customStyles = computed(() => {
     const comp = effectiveActiveCompany.value;
     if (!comp) return {};
-    const primary = comp.primary_color || '#6366f1';
-    const secondary = comp.secondary_color || '#06b6d4';
+    const primary = companyCustomization.value.primary_color || '#6366f1';
+    const secondary = companyCustomization.value.secondary_color || '#06b6d4';
     return {
         '--brand-primary': primary,
         '--brand-secondary': secondary,
@@ -62,7 +63,7 @@ const selectCompanyContext = (companyId) => {
     });
 };
 
-watch(() => effectiveActiveCompany.value?.favicon_url, (newFavicon) => {
+watch(() => companyCustomization.value?.favicon_url, (newFavicon) => {
     if (newFavicon) {
         const link = document.getElementById('dynamic-favicon') || document.createElement('link');
         link.id = 'dynamic-favicon';
@@ -107,12 +108,12 @@ onMounted(() => {
                 <div class="flex items-center gap-3">
                     <Link :href="route('client.dashboard')" class="flex items-center gap-3 group transition-transform hover:scale-102">
                         <div
-                            v-if="effectiveActiveCompany?.logo_url"
+                            v-if="companyCustomization.logo_url"
                             class="w-10 h-10 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white shadow-md shadow-indigo-500/10 group-hover:scale-105 transition-transform shrink-0"
                         >
-                            <img :src="effectiveActiveCompany.logo_url" :alt="effectiveActiveCompany.name" class="w-full h-full object-cover" />
+                            <img :src="companyCustomization.logo_url" :alt="effectiveActiveCompany.name" class="w-full h-full object-cover" />
                         </div>
-                        <div v-else class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform shrink-0">
+                        <div v-else class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-105 transition-transform shrink-0" :style="{ background: 'var(--brand-gradient)' }">
                             <i class="fa-solid fa-calendar-check text-lg"></i>
                         </div>
                         <div class="min-w-0">

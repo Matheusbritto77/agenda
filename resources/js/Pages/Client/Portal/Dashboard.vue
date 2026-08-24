@@ -218,10 +218,25 @@ const statusBadge = (status) => {
 };
 
 const firstName = computed(() => props.client.name.split(' ')[0]);
+const portalCustomization = computed(() => props.activeCompany?.portal_customization || props.activeCompany || {});
+const portalPrimaryColor = computed(() => portalCustomization.value.primary_color || '#6366f1');
+const portalSecondaryColor = computed(() => portalCustomization.value.secondary_color || '#06b6d4');
+const colorWithAlpha = (color, alpha) => {
+    const value = color.replace('#', '');
+    const normalized = value.length === 3 ? value.split('').map((character) => character + character).join('') : value;
+    return `#${normalized}${alpha}`;
+};
+const activeTabStyle = (tab) => activeTab.value === tab
+    ? { backgroundColor: portalPrimaryColor.value, boxShadow: `0 8px 20px ${colorWithAlpha(portalPrimaryColor.value, '33')}` }
+    : {};
 </script>
 
 <template>
-    <ClientPortalLayout :title="activeCompany ? (activeCompany.welcome_title || activeCompany.name) : 'Minha Área - Agendae'">
+    <ClientPortalLayout
+        :title="activeCompany ? (activeCompany.welcome_title || activeCompany.name) : 'Minha Área - Agendae'"
+        :active-company="activeCompany"
+        :companies="companies"
+    >
         <div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <!-- Hero / Active Company Branded Header -->
             <PortalHeroBanner
@@ -231,13 +246,17 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                 :companies="companies"
                 @select-company="selectCompany"
                 @switch-tab="activeTab = $event"
+                @open-company-review="openCompanyReviewModal"
             />
 
             <!-- Hero Profile Banner & Quick Stats -->
             <section class="relative overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 p-6 sm:p-8 shadow-xl shadow-indigo-500/5 backdrop-blur-xl transition-all">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                     <div class="flex items-center gap-4 sm:gap-5 min-w-0">
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-xl shadow-indigo-500/30 shrink-0 ring-4 ring-white/50 dark:ring-slate-800/50">
+                        <div
+                            class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-xl shrink-0 ring-4 ring-white/50 dark:ring-slate-800/50"
+                            :style="{ background: `linear-gradient(135deg, ${portalPrimaryColor}, ${portalSecondaryColor})`, boxShadow: `0 16px 32px ${colorWithAlpha(portalPrimaryColor, '33')}` }"
+                        >
                             {{ firstName.charAt(0).toUpperCase() }}
                         </div>
                         <div class="min-w-0 space-y-1">
@@ -245,8 +264,11 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                                 <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                                     {{ firstName }}
                                 </h2>
-                                <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 border border-indigo-500/20">
-                                    Cliente VIP
+                                <span
+                                    class="px-2.5 py-0.5 rounded-full text-xs font-black border"
+                                    :style="{ color: portalPrimaryColor, borderColor: colorWithAlpha(portalPrimaryColor, '33'), backgroundColor: colorWithAlpha(portalPrimaryColor, '12') }"
+                                >
+                                    {{ activeCompany?.badge?.name || 'Cliente VIP' }}
                                 </span>
                             </div>
                             <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl">
@@ -258,7 +280,7 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                     <!-- Quick stats pills -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 bg-slate-50/70 dark:bg-slate-950/50 text-center">
-                            <span class="block text-2xl sm:text-3xl font-black text-indigo-600 dark:text-cyan-400">{{ summary.appointments }}</span>
+                            <span class="block text-2xl sm:text-3xl font-black" :style="{ color: portalPrimaryColor }">{{ summary.appointments }}</span>
                             <span class="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Agendamentos</span>
                         </div>
                         <div class="p-3.5 sm:p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 bg-slate-50/70 dark:bg-slate-950/50 text-center">
@@ -286,9 +308,10 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                         :class="[
                             'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
                             activeTab === 'appointments'
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                ? 'text-white shadow-md'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         ]"
+                        :style="activeTabStyle('appointments')"
                     >
                         <i class="fa-solid fa-calendar-check text-xs"></i>
                         <span>Meus Agendamentos</span>
@@ -303,9 +326,10 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                         :class="[
                             'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
                             activeTab === 'companies'
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                ? 'text-white shadow-md'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         ]"
+                        :style="activeTabStyle('companies')"
                     >
                         <i class="fa-solid fa-building-store text-xs"></i>
                         <span>Empresas & Avaliações</span>
@@ -320,9 +344,10 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                         :class="[
                             'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
                             activeTab === 'badges'
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                ? 'text-white shadow-md'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         ]"
+                        :style="activeTabStyle('badges')"
                     >
                         <i class="fa-solid fa-award text-xs"></i>
                         <span>Medalhas & Fidelidade</span>
@@ -334,9 +359,10 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                         :class="[
                             'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
                             activeTab === 'coupons'
-                                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                ? 'text-white shadow-md'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                         ]"
+                        :style="activeTabStyle('coupons')"
                     >
                         <i class="fa-solid fa-ticket text-xs"></i>
                         <span>Cupons & Descontos</span>
@@ -381,6 +407,7 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
                 :quick-compliments="quickCompliments"
                 :status-badge="statusBadge"
                 :get-rating-label="getRatingLabel"
+                :active-company="activeCompany"
                 @switch-tab="activeTab = $event"
                 @append-compliment="appendCompliment"
                 @save-review="saveReview"
@@ -405,6 +432,7 @@ const firstName = computed(() => props.client.name.split(' ')[0]);
             <PortalCouponsTab
                 v-else-if="activeTab === 'coupons'"
                 :coupons="coupons"
+                :active-company="activeCompany"
                 :copied-coupon-id="copiedCouponId"
                 @copy-coupon="copyCouponCode"
             />

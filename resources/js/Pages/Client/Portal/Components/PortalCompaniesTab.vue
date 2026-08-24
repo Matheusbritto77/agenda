@@ -39,7 +39,10 @@ defineEmits(['select-company', 'open-company-review']);
                     <!-- Company Header -->
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex items-center gap-3.5 min-w-0">
-                            <div class="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-500 text-white flex items-center justify-center font-black text-base shadow-md shrink-0">
+                            <div
+                                class="w-12 h-12 rounded-2xl overflow-hidden text-white flex items-center justify-center font-black text-base shadow-md shrink-0"
+                                :style="{ background: `linear-gradient(135deg, ${company.primary_color || '#6366f1'}, ${company.secondary_color || '#06b6d4'})` }"
+                            >
                                 <img v-if="company.logo_url" :src="company.logo_url" :alt="company.name" class="w-full h-full object-cover" />
                                 <i v-else class="fa-solid fa-store"></i>
                             </div>
@@ -59,7 +62,7 @@ defineEmits(['select-company', 'open-company-review']);
                     </div>
 
                     <!-- Professionals list -->
-                    <div v-if="company.professionals && company.professionals.length" class="space-y-1 text-xs">
+                    <div v-if="company.show_professionals !== false && company.professionals && company.professionals.length" class="space-y-1 text-xs">
                         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Profissionais que te atenderam:</span>
                         <div class="flex flex-wrap gap-1">
                             <span
@@ -73,7 +76,7 @@ defineEmits(['select-company', 'open-company-review']);
                     </div>
 
                     <!-- Existing Company Review Display -->
-                    <div v-if="company.company_review" class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2">
+                    <div v-if="company.show_reviews !== false && company.company_review" class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-2">
                         <div class="space-y-0.5">
                             <span class="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Sua Avaliação Pública</span>
                             <div class="flex items-center gap-1 text-amber-400 text-xs">
@@ -108,7 +111,8 @@ defineEmits(['select-company', 'open-company-review']);
                         v-else
                         type="button"
                         @click="$emit('select-company', company.id)"
-                        class="w-full py-2.5 px-3 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        class="w-full py-2.5 px-3 rounded-xl text-xs font-black text-white shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        :style="{ backgroundColor: company.primary_color || '#6366f1' }"
                     >
                         <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
                         <span>Acessar Espaço Desta Empresa</span>
@@ -127,7 +131,7 @@ defineEmits(['select-company', 'open-company-review']);
                         <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-60"></i>
                     </a>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid gap-2" :class="company.show_reviews !== false ? 'grid-cols-2' : 'grid-cols-1'">
                         <a
                             v-if="company.booking_url"
                             :href="company.booking_url"
@@ -138,6 +142,7 @@ defineEmits(['select-company', 'open-company-review']);
                         </a>
 
                         <button
+                            v-if="company.show_reviews !== false"
                             type="button"
                             @click="$emit('open-company-review', company)"
                             class="py-2 px-3 rounded-xl text-xs font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"

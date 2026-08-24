@@ -3,6 +3,7 @@
 namespace Tests\Feature\Client;
 
 use App\Models\Appointment;
+use App\Models\BrandingSetting;
 use App\Models\ClientAccount;
 use App\Models\Service;
 use App\Models\TeamMember;
@@ -200,6 +201,59 @@ class ClientPortalTest extends TestCase
                 ->has('appointments', 2)
                 ->where('badges.0.earned', true)
                 ->where('badges.1.earned', false)
+            );
+    }
+
+    public function test_dashboard_exposes_the_saved_company_portal_customization(): void
+    {
+        $account = ClientAccount::create([
+            'name' => 'Cliente Personalizado',
+            'email' => 'cliente.personalizado@example.com',
+            'password' => Hash::make('password'),
+            'must_reset_password' => false,
+        ]);
+        [$company, $appointment] = $this->appointment(['status' => 'completed']);
+        $appointment->update(['client_account_id' => $account->id]);
+
+        BrandingSetting::create([
+            'user_id' => $company->id,
+            'primary_color' => '#111827',
+            'secondary_color' => '#334155',
+            'settings' => [
+                'portal_welcome_title' => 'Bem-vindo ao Clube Premium',
+                'portal_welcome_subtitle' => 'Seu espaço personalizado',
+                'portal_announcement' => 'Comunicado exclusivo',
+                'portal_announcement_enabled' => true,
+                'portal_primary_color' => '#8b5cf6',
+                'portal_secondary_color' => '#ec4899',
+                'portal_show_loyalty_badges' => false,
+                'portal_show_reviews' => false,
+                'portal_show_professionals' => false,
+                'portal_show_service_prices' => false,
+                'portal_support_whatsapp' => '11999998888',
+                'portal_custom_instructions' => 'Chegue com dez minutos de antecedência.',
+            ],
+        ]);
+
+        $this->actingAs($account, 'client')
+            ->get(route('client.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('activeCompany.welcome_title', 'Bem-vindo ao Clube Premium')
+                ->where('activeCompany.welcome_subtitle', 'Seu espaço personalizado')
+                ->where('activeCompany.announcement', 'Comunicado exclusivo')
+                ->where('activeCompany.announcement_enabled', true)
+                ->where('activeCompany.primary_color', '#8b5cf6')
+                ->where('activeCompany.secondary_color', '#ec4899')
+                ->where('activeCompany.show_loyalty_badges', false)
+                ->where('activeCompany.show_reviews', false)
+                ->where('activeCompany.show_professionals', false)
+                ->where('activeCompany.show_service_prices', false)
+                ->where('activeCompany.support_whatsapp', '11999998888')
+                ->where('activeCompany.custom_instructions', 'Chegue com dez minutos de antecedência.')
+                ->where('appointments.0.can_review', false)
+                ->where('appointments.0.show_professionals', false)
+                ->where('appointments.0.show_service_prices', false)
             );
     }
 

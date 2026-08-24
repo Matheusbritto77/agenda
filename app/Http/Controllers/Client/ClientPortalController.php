@@ -75,6 +75,7 @@ class ClientPortalController extends Controller
                     'booking_url' => $tenant?->publicBookingUrl(),
                     'logo_url' => $logoUrl,
                     'banner_url' => $bannerUrl,
+                    'favicon_url' => $branding?->favicon_url,
                     'primary_color' => $primaryColor,
                     'secondary_color' => $secondaryColor,
                     'services_count' => $completed,
