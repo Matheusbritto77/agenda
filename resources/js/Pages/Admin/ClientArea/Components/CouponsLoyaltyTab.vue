@@ -184,9 +184,9 @@ defineEmits([
                     <button
                         type="button"
                         @click="$emit('add-loyalty-tier')"
-                        class="btn btn-outline !text-white !border-white/20 hover:!bg-white/10 rounded-xl text-xs flex items-center gap-2"
+                        class="px-4 py-2.5 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-2 backdrop-blur-md transition-all shadow-sm active:scale-95 cursor-pointer"
                     >
-                        <i class="fa-solid fa-plus text-xs"></i>
+                        <i class="fa-solid fa-plus text-xs text-cyan-300"></i>
                         <span>Adicionar Nível</span>
                     </button>
                     <button
