@@ -27,7 +27,61 @@ const form = useForm({
 });
 
 const baseDomain = computed(() => props.domainSettings.base_domain || 'localhost');
+const cnameTarget = computed(() => props.domainSettings.cname_target || props.domainSettings.base_domain || window.location.host);
 const currentUserId = computed(() => page.props.auth?.user?.id ?? null);
+
+const cleanCustomDomain = computed(() => {
+    return (form.custom_domain || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//i, '')
+        .split('/')[0]
+        .split(':')[0];
+});
+
+const dnsHost = computed(() => {
+    const raw = cleanCustomDomain.value;
+    if (!raw) return 'agenda';
+    const parts = raw.split('.');
+    if (parts.length > 2) {
+        if (parts.length === 4 && (parts[2] === 'com' || parts[2] === 'net' || parts[2] === 'org') && parts[3] === 'br') {
+            return parts[0];
+        }
+        if (parts.length === 3 && parts[1] === 'com' && parts[2] === 'br') {
+            return '@';
+        }
+        return parts[0];
+    }
+    return '@';
+});
+
+const dnsType = computed(() => {
+    const raw = cleanCustomDomain.value;
+    if (!raw) return 'CNAME';
+    const parts = raw.split('.');
+    if (parts.length > 2) {
+        if (parts.length === 3 && parts[1] === 'com' && parts[2] === 'br') {
+            return 'CNAME (ou A)';
+        }
+        return 'CNAME';
+    }
+    return 'CNAME (ou A)';
+});
+
+const customDomainPreviewUrl = computed(() => {
+    if (!cleanCustomDomain.value) return null;
+    const scheme = window.location.protocol.replace(':', '');
+    return `${scheme}://${cleanCustomDomain.value}`;
+});
+
+const copiedKey = ref(null);
+const copyToClipboard = (text, key) => {
+    navigator.clipboard.writeText(text);
+    copiedKey.value = key;
+    setTimeout(() => {
+        copiedKey.value = null;
+    }, 2000);
+};
 
 const livePreviewSubdomain = ref((form.subdomain || 'suaempresa').toLowerCase().replace(/[^a-z0-9-]/g, ''));
 const livePreviewUrl = computed(() => {
@@ -307,18 +361,89 @@ const successMessage = computed(() => page.props.flash?.success);
                                     id="custom_domain"
                                     v-model="form.custom_domain"
                                     class="block w-full py-2.5 px-3 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
-                                    placeholder="ex: agenda.meusite.com.br"
+                                    placeholder="ex: agenda.meusite.com.br ou agendamentos.salao.com"
                                 >
-                                <span class="text-[11px] opacity-70 mt-1 block">Sem http:// ou https://</span>
+                                <span class="text-[11px] opacity-70 mt-1 block">Sem http:// ou https:// (Ex: agenda.meusite.com.br)</span>
                                 <p v-if="form.errors.custom_domain" class="text-rose-500 text-xs font-medium mt-1">{{ form.errors.custom_domain }}</p>
                             </div>
 
-                            <div class="p-3.5 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs opacity-90">
-                                <strong class="font-bold block text-slate-900 dark:text-slate-100">Apontamento DNS Exigido:</strong>
-                                <div class="space-y-0.5 font-mono text-[11px]">
-                                    <p><span class="text-indigo-500 font-bold">Tipo:</span> CNAME</p>
-                                    <p><span class="text-indigo-500 font-bold">Host:</span> agenda (ou subdomínio)</p>
-                                    <p><span class="text-indigo-500 font-bold">Destino:</span> cname.agendae.app</p>
+                            <!-- Dynamic DNS Record Setup Box -->
+                            <div class="p-4 bg-slate-100 dark:bg-slate-900/90 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs shadow-xs">
+                                <div class="flex items-center justify-between border-b border-slate-200/70 dark:border-slate-800 pb-2">
+                                    <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
+                                        <i class="fa-solid fa-server text-cyan-500"></i>
+                                        <span>Apontamento DNS no seu Provedor</span>
+                                    </div>
+                                    <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                                        Registro.br / Cloudflare / cPanel
+                                    </span>
+                                </div>
+
+                                <div class="space-y-2 font-mono text-[11px]">
+                                    <!-- Record Type -->
+                                    <div class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800/60">
+                                        <div>
+                                            <span class="text-slate-400 text-[10px] font-sans font-bold block">TIPO</span>
+                                            <span class="font-black text-indigo-600 dark:text-cyan-400">{{ dnsType }}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click="copyToClipboard('CNAME', 'type')"
+                                            class="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-[10px] font-bold font-sans text-slate-600 dark:text-slate-300 transition-all cursor-pointer flex items-center gap-1"
+                                            title="Copiar Tipo"
+                                        >
+                                            <i :class="copiedKey === 'type' ? 'fa-solid fa-check text-emerald-500' : 'fa-regular fa-copy'"></i>
+                                            <span>{{ copiedKey === 'type' ? 'Copiado' : 'Copiar' }}</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Record Host -->
+                                    <div class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800/60">
+                                        <div class="min-w-0">
+                                            <span class="text-slate-400 text-[10px] font-sans font-bold block">NOME / HOST</span>
+                                            <span class="font-black text-slate-900 dark:text-white truncate block">{{ dnsHost }}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click="copyToClipboard(dnsHost, 'host')"
+                                            class="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-[10px] font-bold font-sans text-slate-600 dark:text-slate-300 transition-all cursor-pointer flex items-center gap-1 shrink-0 ml-2"
+                                            title="Copiar Host"
+                                        >
+                                            <i :class="copiedKey === 'host' ? 'fa-solid fa-check text-emerald-500' : 'fa-regular fa-copy'"></i>
+                                            <span>{{ copiedKey === 'host' ? 'Copiado' : 'Copiar' }}</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Record Target -->
+                                    <div class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/80 border border-slate-200/60 dark:border-slate-800/60">
+                                        <div class="min-w-0">
+                                            <span class="text-slate-400 text-[10px] font-sans font-bold block">DESTINO / VALOR</span>
+                                            <span class="font-black text-emerald-600 dark:text-emerald-400 truncate block">{{ cnameTarget }}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            @click="copyToClipboard(cnameTarget, 'target')"
+                                            class="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-[10px] font-bold font-sans text-slate-600 dark:text-slate-300 transition-all cursor-pointer flex items-center gap-1 shrink-0 ml-2"
+                                            title="Copiar Destino"
+                                        >
+                                            <i :class="copiedKey === 'target' ? 'fa-solid fa-check text-emerald-500' : 'fa-regular fa-copy'"></i>
+                                            <span>{{ copiedKey === 'target' ? 'Copiado' : 'Copiar' }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Custom Domain Preview -->
+                            <div v-if="customDomainPreviewUrl">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">Link do Seu Site</label>
+                                <div class="p-3 bg-slate-100 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <i class="fa-solid fa-globe text-cyan-500 text-sm shrink-0"></i>
+                                        <span class="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 truncate">{{ customDomainPreviewUrl }}</span>
+                                    </div>
+                                    <a :href="customDomainPreviewUrl" target="_blank" class="text-xs font-bold text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 p-1 shrink-0" title="Testar Domínio">
+                                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -334,7 +459,7 @@ const successMessage = computed(() => page.props.flash?.success);
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="inline-flex items-center gap-2 py-3 px-6 text-sm font-bold rounded-xl text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 shadow-lg shadow-indigo-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="inline-flex items-center gap-2 py-3 px-6 text-sm font-bold rounded-xl text-white bg-gradient-to-r from-indigo-600 via-indigo-500 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 shadow-lg shadow-indigo-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         <i v-if="!form.processing" class="fa-solid fa-floppy-disk text-xs"></i>
                         <i v-else class="fa-solid fa-spinner fa-spin text-xs"></i>
@@ -342,6 +467,45 @@ const successMessage = computed(() => page.props.flash?.success);
                     </button>
                 </div>
             </form>
+
+            <!-- Practical Guide / How it works Card -->
+            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-6 sm:p-8 space-y-6 shadow-sm">
+                <div class="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div class="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-cyan-400 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">Como Funciona na Prática?</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Entenda o passo a passo para colocar seu domínio próprio no ar com segurança.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">1</span>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm">Defina o Endereço</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Digite acima o domínio ou subdomínio que deseja usar para seus clientes agendarem (ex: <code class="text-indigo-600 dark:text-cyan-400 font-mono">agenda.meusite.com.br</code>).
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2">
+                        <span class="w-6 h-6 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center">2</span>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm">Crie o Apontamento DNS</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+                            No painel onde registrou seu domínio (Registro.br, Cloudflare, GoDaddy, Hostinger, cPanel, etc.), adicione um registro <strong>CNAME</strong> com o <strong>Host</strong> e <strong>Destino</strong> copiados acima.
+                        </p>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2">
+                        <span class="w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center">3</span>
+                        <h4 class="font-bold text-slate-900 dark:text-white text-sm">Pronto e Conectado!</h4>
+                        <p class="text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Após a propagação do DNS (geralmente de 5 a 30 minutos), qualquer cliente que acessar o seu link verá seu catálogo com SSL e identidade visual exclusiva.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </AdminLayout>
 </template>
