@@ -22,11 +22,17 @@ defineEmits(['close', 'save']);
         <div v-if="show && client" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 liquid-glass-backdrop" @click.self="$emit('close')">
             <form @submit.prevent="$emit('save')" class="liquid-glass-card w-full max-w-lg p-6 space-y-5">
                 <div class="flex justify-between gap-4">
-                    <div>
-                        <h3 class="text-lg font-black" style="color: var(--text-heading);">Editar contato do cliente</h3>
-                        <p class="text-xs opacity-60 mt-1">A alteração vale para o histórico visível da empresa.</p>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center font-black shrink-0 overflow-hidden shadow-sm">
+                            <img v-if="client.avatar_url" :src="client.avatar_url" :alt="client.name" class="w-full h-full object-cover" />
+                            <span v-else>{{ (client.name || 'C').substring(0, 2).toUpperCase() }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-base sm:text-lg font-black truncate" style="color: var(--text-heading);">Editar contato</h3>
+                            <p class="text-xs opacity-60 truncate">{{ client.name }}</p>
+                        </div>
                     </div>
-                    <button type="button" @click="$emit('close')" class="w-8 h-8 rounded-xl hover:bg-slate-500/10 flex items-center justify-center">
+                    <button type="button" @click="$emit('close')" class="w-8 h-8 rounded-xl hover:bg-slate-500/10 flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>

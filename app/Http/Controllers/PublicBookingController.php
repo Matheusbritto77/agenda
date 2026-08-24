@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -35,6 +36,54 @@ class PublicBookingController extends Controller
     private const SLOT_STEP_MINUTES = 15;
 
     private const BOOKABLE_STATUSES = ['pending', 'confirmed'];
+
+    public function favicon(Request $request): Response
+    {
+        $tenant = $this->resolveTenant($request);
+        $company = $tenant->parent ?? $tenant;
+        $branding = BrandingSetting::query()->where('user_id', $company->id)->first();
+        $brandingSettings = $branding?->settings ?? [];
+        $faviconPath = $brandingSettings['favicon_path'] ?? null;
+
+        if (! is_string($faviconPath) || $faviconPath === '') {
+            return redirect('/favicon.svg');
+        }
+
+        $path = \App\Support\StorageHelper::cleanPath($faviconPath);
+
+        if (! $path) {
+            return redirect('/favicon.svg');
+        }
+
+        try {
+            $disk = Storage::disk('public');
+
+            if (! $disk->exists($path)) {
+                return redirect('/favicon.svg');
+            }
+
+            $contents = $disk->get($path);
+            $detectedMime = $disk->mimeType($path);
+            $mimeType = is_string($detectedMime) && str_starts_with($detectedMime, 'image/')
+                ? $detectedMime
+                : $this->faviconMimeType($path);
+
+            return response($contents, 200, [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline',
+                'Cache-Control' => 'public, max-age=31536000, immutable',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        } catch (Throwable $exception) {
+            Log::warning('Não foi possível carregar o favicon personalizado.', [
+                'tenant_id' => $company->id,
+                'favicon_path' => $path,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return redirect('/favicon.svg');
+        }
+    }
 
     public function landing(Request $request): Response
     {
@@ -997,6 +1046,17 @@ class PublicBookingController extends Controller
         }
 
         return $tenant;
+    }
+
+    private function faviconMimeType(string $path): string
+    {
+        return match (strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            'svg' => 'image/svg+xml',
+            'ico' => 'image/x-icon',
+            'webp' => 'image/webp',
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'image/png',
+        };
     }
 
     private function shouldRenderLandingPage(Request $request): bool

@@ -93,12 +93,13 @@ const hasCustomLogo = computed(() => {
 });
 
 const currentYear = new Date().getFullYear();
+const publicFaviconUrl = computed(() => props.branding?.public_favicon_url || props.branding?.favicon_url || null);
 
 watch(() => props.title, (newTitle) => {
     document.title = newTitle;
 }, { immediate: true });
 
-watch(() => props.branding?.favicon_url, (newFavicon) => {
+watch(publicFaviconUrl, (newFavicon) => {
     if (newFavicon) {
         const faviconLinks = Array.from(document.querySelectorAll("link[rel~='icon']"));
         const link = document.getElementById('dynamic-favicon') || document.createElement('link');
@@ -111,10 +112,20 @@ watch(() => props.branding?.favicon_url, (newFavicon) => {
 
         link.id = 'dynamic-favicon';
         link.rel = 'icon';
+        link.setAttribute('sizes', 'any');
         link.href = newFavicon;
 
         if (!link.isConnected) {
             document.head.appendChild(link);
+        }
+
+        const shortcutLink = document.getElementById('dynamic-shortcut-favicon') || document.createElement('link');
+        shortcutLink.id = 'dynamic-shortcut-favicon';
+        shortcutLink.rel = 'shortcut icon';
+        shortcutLink.href = newFavicon;
+
+        if (!shortcutLink.isConnected) {
+            document.head.appendChild(shortcutLink);
         }
 
         const appleLink = document.getElementById('dynamic-apple-touch-icon') || document.createElement('link');

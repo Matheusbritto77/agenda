@@ -17,12 +17,13 @@
             $tenantBranding = $brandingOwnerId
                 ? \App\Models\BrandingSetting::where('user_id', $brandingOwnerId)->first()
                 : null;
-            $tenantFaviconUrl = $tenantBranding?->favicon_url;
+            $tenantFaviconUrl = $tenantBranding?->public_favicon_url;
         @endphp
 
         <!-- Favicon -->
         @if ($tenantFaviconUrl)
-            <link rel="icon" id="dynamic-favicon" href="{{ $tenantFaviconUrl }}">
+            <link rel="icon" id="dynamic-favicon" href="{{ $tenantFaviconUrl }}" sizes="any">
+            <link rel="shortcut icon" id="dynamic-shortcut-favicon" href="{{ $tenantFaviconUrl }}">
             <link rel="apple-touch-icon" id="dynamic-apple-touch-icon" href="{{ $tenantFaviconUrl }}">
         @else
             <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="/favicon.svg">

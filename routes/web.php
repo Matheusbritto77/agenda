@@ -78,6 +78,7 @@ Route::get('/', function (Request $request, PublicBookingController $controller)
 })->name('booking.index');
 
 Route::middleware([ResolvePublicBookingTenant::class])->group(function () {
+    Route::get('/company-favicon', [PublicBookingController::class, 'favicon'])->name('booking.favicon');
     Route::get('/available-slots', [PublicBookingController::class, 'availableSlots'])->name('booking.slots');
     Route::post('/booking', [PublicBookingController::class, 'store'])->name('booking.store');
     Route::post('/api/coupons/validate', [PublicBookingController::class, 'validateCoupon'])->name('booking.coupons.validate');

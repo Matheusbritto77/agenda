@@ -554,6 +554,7 @@ class ClientAreaController extends Controller
             'name' => $latest?->client_name ?: $client->name,
             'email' => $latest?->client_email ?: $client->email,
             'phone' => $latest?->client_phone ?: $client->phone,
+            'avatar_url' => $client->avatar_url,
             'account_email' => $client->email,
             'appointments_count' => $appointments->count(),
             'completed_count' => $completed->count(),

@@ -30,11 +30,17 @@ defineEmits(['close']);
         <div v-if="show && client" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 liquid-glass-backdrop" @click.self="$emit('close')">
             <div class="liquid-glass-card w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 space-y-5">
                 <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-xl font-black" style="color: var(--text-heading);">Histórico de {{ client.name }}</h3>
-                        <p class="text-xs opacity-60">{{ client.appointments_count }} atendimentos registrados</p>
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center font-black shrink-0 overflow-hidden shadow-sm">
+                            <img v-if="client.avatar_url" :src="client.avatar_url" :alt="client.name" class="w-full h-full object-cover" />
+                            <span v-else>{{ (client.name || 'C').substring(0, 2).toUpperCase() }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-lg sm:text-xl font-black truncate" style="color: var(--text-heading);">Histórico de {{ client.name }}</h3>
+                            <p class="text-xs opacity-60 truncate">{{ client.email }} · {{ client.appointments_count }} atendimentos</p>
+                        </div>
                     </div>
-                    <button type="button" @click="$emit('close')" class="w-9 h-9 rounded-xl hover:bg-slate-500/10 flex items-center justify-center">
+                    <button type="button" @click="$emit('close')" class="w-9 h-9 rounded-xl hover:bg-slate-500/10 flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>

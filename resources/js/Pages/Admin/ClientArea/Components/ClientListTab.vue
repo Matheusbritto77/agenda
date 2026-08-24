@@ -53,8 +53,9 @@ defineEmits(['submit-filters', 'open-client', 'open-edit', 'open-gift']);
                         <tr v-for="client in clients.data" :key="client.id">
                             <td>
                                 <div class="flex items-center gap-3 min-w-[220px]">
-                                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center font-black shrink-0">
-                                        {{ (client.name || 'C').substring(0, 2).toUpperCase() }}
+                                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-white flex items-center justify-center font-black shrink-0 overflow-hidden shadow-xs">
+                                        <img v-if="client.avatar_url" :src="client.avatar_url" :alt="client.name" class="w-full h-full object-cover" />
+                                        <span v-else>{{ (client.name || 'C').substring(0, 2).toUpperCase() }}</span>
                                     </div>
                                     <div class="min-w-0">
                                         <p class="font-extrabold truncate" style="color: var(--text-heading);">{{ client.name }}</p>
