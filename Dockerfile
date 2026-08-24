@@ -36,8 +36,18 @@ WORKDIR /var/www/html
 COPY . .
 
 # Install PHP dependencies without running Laravel bootstrap scripts during build.
-# The app environment is fully available at container start, not at image build time.
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+# Composer occasionally hits transient GitHub 5xx responses in CI, so retry the
+# install a few times before failing the image build.
+RUN set -eux; \
+    for attempt in 1 2 3; do \
+        if composer install --no-dev --optimize-autoloader --no-interaction --no-scripts; then \
+            break; \
+        fi; \
+        if [ "$attempt" -eq 3 ]; then \
+            exit 1; \
+        fi; \
+        sleep 10; \
+    done
 
 # Install JS dependencies and compile assets
 RUN npm ci && npm run build && rm -rf node_modules
