@@ -31,12 +31,14 @@ const customization = computed(() => props.activeCompany?.portal_customization |
             v-if="activeCompany"
             class="rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden shadow-2xl transition-all"
             :style="{
-                background: `linear-gradient(135deg, ${customization.primary_color || '#6366f1'} 0%, ${customization.secondary_color || '#06b6d4'} 100%)`
+                background: customization.banner_url
+                    ? '#0b0f19'
+                    : `linear-gradient(135deg, ${customization.primary_color || '#6366f1'} 0%, ${customization.secondary_color || '#06b6d4'} 100%)`
             }"
         >
             <div v-if="customization.banner_url" class="absolute inset-0 z-0">
-                <img :src="customization.banner_url" :alt="`Capa de ${activeCompany.name}`" class="h-full w-full object-cover opacity-30" />
-                <div class="absolute inset-0 bg-gradient-to-r from-black/30 via-black/10 to-black/20"></div>
+                <img :src="customization.banner_url" :alt="`Capa de ${activeCompany.name}`" class="h-full w-full object-cover" />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-slate-950/35 sm:bg-gradient-to-r sm:from-slate-950/90 sm:via-slate-950/65 sm:to-slate-950/40"></div>
             </div>
 
             <div class="relative z-10 space-y-4">

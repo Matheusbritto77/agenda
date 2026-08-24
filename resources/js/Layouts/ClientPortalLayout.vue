@@ -8,6 +8,8 @@ const props = defineProps({
     companies: { type: Array, default: () => [] },
 });
 
+defineEmits(['open-profile']);
+
 const page = usePage();
 const isDarkMode = ref(false);
 const companyDropdownOpen = ref(false);
@@ -212,15 +214,21 @@ onMounted(() => {
                     </div>
 
                     <!-- User profile badge -->
-                    <div class="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/70">
-                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-cyan-600 text-white flex items-center justify-center font-black text-[11px] shadow-xs">
-                            {{ clientInitials }}
+                    <button
+                        type="button"
+                        @click="$emit('open-profile')"
+                        class="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/70 hover:border-indigo-500/50 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all cursor-pointer text-left"
+                        title="Ver e Editar Meu Perfil"
+                    >
+                        <div class="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-tr from-indigo-600 to-cyan-600 text-white flex items-center justify-center font-black text-[11px] shadow-xs shrink-0">
+                            <img v-if="clientUser.avatar_url" :src="clientUser.avatar_url" :alt="clientUser.name" class="w-full h-full object-cover" />
+                            <span v-else>{{ clientInitials }}</span>
                         </div>
                         <div class="text-left min-w-0 max-w-[120px]">
                             <p class="text-xs font-bold text-slate-900 dark:text-white truncate">{{ clientUser.name }}</p>
                             <p class="text-[10px] text-slate-400 truncate">{{ clientUser.email }}</p>
                         </div>
-                    </div>
+                    </button>
 
                     <!-- Theme toggle button -->
                     <button

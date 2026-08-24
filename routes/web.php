@@ -43,6 +43,8 @@ Route::prefix('cliente')->name('client.')->group(function (): void {
 
         Route::middleware('client.password.reset')->group(function (): void {
             Route::get('/', [ClientPortalController::class, 'index'])->name('dashboard');
+            Route::post('/perfil', [ClientPortalController::class, 'updateProfile'])->name('profile.update');
+            Route::put('/perfil', [ClientPortalController::class, 'updateProfile'])->name('profile.update.put');
             Route::post('/empresas/selecionar/{company?}', [ClientPortalController::class, 'selectCompany'])->name('companies.select');
             Route::get('/empresas/selecionar/{company?}', [ClientPortalController::class, 'selectCompany'])->name('companies.select.get');
             Route::put('/agendamentos/{appointment}/avaliacao', [ClientPortalController::class, 'review'])->name('reviews.store');

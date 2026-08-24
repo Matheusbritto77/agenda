@@ -326,6 +326,95 @@ class ClientPortalTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_client_can_update_profile_info_and_phone(): void
+    {
+        $account = ClientAccount::create([
+            'name' => 'Nome Antigo',
+            'email' => 'antigo@example.com',
+            'phone' => '11999990000',
+            'password' => Hash::make('password'),
+            'must_reset_password' => false,
+        ]);
+
+        $this->actingAs($account, 'client')
+            ->post(route('client.profile.update'), [
+                'name' => 'Nome Novo',
+                'email' => 'novo@example.com',
+                'phone' => '11988887777',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $account->refresh();
+        $this->assertSame('Nome Novo', $account->name);
+        $this->assertSame('novo@example.com', $account->email);
+        $this->assertSame('11988887777', $account->phone);
+    }
+
+    public function test_client_can_update_profile_avatar_and_remove_it(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $account = ClientAccount::create([
+            'name' => 'Cliente Avatar',
+            'email' => 'avatar@example.com',
+            'password' => Hash::make('password'),
+            'must_reset_password' => false,
+        ]);
+
+        $avatarFile = \Illuminate\Http\UploadedFile::fake()->image('avatar.jpg', 200, 200);
+
+        $this->actingAs($account, 'client')
+            ->post(route('client.profile.update'), [
+                'name' => 'Cliente Avatar',
+                'email' => 'avatar@example.com',
+                'avatar' => $avatarFile,
+            ])
+            ->assertRedirect();
+
+        $account->refresh();
+        $this->assertNotNull($account->avatar_path);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($account->avatar_path);
+        $this->assertNotNull($account->avatar_url);
+
+        // Now remove avatar
+        $this->actingAs($account, 'client')
+            ->post(route('client.profile.update'), [
+                'name' => 'Cliente Avatar',
+                'email' => 'avatar@example.com',
+                'remove_avatar' => true,
+            ])
+            ->assertRedirect();
+
+        $account->refresh();
+        $this->assertNull($account->avatar_path);
+        $this->assertNull($account->avatar_url);
+    }
+
+    public function test_client_can_update_password_with_current_password(): void
+    {
+        $account = ClientAccount::create([
+            'name' => 'Cliente Senha',
+            'email' => 'senha@example.com',
+            'password' => Hash::make('antiga-senha'),
+            'must_reset_password' => false,
+        ]);
+
+        $this->actingAs($account, 'client')
+            ->post(route('client.profile.update'), [
+                'name' => 'Cliente Senha',
+                'email' => 'senha@example.com',
+                'current_password' => 'antiga-senha',
+                'password' => 'nova-senha-123',
+                'password_confirmation' => 'nova-senha-123',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $account->refresh();
+        $this->assertTrue(Hash::check('nova-senha-123', $account->password));
+    }
+
     private function appointment(array $overrides = []): array
     {
         $company = User::factory()->create();

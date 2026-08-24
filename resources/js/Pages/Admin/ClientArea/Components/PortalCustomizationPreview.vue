@@ -105,12 +105,15 @@ const companyName = props.portalCustomization?.company_name || 'Minha Empresa';
                     <div
                         class="rounded-2xl p-4 text-white space-y-3 shadow-lg relative overflow-hidden"
                         :style="{
-                            background: `linear-gradient(135deg, ${customForm.portal_primary_color} 0%, ${customForm.portal_secondary_color} 100%)`
+                            background: bannerPreview
+                                ? '#0b0f19'
+                                : `linear-gradient(135deg, ${customForm.portal_primary_color} 0%, ${customForm.portal_secondary_color} 100%)`
                         }"
                     >
                         <!-- Banner image overlay if present -->
                         <div v-if="bannerPreview" class="absolute inset-0 z-0">
-                            <img :src="bannerPreview" class="w-full h-full object-cover opacity-30" />
+                            <img :src="bannerPreview" class="w-full h-full object-cover" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/60 to-slate-950/40"></div>
                         </div>
 
                         <div class="relative z-10 flex items-start gap-3">

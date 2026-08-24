@@ -7,6 +7,7 @@ import PortalAppointmentsTab from './Components/PortalAppointmentsTab.vue';
 import PortalCompaniesTab from './Components/PortalCompaniesTab.vue';
 import PortalBadgesTab from './Components/PortalBadgesTab.vue';
 import PortalCouponsTab from './Components/PortalCouponsTab.vue';
+import PortalProfileTab from './Components/PortalProfileTab.vue';
 import PortalCompanyReviewModal from './Components/PortalCompanyReviewModal.vue';
 
 const props = defineProps({
@@ -236,6 +237,7 @@ const activeTabStyle = (tab) => activeTab.value === tab
         :title="activeCompany ? (activeCompany.welcome_title || activeCompany.name) : 'Minha Área - Agendae'"
         :active-company="activeCompany"
         :companies="companies"
+        @open-profile="activeTab = 'profile'"
     >
         <div class="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <!-- Hero / Active Company Branded Header -->
@@ -254,10 +256,16 @@ const activeTabStyle = (tab) => activeTab.value === tab
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                     <div class="flex items-center gap-4 sm:gap-5 min-w-0">
                         <div
-                            class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-xl shrink-0 ring-4 ring-white/50 dark:ring-slate-800/50"
+                            class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl text-white flex items-center justify-center font-black text-2xl sm:text-3xl shadow-xl shrink-0 ring-4 ring-white/50 dark:ring-slate-800/50 overflow-hidden"
                             :style="{ background: `linear-gradient(135deg, ${portalPrimaryColor}, ${portalSecondaryColor})`, boxShadow: `0 16px 32px ${colorWithAlpha(portalPrimaryColor, '33')}` }"
                         >
-                            {{ firstName.charAt(0).toUpperCase() }}
+                            <img
+                                v-if="client.avatar_url"
+                                :src="client.avatar_url"
+                                :alt="client.name"
+                                class="w-full h-full object-cover"
+                            />
+                            <span v-else>{{ firstName.charAt(0).toUpperCase() }}</span>
                         </div>
                         <div class="min-w-0 space-y-1">
                             <div class="flex flex-wrap items-center gap-2">
@@ -270,6 +278,15 @@ const activeTabStyle = (tab) => activeTab.value === tab
                                 >
                                     {{ activeCompany?.badge?.name || 'Cliente VIP' }}
                                 </span>
+                                <button
+                                    type="button"
+                                    @click="activeTab = 'profile'"
+                                    class="px-2.5 py-0.5 rounded-full text-xs font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Editar Dados e Foto"
+                                >
+                                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                    <span>Editar Perfil</span>
+                                </button>
                             </div>
                             <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-xl">
                                 {{ activeCompany ? ('Gerencie seus agendamentos e experiências exclusivas com ' + activeCompany.name + '.') : 'Gerencie seus agendamentos em todos os estabelecimentos que você frequenta.' }}
@@ -370,6 +387,21 @@ const activeTabStyle = (tab) => activeTab.value === tab
                             {{ coupons.length }}
                         </span>
                     </button>
+
+                    <button
+                        type="button"
+                        @click="activeTab = 'profile'"
+                        :class="[
+                            'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
+                            activeTab === 'profile'
+                                ? 'text-white shadow-md'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                        ]"
+                        :style="activeTabStyle('profile')"
+                    >
+                        <i class="fa-solid fa-user-gear text-xs"></i>
+                        <span>Meu Perfil</span>
+                    </button>
                 </div>
 
                 <!-- Sub-filters when on Appointments Tab -->
@@ -435,6 +467,14 @@ const activeTabStyle = (tab) => activeTab.value === tab
                 :active-company="activeCompany"
                 :copied-coupon-id="copiedCouponId"
                 @copy-coupon="copyCouponCode"
+            />
+
+            <!-- TAB 5: MEU PERFIL & DADOS -->
+            <PortalProfileTab
+                v-else-if="activeTab === 'profile'"
+                :client="client"
+                :summary="summary"
+                :active-company="activeCompany"
             />
         </div>
 

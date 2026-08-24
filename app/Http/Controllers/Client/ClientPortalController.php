@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\AppointmentReview;
 use App\Models\ClientAccount;
+use App\Support\StorageHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -164,8 +166,12 @@ class ClientPortalController extends Controller
 
         return Inertia::render('Client/Portal/Dashboard', [
             'client' => [
+                'id' => $client->id,
                 'name' => $client->name,
                 'email' => $client->email,
+                'phone' => $client->phone,
+                'avatar_url' => $client->avatar_url,
+                'created_at' => $client->created_at?->format('d/m/Y'),
             ],
             'activeCompany' => $activeCompany,
             'summary' => [
@@ -285,6 +291,47 @@ class ClientPortalController extends Controller
         );
 
         return back()->with('success', 'Avaliação da empresa enviada com sucesso! Ela será exibida na página pública do estabelecimento.');
+    }
+
+    public function updateProfile(Request $request): RedirectResponse
+    {
+        /** @var ClientAccount $client */
+        $client = Auth::guard('client')->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('client_accounts', 'email')->ignore($client->id)],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'avatar' => ['nullable', 'image', 'max:5120'],
+            'remove_avatar' => ['nullable', 'boolean'],
+            'current_password' => ['nullable', 'string', 'current_password:client'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            if ($client->avatar_path) {
+                StorageHelper::delete($client->avatar_path);
+            }
+            $client->avatar_path = $request->file('avatar')->store("clients/avatars/{$client->id}", 'public');
+        } elseif ($request->boolean('remove_avatar')) {
+            if ($client->avatar_path) {
+                StorageHelper::delete($client->avatar_path);
+            }
+            $client->avatar_path = null;
+        }
+
+        $client->name = $validated['name'];
+        $client->email = $validated['email'];
+        $client->phone = $validated['phone'] ?? null;
+
+        if (! empty($validated['password'])) {
+            $client->password = $validated['password'];
+            $client->must_reset_password = false;
+        }
+
+        $client->save();
+
+        return back()->with('success', 'Seu perfil foi atualizado com sucesso!');
     }
 
     private function earnedBadges(int $completed, ?array $activeCompany = null): array
