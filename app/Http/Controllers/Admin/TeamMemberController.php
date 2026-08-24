@@ -24,9 +24,11 @@ class TeamMemberController extends Controller
      * Map a team member role_id to the human-readable role title
      * used for the user record's role_title attribute.
      */
-    private function roleIdToTitle(string $roleId): string
+    private function roleIdToTitle(string $roleId, int $tenantId): string
     {
-        return RoleCatalog::titleFor($roleId);
+        $owner = User::find($tenantId);
+
+        return RoleCatalog::titleFor($roleId, $owner?->custom_roles ?? []);
     }
 
     /**
@@ -48,7 +50,7 @@ class TeamMemberController extends Controller
         }
 
         $roleIdChosen = $roleId ?? ($member?->role_id ?? ($validated['role_id'] ?? 'professional'));
-        $roleTitle = $this->roleIdToTitle((string) $roleIdChosen);
+        $roleTitle = $this->roleIdToTitle((string) $roleIdChosen, $tenantId);
 
         $user = $linkedUser ?? User::where('email', $email)->first();
         $userPassword = ! empty($validated['password'] ?? null)
@@ -109,6 +111,7 @@ class TeamMemberController extends Controller
     {
         $user = $request->user() ?? auth()->user();
         $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
+        $owner = User::find($tenantId);
 
         $teamMembers = TeamMember::query()
             ->where('user_id', $tenantId)
@@ -127,7 +130,7 @@ class TeamMemberController extends Controller
             return response()->json([
                 'team_members' => $teamMembers,
                 'services' => $services,
-                'roles' => RoleCatalog::all(),
+                'roles' => RoleCatalog::all($owner?->custom_roles ?? []),
                 'app_domain' => $appDomain,
             ]);
         }
@@ -135,7 +138,7 @@ class TeamMemberController extends Controller
         return Inertia::render('Admin/Team/Index', [
             'teamMembers' => $teamMembers,
             'services' => $services,
-            'roles' => RoleCatalog::all(),
+            'roles' => RoleCatalog::all($owner?->custom_roles ?? []),
             'appDomain' => $appDomain,
         ]);
     }
@@ -145,11 +148,13 @@ class TeamMemberController extends Controller
         try {
             $user = $request->user() ?? auth()->user();
             $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
+            $owner = User::find($tenantId);
+            $availableRoleIds = RoleCatalog::ids($owner?->custom_roles ?? []);
 
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:'.implode(',', RoleCatalog::ids())],
+                'role_id' => ['nullable', 'string', Rule::in($availableRoleIds)],
                 'email' => [
                     'nullable',
                     'email',
@@ -260,11 +265,13 @@ class TeamMemberController extends Controller
             $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
             abort_unless((int) $teamMember->user_id === (int) $tenantId, 404);
             $linkedUser = $this->linkedUserForMember($teamMember, $tenantId);
+            $owner = User::find($tenantId);
+            $availableRoleIds = RoleCatalog::ids($owner?->custom_roles ?? []);
 
             $validated = Validator::make($request->all(), [
                 'name' => ['required', 'string', 'max:255'],
                 'job_title' => ['nullable', 'string', 'max:255'],
-                'role_id' => ['nullable', 'string', 'in:'.implode(',', RoleCatalog::ids())],
+                'role_id' => ['nullable', 'string', Rule::in($availableRoleIds)],
                 'email' => [
                     'nullable',
                     'email',
@@ -454,14 +461,14 @@ class TeamMemberController extends Controller
                     'subdomain' => $teamMember->subdomain,
                     'active_domain_type' => ! empty($teamMember->subdomain) ? 'subdomain' : 'subdomain',
                     'must_reset_password' => true,
-                    'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional')),
+                    'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional'), $tenantId),
                 ]);
             } else {
                 $user->update([
                     'password' => Hash::make('agendae123'),
                     'must_reset_password' => true,
                     'parent_id' => $tenantId,
-                    'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional')),
+                    'role_title' => $this->roleIdToTitle((string) ($teamMember->role_id ?? 'professional'), $tenantId),
                 ]);
             }
 

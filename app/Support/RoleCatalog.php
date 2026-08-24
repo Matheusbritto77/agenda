@@ -2,12 +2,22 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Str;
+
 final class RoleCatalog
 {
     /**
      * @return array<string, array{name: string, description: string, badge_color: string, icon: string}>
      */
-    public static function all(): array
+    public static function all(array $customRoles = []): array
+    {
+        return array_replace(self::defaults(), self::normalizeCustomRoles($customRoles));
+    }
+
+    /**
+     * @return array<string, array{name: string, description: string, badge_color: string, icon: string}>
+     */
+    public static function defaults(): array
     {
         return [
             'admin' => [
@@ -37,26 +47,58 @@ final class RoleCatalog
         ];
     }
 
-    public static function ids(): array
+    /**
+     * @return array<string, array{name: string, description: string, badge_color: string, icon: string}>
+     */
+    public static function normalizeCustomRoles(array $customRoles): array
     {
-        return array_keys(self::all());
+        $normalized = [];
+
+        foreach ($customRoles as $key => $role) {
+            if (! is_array($role)) {
+                continue;
+            }
+
+            $roleId = is_string($key) && $key !== '' ? Str::slug($key, '-') : '';
+            if ($roleId === '' && isset($role['role_id'])) {
+                $roleId = Str::slug((string) $role['role_id'], '-');
+            }
+
+            if ($roleId === '') {
+                continue;
+            }
+
+            $normalized[$roleId] = [
+                'name' => (string) ($role['name'] ?? Str::headline(str_replace(['_', '-'], ' ', $roleId))),
+                'description' => (string) ($role['description'] ?? ''),
+                'badge_color' => (string) ($role['badge_color'] ?? self::defaults()['professional']['badge_color']),
+                'icon' => (string) ($role['icon'] ?? self::defaults()['professional']['icon']),
+            ];
+        }
+
+        return $normalized;
     }
 
-    public static function titleFor(?string $roleId): string
+    public static function ids(array $customRoles = []): array
     {
-        $roles = self::all();
+        return array_keys(self::all($customRoles));
+    }
+
+    public static function titleFor(?string $roleId, array $customRoles = []): string
+    {
+        $roles = self::all($customRoles);
         return $roles[$roleId ?? '']['name'] ?? $roles['professional']['name'];
     }
 
-    public static function badgeColorFor(?string $roleId): string
+    public static function badgeColorFor(?string $roleId, array $customRoles = []): string
     {
-        $roles = self::all();
+        $roles = self::all($customRoles);
         return $roles[$roleId ?? '']['badge_color'] ?? $roles['professional']['badge_color'];
     }
 
-    public static function iconFor(?string $roleId): string
+    public static function iconFor(?string $roleId, array $customRoles = []): string
     {
-        $roles = self::all();
+        $roles = self::all($customRoles);
         return $roles[$roleId ?? '']['icon'] ?? $roles['professional']['icon'];
     }
 }

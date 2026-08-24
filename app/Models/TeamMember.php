@@ -80,17 +80,17 @@ class TeamMember extends Model
 
     public function getRoleNameAttribute(): string
     {
-        return RoleCatalog::titleFor($this->role_id);
+        return RoleCatalog::titleFor($this->role_id, $this->user?->custom_roles ?? []);
     }
 
     public function getRoleBadgeColorAttribute(): string
     {
-        return RoleCatalog::badgeColorFor($this->role_id);
+        return RoleCatalog::badgeColorFor($this->role_id, $this->user?->custom_roles ?? []);
     }
 
     public function getRoleIconAttribute(): string
     {
-        return RoleCatalog::iconFor($this->role_id);
+        return RoleCatalog::iconFor($this->role_id, $this->user?->custom_roles ?? []);
     }
 
     public function getPublicBookingUrlAttribute(): string

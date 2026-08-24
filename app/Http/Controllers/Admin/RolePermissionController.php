@@ -7,7 +7,10 @@ use App\Models\TeamMember;
 use App\Models\User;
 use App\Support\RoleCatalog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class RolePermissionController extends Controller
@@ -39,7 +42,7 @@ class RolePermissionController extends Controller
             ->latest()
             ->get();
 
-        $roles = RoleCatalog::all();
+        $roles = RoleCatalog::all($owner->custom_roles ?? []);
 
         $permissionModules = [
             'appointments' => [
@@ -171,12 +174,10 @@ class RolePermissionController extends Controller
             ],
         ];
 
-        // Merge stored tenant permissions with default ones
+        // Merge stored tenant permissions with defaults and initialize custom roles
         $tenantPermissions = $owner->role_permissions ?? [];
-        foreach ($rolePermissions as $r => $perms) {
-            if (isset($tenantPermissions[$r])) {
-                $rolePermissions[$r] = (array) $tenantPermissions[$r];
-            }
+        foreach (array_keys($roles) as $roleId) {
+            $rolePermissions[$roleId] = array_values(array_unique((array) ($tenantPermissions[$roleId] ?? $rolePermissions[$roleId] ?? [])));
         }
 
         if ($request->expectsJson()) {
@@ -200,13 +201,19 @@ class RolePermissionController extends Controller
 
     public function updatePermissions(Request $request)
     {
-        $role = $request->input('role', 'admin');
-        $permissions = (array) $request->input('permissions', []);
-
         $user = $request->user() ?? auth()->user();
         $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
-
         $owner = User::findOrFail($tenantId);
+
+        $validated = Validator::make($request->all(), [
+            'role' => ['required', 'string', Rule::in($this->availableRoleIds($owner))],
+            'permissions' => ['array'],
+            'permissions.*' => ['string'],
+        ])->validate();
+
+        $role = $validated['role'];
+        $permissions = array_values(array_unique((array) ($validated['permissions'] ?? [])));
+
         $rolePermissions = $owner->role_permissions ?? [];
         $rolePermissions[$role] = $permissions;
         $owner->role_permissions = $rolePermissions;
@@ -225,18 +232,87 @@ class RolePermissionController extends Controller
             ->with('success', "Permissões do cargo atualizadas com sucesso!");
     }
 
-    public function updateMemberRole(Request $request, TeamMember $teamMember)
+    public function storeCustomRole(Request $request)
     {
-        $tenantId = $request->user()?->id ?? auth()->id();
-        abort_unless((int) $teamMember->user_id === (int) $tenantId, 404);
+        $user = $request->user() ?? auth()->user();
+        $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
+        $owner = User::findOrFail($tenantId);
+        $existingRoles = RoleCatalog::all($owner->custom_roles ?? []);
+        $existingRoleIds = array_keys($existingRoles);
 
         $validated = Validator::make($request->all(), [
-            'role_id' => ['required', 'string', 'in:' . implode(',', RoleCatalog::ids())],
+            'name' => ['required', 'string', 'max:255'],
+            'role_id' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_-]+$/i'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'icon' => ['nullable', 'string', 'max:100'],
+            'badge_color' => ['nullable', 'string', 'max:255'],
+            'base_role_id' => ['nullable', 'string', Rule::in($existingRoleIds)],
+        ])->validate();
+
+        $roleId = Str::slug((string) ($validated['role_id'] ?? $validated['name']), '-');
+        if ($roleId === '') {
+            throw ValidationException::withMessages([
+                'name' => 'Informe um nome válido para o novo cargo.',
+            ]);
+        }
+
+        if (in_array($roleId, $existingRoleIds, true)) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Este identificador já está em uso. Escolha outro nome ou slug.',
+            ]);
+        }
+
+        $baseRoleId = $validated['base_role_id'] ?? 'professional';
+        $basePermissions = $owner->rolePermissionsFor($baseRoleId);
+
+        $customRoles = $owner->custom_roles ?? [];
+        $customRoles[$roleId] = [
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? '',
+            'badge_color' => $validated['badge_color'] ?? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
+            'icon' => $validated['icon'] ?? 'fa-solid fa-user-tag',
+        ];
+
+        $owner->custom_roles = $customRoles;
+        $rolePermissions = $owner->role_permissions ?? [];
+        $rolePermissions[$roleId] = $basePermissions;
+        $owner->role_permissions = $rolePermissions;
+        $owner->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => "Cargo '{$validated['name']}' criado com sucesso!",
+                'role' => $roleId,
+                'role_data' => $customRoles[$roleId],
+            ], 201);
+        }
+
+        return redirect()
+            ->route('admin.roles.index')
+            ->with('success', "Cargo '{$validated['name']}' criado com sucesso!");
+    }
+
+    public function updateMemberRole(Request $request, TeamMember $teamMember)
+    {
+        $authUser = $request->user() ?? auth()->user();
+        $tenantId = $authUser?->parent_id ? (int) $authUser->parent_id : (int) ($authUser?->id ?? auth()->id());
+        abort_unless((int) $teamMember->user_id === (int) $tenantId, 404);
+        $owner = User::findOrFail($tenantId);
+
+        $validated = Validator::make($request->all(), [
+            'role_id' => ['required', 'string', Rule::in($this->availableRoleIds($owner))],
         ])->validate();
 
         $teamMember->update([
             'role_id' => $validated['role_id'],
         ]);
+
+        User::query()
+            ->where('parent_id', $tenantId)
+            ->where('email', $teamMember->email)
+            ->update([
+                'role_title' => RoleCatalog::titleFor($validated['role_id'], $owner->custom_roles ?? []),
+            ]);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -248,5 +324,13 @@ class RolePermissionController extends Controller
         return redirect()
             ->route('admin.roles.index')
             ->with('success', "Cargo de {$teamMember->name} alterado para '{$teamMember->role_name}' com sucesso!");
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function availableRoleIds(User $owner): array
+    {
+        return RoleCatalog::ids($owner->custom_roles ?? []);
     }
 }

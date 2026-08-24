@@ -44,7 +44,7 @@ class HandleInertiaRequests extends Middleware
                     ->first();
 
                 $userRole = $member ? $member->role_id : 'professional';
-                $canManageRoles = ($userRole === 'admin');
+                $canManageRoles = $user->hasPermission('settings.roles');
             } else {
                 $canManageRoles = true;
             }

@@ -203,6 +203,7 @@ Route::middleware(['auth', 'verified', 'ensure.password.changed'])->prefix('admi
 
     // Roles & Permissions Settings
     Route::middleware('permission:settings.roles')->get('/roles', [RolePermissionController::class, 'index'])->name('roles.index');
+    Route::middleware('permission:settings.roles')->post('/roles/custom', [RolePermissionController::class, 'storeCustomRole'])->name('roles.custom.store');
     Route::middleware('permission:settings.roles')->post('/roles/permissions', [RolePermissionController::class, 'updatePermissions'])->name('roles.permissions.update');
     Route::middleware('permission:settings.roles')->patch('/roles/team-members/{teamMember}/role', [RolePermissionController::class, 'updateMemberRole'])->name('roles.team-member.update-role');
 

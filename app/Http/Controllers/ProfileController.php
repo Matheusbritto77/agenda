@@ -24,6 +24,7 @@ class ProfileController extends Controller
         $teamMember = $this->teamMemberForUser($user);
         $roleId = $teamMember?->role_id ?? ($user->parent_id ? 'professional' : 'admin');
         $permissions = $this->permissionModulesForUser($user);
+        $tenantRoles = $tenant?->custom_roles ?? [];
 
         return Inertia::render('Profile/Edit', [
             'user' => $user,
@@ -32,7 +33,7 @@ class ProfileController extends Controller
             'accountContext' => [
                 'is_owner' => $user->parent_id === null,
                 'role_id' => $roleId,
-                'role_name' => RoleCatalog::titleFor($roleId),
+                'role_name' => RoleCatalog::titleFor($roleId, $tenantRoles),
                 'company_name' => $tenant->name,
                 'company_email' => $tenant->email,
                 'public_booking_url' => $user->parent_id ? ($teamMember?->publicBookingUrl() ?? $tenant->publicBookingUrl()) : $user->publicBookingUrl(),

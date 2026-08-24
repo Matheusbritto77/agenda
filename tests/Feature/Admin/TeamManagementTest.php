@@ -83,6 +83,53 @@ class TeamManagementTest extends TestCase
         ]);
     }
 
+    public function test_tenant_can_create_team_member_with_custom_role(): void
+    {
+        $tenant = User::factory()->create([
+            'custom_roles' => [
+                'supervisor' => [
+                    'name' => 'Supervisor',
+                    'description' => 'Coordena a equipe',
+                    'badge_color' => 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30',
+                    'icon' => 'fa-solid fa-user-tag',
+                ],
+            ],
+            'role_permissions' => [
+                'supervisor' => ['appointments.view', 'team.view'],
+            ],
+        ]);
+
+        $response = $this->actingAs($tenant)->post(route('admin.team.store'), [
+            'name' => 'Patricia Supervisora',
+            'job_title' => 'Lider de Operacao',
+            'role_id' => 'supervisor',
+            'email' => 'patricia@barbearia.com',
+            'phone' => '(11) 99999-1111',
+            'subdomain' => 'patricia-supervisora',
+            'bio' => 'Responsavel pela coordenação da operação.',
+            'is_active' => 1,
+        ]);
+
+        $response->assertRedirect(route('admin.team.index'));
+
+        $member = TeamMember::query()
+            ->where('user_id', $tenant->id)
+            ->where('email', 'patricia@barbearia.com')
+            ->first();
+
+        $this->assertNotNull($member);
+        $this->assertSame('supervisor', $member->role_id);
+        $this->assertSame('Supervisor', $member->role_name);
+
+        $linkedUser = User::query()
+            ->where('parent_id', $tenant->id)
+            ->where('email', 'patricia@barbearia.com')
+            ->first();
+
+        $this->assertNotNull($linkedUser);
+        $this->assertSame('Supervisor', $linkedUser->role_title);
+    }
+
     public function test_tenant_can_update_team_member(): void
     {
         $tenant = User::factory()->create();

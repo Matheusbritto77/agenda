@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'avatar_url', 'password', 'parent_id', 'role_title', 'must_reset_password', 'subdomain', 'custom_domain', 'active_domain_type', 'role_permissions'])]
+#[Fillable(['name', 'email', 'avatar_url', 'password', 'parent_id', 'role_title', 'must_reset_password', 'subdomain', 'custom_domain', 'active_domain_type', 'role_permissions', 'custom_roles'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,7 @@ class User extends Authenticatable
             'parent_id' => 'integer',
             'must_reset_password' => 'boolean',
             'role_permissions' => 'array',
+            'custom_roles' => 'array',
         ];
     }
 
@@ -99,11 +100,45 @@ class User extends Authenticatable
             return true;
         }
 
-        // Fetch customized permissions
-        $owner = self::find($this->parent_id);
-        $tenantPermissions = $owner ? ($owner->role_permissions ?? []) : [];
+        return in_array($permission, $this->rolePermissionsFor($role), true);
+    }
 
-        $defaultRolePermissions = [
+    /**
+     * @return array<string, array{name: string, description: string, badge_color: string, icon: string}>
+     */
+    public function roleDefinitions(): array
+    {
+        return \App\Support\RoleCatalog::all($this->tenantOwner()?->custom_roles ?? $this->custom_roles ?? []);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function roleIds(): array
+    {
+        return \App\Support\RoleCatalog::ids($this->tenantOwner()?->custom_roles ?? $this->custom_roles ?? []);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function rolePermissionsFor(string $roleId): array
+    {
+        $owner = $this->tenantOwner();
+        $tenantPermissions = $owner?->role_permissions ?? $this->role_permissions ?? [];
+        $defaultRolePermissions = self::defaultRolePermissions();
+
+        return isset($tenantPermissions[$roleId])
+            ? (array) $tenantPermissions[$roleId]
+            : ($defaultRolePermissions[$roleId] ?? []);
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public static function defaultRolePermissions(): array
+    {
+        return [
             'admin' => [
                 'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.cancel', 'appointments.view_all',
                 'clients.view', 'clients.edit', 'clients.reviews', 'clients.view_all',
@@ -141,12 +176,15 @@ class User extends Authenticatable
                 'team.view',
             ],
         ];
+    }
 
-        $userPermissions = isset($tenantPermissions[$role])
-            ? (array) $tenantPermissions[$role]
-            : ($defaultRolePermissions[$role] ?? []);
+    public function tenantOwner(): ?self
+    {
+        if ($this->parent_id === null) {
+            return $this;
+        }
 
-        return in_array($permission, $userPermissions, true);
+        return self::query()->find($this->parent_id);
     }
 
     public function brandingSetting(): \Illuminate\Database\Eloquent\Relations\HasOne

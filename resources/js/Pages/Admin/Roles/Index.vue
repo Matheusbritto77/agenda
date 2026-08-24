@@ -34,22 +34,29 @@ const activeTab = ref('users');
 const selectedRole = ref('admin');
 const selectedRolePermissions = ref([]);
 
-const roleTitles = {
-    'admin': 'Administrador',
-    'manager': 'Gerente',
-    'professional': 'Profissional / Especialista',
-    'receptionist': 'Recepcionista / Atendente'
-};
+const roleEntries = computed(() => Object.entries(props.roles || {}));
+const defaultRoleId = computed(() => roleEntries.value[0]?.[0] || 'admin');
+const roleTitles = computed(() => Object.fromEntries(roleEntries.value.map(([key, role]) => [key, role.name])));
 
 const subUserEmailsForStats = computed(() => props.subUsers?.map(u => u.email).filter(Boolean) || []);
 const teamMembersNotInSubUsers = computed(() => props.teamMembers.filter(m => !m.email || !subUserEmailsForStats.value.includes(m.email)));
 const adminCount = computed(() => 1 + props.teamMembers.filter(m => m.role_id === 'admin').length);
 const totalAccounts = computed(() => 1 + (props.subUsers?.length || 0) + teamMembersNotInSubUsers.value.length);
 const subUserEmails = computed(() => props.subUsers?.map(u => u.email).filter(Boolean) || []);
+const roleCount = computed(() => roleEntries.value.length);
 
 const permissionsForm = useForm({
     role: 'admin',
     permissions: [],
+});
+
+const customRoleForm = useForm({
+    name: '',
+    role_id: '',
+    description: '',
+    base_role_id: 'professional',
+    icon: 'fa-solid fa-user-tag',
+    badge_color: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
 });
 
 const roleUpdateForms = ref({});
@@ -57,7 +64,7 @@ const roleUpdateForms = ref({});
 const getRoleUpdateForm = (memberId) => {
     if (!roleUpdateForms.value[memberId]) {
         roleUpdateForms.value[memberId] = useForm({
-            role_id: 'professional',
+            role_id: defaultRoleId.value,
         });
     }
     return roleUpdateForms.value[memberId];
@@ -108,6 +115,19 @@ const submitPermissions = () => {
     });
 };
 
+const submitCustomRole = () => {
+    customRoleForm.post(route('admin.roles.custom.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            customRoleForm.reset();
+            customRoleForm.base_role_id = 'professional';
+            customRoleForm.icon = 'fa-solid fa-user-tag';
+            customRoleForm.badge_color = 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30';
+            router.reload({ preserveScroll: true });
+        },
+    });
+};
+
 const submitRoleChange = (memberId) => {
     const form = getRoleUpdateForm(memberId);
     form.patch(route('admin.roles.team-member.update-role', memberId), {
@@ -124,10 +144,10 @@ const getLinkedMember = (sub) => {
 };
 
 const onMountedFn = () => {
-    selectRole('admin');
+    selectRole(defaultRoleId.value);
     props.teamMembers.forEach(m => {
         const form = getRoleUpdateForm(m.id);
-        form.role_id = m.role_id || 'professional';
+        form.role_id = m.role_id || defaultRoleId.value;
     });
 
     window.addEventListener('keydown', (e) => {
@@ -225,7 +245,7 @@ onMounted(onMountedFn);
                         </div>
                         <div>
                             <span class="text-xs font-semibold uppercase tracking-wider opacity-60">Roles Ativas</span>
-                            <h3 class="text-2xl font-black mt-0.5" style="color: var(--text-heading);">4</h3>
+                            <h3 class="text-2xl font-black mt-0.5" style="color: var(--text-heading);">{{ roleCount }}</h3>
                         </div>
                     </div>
                 </div>
@@ -342,17 +362,8 @@ onMounted(onMountedFn);
                                                         class="text-xs font-bold py-1.5 pl-3 pr-8 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer shadow-sm hover:border-indigo-500 transition-all"
                                                         title="Clique para alterar o cargo deste colaborador"
                                                     >
-                                                        <option value="professional">
-                                                            Profissional / Especialista
-                                                        </option>
-                                                        <option value="manager">
-                                                            Gerente
-                                                        </option>
-                                                        <option value="receptionist">
-                                                            Recepcionista
-                                                        </option>
-                                                        <option value="admin">
-                                                            Administrador
+                                                        <option v-for="(role, key) in roles" :key="key" :value="key">
+                                                            {{ role.name }}
                                                         </option>
                                                     </select>
                                                 </div>
@@ -424,17 +435,8 @@ onMounted(onMountedFn);
                                                             class="text-xs font-bold py-1.5 pl-3 pr-8 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer shadow-sm hover:border-indigo-500 transition-all"
                                                             title="Clique para alterar o cargo deste profissional"
                                                         >
-                                                            <option value="professional">
-                                                                Profissional / Especialista
-                                                            </option>
-                                                            <option value="manager">
-                                                                Gerente
-                                                            </option>
-                                                            <option value="receptionist">
-                                                                Recepcionista
-                                                            </option>
-                                                            <option value="admin">
-                                                                Administrador
+                                                            <option v-for="(role, key) in roles" :key="key" :value="key">
+                                                                {{ role.name }}
                                                             </option>
                                                         </select>
                                                     </div>
@@ -472,6 +474,64 @@ onMounted(onMountedFn);
 
             <div v-if="activeTab === 'roles'" class="space-y-6">
                 <form @submit.prevent="submitPermissions">
+                    <div class="glass-card-3d rounded-3xl p-6 sm:p-7 space-y-5 mb-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b" style="border-color: var(--border);">
+                            <div>
+                                <h3 class="text-base font-extrabold" style="color: var(--text-heading);">Criar Cargo Personalizado</h3>
+                                <p class="text-xs opacity-60">Crie um novo perfil e comece com as permissões de uma role base.</p>
+                            </div>
+                            <span class="text-[11px] font-semibold px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                Disponível para a empresa inteira
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="form-group mb-0">
+                                        <label class="form-label text-xs">Nome da Role *</label>
+                                        <input v-model="customRoleForm.name" type="text" class="form-control text-xs sm:text-sm rounded-xl" placeholder="Ex: Supervisor" />
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="form-label text-xs">Identificador interno</label>
+                                        <input v-model="customRoleForm.role_id" type="text" class="form-control text-xs sm:text-sm rounded-xl" placeholder="supervisor" />
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div class="form-group mb-0">
+                                        <label class="form-label text-xs">Base de permissões</label>
+                                        <select v-model="customRoleForm.base_role_id" class="form-control text-xs sm:text-sm rounded-xl">
+                                            <option v-for="(role, key) in roles" :key="key" :value="key">
+                                                {{ role.name }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="form-label text-xs">Ícone Font Awesome</label>
+                                        <input v-model="customRoleForm.icon" type="text" class="form-control text-xs sm:text-sm rounded-xl" placeholder="fa-solid fa-user-tag" />
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-0">
+                                    <label class="form-label text-xs">Cor da badge</label>
+                                    <input v-model="customRoleForm.badge_color" type="text" class="form-control text-xs sm:text-sm rounded-xl" placeholder="bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30" />
+                                </div>
+                            </div>
+
+                            <div class="form-group mb-0 h-full">
+                                <label class="form-label text-xs">Descrição</label>
+                                <textarea v-model="customRoleForm.description" rows="9" class="form-control text-xs sm:text-sm rounded-xl h-full" placeholder="Descreva o que esse cargo pode fazer dentro da empresa."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-end">
+                            <button type="button" @click="submitCustomRole" class="btn btn-primary py-2.5 px-6 text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30" :disabled="customRoleForm.processing">
+                                <i class="fa-solid fa-plus text-xs mr-1.5"></i>
+                                <span>{{ customRoleForm.processing ? 'Criando...' : 'Criar Cargo' }}</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div
