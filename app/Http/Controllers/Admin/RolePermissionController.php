@@ -326,6 +326,51 @@ class RolePermissionController extends Controller
             ->with('success', "Cargo de {$teamMember->name} alterado para '{$teamMember->role_name}' com sucesso!");
     }
 
+    public function destroyCustomRole(Request $request, string $roleId)
+    {
+        $user = $request->user() ?? auth()->user();
+        $tenantId = $user->parent_id ? (int) $user->parent_id : (int) $user->id;
+        $owner = User::findOrFail($tenantId);
+
+        $defaultRoleIds = array_keys(RoleCatalog::defaults());
+        if (in_array($roleId, $defaultRoleIds, true)) {
+            abort(422, 'Cargos padrão do sistema não podem ser removidos.');
+        }
+
+        $customRoles = $owner->custom_roles ?? [];
+        if (! isset($customRoles[$roleId])) {
+            abort(404, 'Cargo personalizado não encontrado.');
+        }
+
+        $roleName = $customRoles[$roleId]['name'] ?? $roleId;
+
+        // Fallback any team members with this custom role to 'professional'
+        TeamMember::query()
+            ->where('user_id', $tenantId)
+            ->where('role_id', $roleId)
+            ->update([
+                'role_id' => 'professional',
+            ]);
+
+        unset($customRoles[$roleId]);
+        $owner->custom_roles = $customRoles;
+
+        $rolePermissions = $owner->role_permissions ?? [];
+        unset($rolePermissions[$roleId]);
+        $owner->role_permissions = $rolePermissions;
+        $owner->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => "Cargo '{$roleName}' excluído com sucesso!",
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.roles.index')
+            ->with('success', "Cargo '{$roleName}' excluído com sucesso!");
+    }
+
     /**
      * @return array<int, string>
      */
