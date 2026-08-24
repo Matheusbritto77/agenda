@@ -192,16 +192,31 @@ class ServiceController extends Controller
 
     private function validateServiceRequest(Request $request, ?Service $service = null): array
     {
+        $currentImageUrl = $service?->image_url ? trim((string) $service->image_url) : null;
+        $submittedImageUrl = trim((string) $request->input('image_url', ''));
+        $isKeepingCurrentImageUrl = $service !== null
+            && $submittedImageUrl !== ''
+            && $currentImageUrl !== null
+            && $submittedImageUrl === $currentImageUrl;
+
+        $imageUrlRules = $isKeepingCurrentImageUrl
+            ? ['nullable', 'string', 'max:2048']
+            : ['nullable', 'url', 'max:2048'];
+
         return Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'price' => ['required', 'numeric', 'min:0'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
             'slot_duration_minutes' => ['nullable', 'integer', Rule::in([15, 30, 45, 60, 90, 120])],
-            'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_url' => $imageUrlRules,
             'image_file' => ['nullable', 'file', 'image', 'mimes:jpeg,png,webp,jpg', 'max:10240'],
-        ])->after(function ($validator) use ($request): void {
-            if ($request->filled('image_url') && $request->hasFile('image_file')) {
+        ])->after(function ($validator) use ($request, $service, $submittedImageUrl): void {
+            if (
+                $service === null
+                && $request->hasFile('image_file')
+                && $submittedImageUrl !== ''
+            ) {
                 $validator->errors()->add('image_file', 'Envie apenas uma imagem por vez: arquivo ou URL.');
             }
         })->validate();

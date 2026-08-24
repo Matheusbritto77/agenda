@@ -43,6 +43,7 @@ const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
         form.image_file = file;
+        form.image_url = '';
         const reader = new FileReader();
         reader.onload = (e) => {
             imagePreview.value = e.target.result;
@@ -53,8 +54,8 @@ const handleFileChange = (event) => {
 };
 
 const handleUrlPreview = () => {
-    if (form.image_file) return;
     if (form.image_url && form.image_url.trim() !== '') {
+        form.image_file = null;
         imagePreview.value = form.image_url;
         imagePreviewVisible.value = true;
     } else {
@@ -65,6 +66,7 @@ const handleUrlPreview = () => {
 
 const submit = () => {
     form.post(route('admin.services.update', props.service.id), {
+        forceFormData: true,
         onSuccess: () => {
             router.visit(route('admin.services.index'));
         },

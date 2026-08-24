@@ -112,6 +112,7 @@ const handleCreateFileChange = (file) => {
 const handleEditFileChange = (file) => {
     if (file) {
         editForm.image_file = file;
+        editForm.image_url = '';
         const reader = new FileReader();
         reader.onload = (e) => {
             editImagePreview.value = e.target.result;
@@ -142,6 +143,7 @@ const submitCreate = () => {
 
 const submitEdit = () => {
     editForm.post(route('admin.services.update', editForm.id), {
+        forceFormData: true,
         onSuccess: () => {
             closeEditModal();
         },

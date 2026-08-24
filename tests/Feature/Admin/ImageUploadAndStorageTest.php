@@ -120,11 +120,13 @@ class ImageUploadAndStorageTest extends TestCase
         $oldImagePath = $service->image_path;
         $newImageFile = UploadedFile::fake()->image('corte_v2.webp', 800, 800);
 
-        $this->actingAs($this->user)->put(route('admin.services.update', $service), [
+        $this->actingAs($this->user)->post(route('admin.services.update', $service), [
             'name' => 'Corte Premium Atualizado',
             'price' => '80.00',
             'duration_minutes' => 50,
+            'image_url' => $service->image_url,
             'image_file' => $newImageFile,
+            '_method' => 'PUT',
         ]);
 
         $service->refresh();
