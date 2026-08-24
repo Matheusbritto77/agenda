@@ -222,7 +222,7 @@ class PublicBookingController extends Controller
         $companyReviews = \App\Models\CompanyReview::query()
             ->where('user_id', $company->id)
             ->where('is_public', true)
-            ->with('clientAccount:id,name')
+            ->with('clientAccount:id,name,avatar_path')
             ->latest('company_reviews.created_at')
             ->orderByDesc('company_reviews.id')
             ->get()
@@ -231,6 +231,8 @@ class PublicBookingController extends Controller
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'client_name' => $this->abbreviateClientName($review->clientAccount?->name),
+                'client_avatar_url' => $review->clientAccount?->avatar_url,
+                'client_initials' => $this->clientInitials($review->clientAccount?->name),
                 'service_name' => 'Avaliação do Estabelecimento',
                 'created_at' => $review->created_at->format('d/m/Y'),
                 'sort_key' => $review->id,
@@ -241,7 +243,7 @@ class PublicBookingController extends Controller
             ->whereHas('appointment', fn ($query) => $query
                 ->where('appointments.user_id', $company->id)
                 ->where('appointments.status', 'completed'))
-            ->with(['clientAccount:id,name', 'appointment.service:id,name'])
+            ->with(['clientAccount:id,name,avatar_path', 'appointment.service:id,name'])
             ->latest('appointment_reviews.created_at')
             ->orderByDesc('appointment_reviews.id')
             ->get()
@@ -250,6 +252,8 @@ class PublicBookingController extends Controller
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'client_name' => $this->abbreviateClientName($review->clientAccount?->name),
+                'client_avatar_url' => $review->clientAccount?->avatar_url,
+                'client_initials' => $this->clientInitials($review->clientAccount?->name),
                 'service_name' => $review->appointment?->service?->name,
                 'created_at' => $review->created_at->format('d/m/Y'),
                 'sort_key' => $review->id,
@@ -316,6 +320,21 @@ class PublicBookingController extends Controller
         }
 
         return $parts[0].' '.mb_strtoupper(mb_substr($parts[array_key_last($parts)], 0, 1)).'.';
+    }
+
+    private function clientInitials(?string $name): string
+    {
+        $parts = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        if ($parts === []) {
+            return 'C';
+        }
+
+        if (count($parts) === 1) {
+            return mb_strtoupper(mb_substr($parts[0], 0, 1));
+        }
+
+        return mb_strtoupper(mb_substr($parts[0], 0, 1).mb_substr($parts[array_key_last($parts)], 0, 1));
     }
 
     private function businessHourContainsCurrentTime(BusinessHour $hour, Carbon $now): bool

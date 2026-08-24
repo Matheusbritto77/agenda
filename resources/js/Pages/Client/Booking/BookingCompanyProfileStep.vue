@@ -315,9 +315,25 @@ const ctaLabel = computed(() => props.companyProfile.cta_label || 'Agendar agora
                     </div>
                     <p v-if="review.comment" class="flex-1 text-sm leading-relaxed font-medium" :style="{ color: 'var(--text)' }">“{{ review.comment }}”</p>
                     <p v-else class="flex-1 text-sm italic opacity-60" :style="{ color: 'var(--text-muted)' }">Cliente avaliou este atendimento com {{ review.rating }} estrelas.</p>
-                    <div class="mt-4 border-t pt-3" :style="{ borderColor: 'var(--border)' }">
-                        <p class="text-xs font-black" :style="{ color: 'var(--text-heading)' }">{{ review.client_name }}</p>
-                        <p v-if="review.service_name" class="mt-0.5 text-[11px] opacity-75 font-medium" :style="{ color: 'var(--text-muted)' }">{{ review.service_name }} · Atendimento verificado</p>
+                    <div class="mt-4 border-t pt-3 flex items-center gap-3" :style="{ borderColor: 'var(--border)' }">
+                        <div
+                            class="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-xs font-black text-white shadow-xs border border-white/20 dark:border-slate-700/50"
+                            :style="{
+                                background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary, var(--primary)) 100%)'
+                            }"
+                        >
+                            <img
+                                v-if="review.client_avatar_url"
+                                :src="review.client_avatar_url"
+                                :alt="review.client_name"
+                                class="w-full h-full object-cover"
+                            />
+                            <span v-else>{{ review.client_initials || review.client_name?.charAt(0)?.toUpperCase() || 'C' }}</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-black truncate" :style="{ color: 'var(--text-heading)' }">{{ review.client_name }}</p>
+                            <p v-if="review.service_name" class="mt-0.5 text-[11px] opacity-75 font-medium truncate" :style="{ color: 'var(--text-muted)' }">{{ review.service_name }} · Atendimento verificado</p>
+                        </div>
                     </div>
                 </article>
             </div>

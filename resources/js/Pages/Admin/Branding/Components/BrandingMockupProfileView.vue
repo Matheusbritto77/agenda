@@ -267,9 +267,17 @@ defineEmits(['set-booking-step']);
                 <p class="text-[10px] italic leading-tight opacity-90">
                     "Atendimento impecável! Profissionais pontuais e ambiente nota 10."
                 </p>
-                <div class="pt-1 border-t border-slate-200/30 flex items-center justify-between text-[9px]">
-                    <span class="font-bold">Gabriel S.</span>
-                    <span class="opacity-60">Corte Degradê</span>
+                <div class="pt-1.5 border-t border-slate-200/30 flex items-center gap-2 text-[9px]">
+                    <div
+                        class="w-5 h-5 rounded-full overflow-hidden shrink-0 flex items-center justify-center text-[7px] font-black text-white"
+                        :style="{ background: form.primary_color }"
+                    >
+                        <span>GS</span>
+                    </div>
+                    <div class="min-w-0 flex-1 flex items-center justify-between">
+                        <span class="font-bold truncate">Gabriel S.</span>
+                        <span class="opacity-60 text-[8px]">Corte Degradê</span>
+                    </div>
                 </div>
             </div>
 

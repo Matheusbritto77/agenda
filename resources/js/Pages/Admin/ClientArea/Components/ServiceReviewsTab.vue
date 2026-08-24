@@ -58,9 +58,15 @@ defineEmits(['submit-filters', 'clear-filters', 'toggle-service-review']);
         <div v-if="serviceReviews.data?.length" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <article v-for="review in serviceReviews.data" :key="review.id" class="glass-card-3d rounded-2xl p-5 space-y-4">
                 <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="font-black" style="color: var(--text-heading);">{{ review.service }}</p>
-                        <p class="text-xs opacity-60">{{ review.client_name }} · {{ review.professional }}</p>
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
+                            <img v-if="review.client_avatar_url" :src="review.client_avatar_url" :alt="review.client_name" class="w-full h-full object-cover" />
+                            <span v-else>{{ review.client_name ? review.client_name.charAt(0).toUpperCase() : 'C' }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-black truncate" style="color: var(--text-heading);">{{ review.service }}</p>
+                            <p class="text-xs opacity-60 truncate">{{ review.client_name }} · {{ review.professional }}</p>
+                        </div>
                     </div>
                     <span
                         class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-extrabold"

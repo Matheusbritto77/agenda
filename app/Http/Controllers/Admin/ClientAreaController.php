@@ -62,7 +62,7 @@ class ClientAreaController extends Controller
         $reviewsQuery = AppointmentReview::query()
             ->whereHas('appointment', fn (Builder $query) => $this->scopeAppointments($query, $tenantId, $teamMemberId))
             ->with([
-                'clientAccount:id,name,email',
+                'clientAccount:id,name,email,avatar_path',
                 'appointment:id,user_id,client_account_id,service_id,team_member_id,appointment_date,appointment_time,status',
                 'appointment.service:id,name',
                 'appointment.teamMember:id,name,job_title',
@@ -91,7 +91,7 @@ class ClientAreaController extends Controller
 
         $companyReviews = CompanyReview::query()
             ->where('user_id', $tenantId)
-            ->with('clientAccount:id,name,email')
+            ->with('clientAccount:id,name,email,avatar_path')
             ->latest()
             ->paginate(12, ['*'], 'company_reviews_page')
             ->withQueryString()
@@ -99,6 +99,7 @@ class ClientAreaController extends Controller
                 'id' => $review->id,
                 'client_name' => $review->clientAccount?->name ?? 'Cliente',
                 'client_email' => $review->clientAccount?->email,
+                'client_avatar_url' => $review->clientAccount?->avatar_url,
                 'rating' => (int) $review->rating,
                 'comment' => $review->comment,
                 'is_public' => (bool) $review->is_public,
@@ -581,6 +582,7 @@ class ClientAreaController extends Controller
             'id' => $review->id,
             'client_name' => $review->clientAccount?->name ?? 'Cliente',
             'client_email' => $review->clientAccount?->email,
+            'client_avatar_url' => $review->clientAccount?->avatar_url,
             'service' => $review->appointment?->service?->name ?? 'Serviço removido',
             'professional' => $review->appointment?->teamMember?->name ?? 'Atendimento geral',
             'rating' => (int) $review->rating,
