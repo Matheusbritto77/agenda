@@ -41,16 +41,24 @@ class StorageHelper
     }
 
     /**
-     * Safely deletes a file from the public disk if it exists.
+     * Safely deletes a file from the public disk.
      */
     public static function delete(?string $path): bool
     {
         $cleanPath = self::cleanPath($path);
 
-        if ($cleanPath && Storage::disk('public')->exists($cleanPath)) {
-            return Storage::disk('public')->delete($cleanPath);
+        if (empty($cleanPath)) {
+            return false;
         }
 
-        return false;
+        try {
+            // S3/R2 handles deleting non-existent files gracefully without throwing errors
+            return Storage::disk('public')->delete($cleanPath);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Erro ao excluir arquivo do storage: " . $e->getMessage(), [
+                'path' => $cleanPath,
+            ]);
+            return false;
+        }
     }
 }
