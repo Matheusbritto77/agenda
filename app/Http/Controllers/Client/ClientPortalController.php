@@ -51,6 +51,11 @@ class ClientPortalController extends Controller
                 $bannerUrl = ! empty($bSettings['portal_banner_path'])
                     ? \App\Support\StorageHelper::url($bSettings['portal_banner_path'])
                     : $branding?->banner_url;
+                $logoUrl = ! empty($bSettings['portal_logo_path'])
+                    ? \App\Support\StorageHelper::url($bSettings['portal_logo_path'])
+                    : $branding?->logo_url;
+                $primaryColor = $bSettings['portal_primary_color'] ?? $branding?->primary_color ?? '#6366f1';
+                $secondaryColor = $bSettings['portal_secondary_color'] ?? $branding?->secondary_color ?? '#06b6d4';
 
                 return [
                     'id' => $tenant?->id,
@@ -68,10 +73,10 @@ class ClientPortalController extends Controller
                     'custom_instructions' => $bSettings['portal_custom_instructions'] ?? null,
                     'tagline' => $bSettings['tagline'] ?? null,
                     'booking_url' => $tenant?->publicBookingUrl(),
-                    'logo_url' => $branding?->logo_url,
+                    'logo_url' => $logoUrl,
                     'banner_url' => $bannerUrl,
-                    'primary_color' => $branding?->primary_color ?? '#6366f1',
-                    'secondary_color' => $branding?->secondary_color ?? '#06b6d4',
+                    'primary_color' => $primaryColor,
+                    'secondary_color' => $secondaryColor,
                     'services_count' => $completed,
                     'total_appointments_count' => $companyAppointments->count(),
                     'professionals' => $companyAppointments
@@ -187,7 +192,7 @@ class ClientPortalController extends Controller
                     'company_id' => $appointment->user_id,
                     'company' => $appointment->tenant?->name ?? 'Empresa',
                     'company_booking_url' => $appointment->tenant?->publicBookingUrl(),
-                    'company_logo_url' => $tenantBranding?->logo_url,
+                    'company_logo_url' => ! empty($tSettings['portal_logo_path']) ? \App\Support\StorageHelper::url($tSettings['portal_logo_path']) : $tenantBranding?->logo_url,
                     'service' => $appointment->service?->name ?? 'Serviço',
                     'service_price' => $appointment->service?->formatted_price ?? ('R$ ' . number_format((float) ($appointment->service?->price ?? 0), 2, ',', '.')),
                     'duration_minutes' => $appointment->service?->duration_minutes ?? 30,

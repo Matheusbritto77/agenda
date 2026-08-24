@@ -181,16 +181,12 @@ class ClientAreaTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('branding_settings', [
-            'user_id' => $owner->id,
-            'primary_color' => '#8b5cf6',
-            'secondary_color' => '#ec4899',
-        ]);
-
         $branding = \App\Models\BrandingSetting::where('user_id', $owner->id)->first();
         $this->assertSame('Espaço Exclusivo VIP', $branding->settings['portal_welcome_title']);
         $this->assertSame('11988887777', $branding->settings['portal_support_whatsapp']);
         $this->assertTrue($branding->settings['portal_announcement_enabled']);
+        $this->assertSame('#8b5cf6', $branding->settings['portal_primary_color']);
+        $this->assertSame('#ec4899', $branding->settings['portal_secondary_color']);
     }
 
     public function test_owner_can_create_update_toggle_and_delete_coupons(): void

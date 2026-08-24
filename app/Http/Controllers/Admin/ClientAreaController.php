@@ -120,9 +120,9 @@ class ClientAreaController extends Controller
             'welcome_subtitle' => $bSettings['portal_welcome_subtitle'] ?? 'Acompanhe seus horários, histórico de atendimentos e conquistas.',
             'announcement' => $bSettings['portal_announcement'] ?? '',
             'announcement_enabled' => (bool) ($bSettings['portal_announcement_enabled'] ?? false),
-            'primary_color' => $branding?->primary_color ?? '#6366f1',
-            'secondary_color' => $branding?->secondary_color ?? '#06b6d4',
-            'logo_url' => $branding?->logo_url,
+            'primary_color' => $bSettings['portal_primary_color'] ?? $branding?->primary_color ?? '#6366f1',
+            'secondary_color' => $bSettings['portal_secondary_color'] ?? $branding?->secondary_color ?? '#06b6d4',
+            'logo_url' => ! empty($bSettings['portal_logo_path']) ? \App\Support\StorageHelper::url($bSettings['portal_logo_path']) : $branding?->logo_url,
             'banner_url' => ! empty($bSettings['portal_banner_path']) ? \App\Support\StorageHelper::url($bSettings['portal_banner_path']) : $branding?->banner_url,
             'show_loyalty_badges' => (bool) ($bSettings['portal_show_loyalty_badges'] ?? true),
             'show_reviews' => (bool) ($bSettings['portal_show_reviews'] ?? true),
@@ -237,17 +237,18 @@ class ClientAreaController extends Controller
 
         // Handle logo image upload
         if ($request->hasFile('logo_image')) {
-            if ($branding->logo_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($branding->logo_path);
+            if (! empty($currentSettings['portal_logo_path'])) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($currentSettings['portal_logo_path']);
             }
-            $branding->logo_path = $request->file('logo_image')->store("brandings/{$tenantId}", 'public');
+            $logoPath = $request->file('logo_image')->store("brandings/{$tenantId}", 'public');
+            $currentSettings['portal_logo_path'] = $logoPath;
         }
 
         if (! empty($validated['portal_primary_color'])) {
-            $branding->primary_color = $validated['portal_primary_color'];
+            $currentSettings['portal_primary_color'] = $validated['portal_primary_color'];
         }
         if (! empty($validated['portal_secondary_color'])) {
-            $branding->secondary_color = $validated['portal_secondary_color'];
+            $currentSettings['portal_secondary_color'] = $validated['portal_secondary_color'];
         }
 
         $currentSettings['portal_welcome_title'] = $validated['portal_welcome_title'] ?? null;
