@@ -108,6 +108,7 @@ const prevPage = () => {
 
 // Helper for dynamic border radius style/classes
 const radiusClass = computed(() => {
+    if (props.form.border_radius === 'rounded-full') return 'rounded-3xl';
     return props.form.border_radius || 'rounded-2xl';
 });
 

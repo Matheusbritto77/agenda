@@ -296,6 +296,10 @@ const applyPreset = (preset) => {
                     Pílula
                 </button>
             </div>
+            <p class="text-[11px] text-slate-400 mt-2">
+                <i class="fa-solid fa-circle-info mr-1 text-indigo-500"></i>
+                No modo <strong>Pílula</strong>, botões e controles utilizam formato oval completo, enquanto cartões e contêineres adotam cantos ultra-arredondados e harmônicos sem cortar o conteúdo.
+            </p>
         </div>
     </div>
 </template>

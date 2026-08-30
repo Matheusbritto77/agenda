@@ -62,7 +62,7 @@ const customStyles = computed(() => {
         styles['--radius'] = '1.5rem';
         styles['--radius-sm'] = '1rem';
     } else if (s.border_radius === 'rounded-full') {
-        styles['--radius'] = '9999px';
+        styles['--radius'] = '2rem';
         styles['--radius-sm'] = '9999px';
     } else {
         styles['--radius'] = '1rem';
