@@ -422,4 +422,49 @@ class TeamManagementTest extends TestCase
             ->where('selectedProfessional.name', 'Felipe Tesoura')
         );
     }
+
+    public function test_tenant_cannot_create_team_member_with_owner_email(): void
+    {
+        $tenant = User::factory()->create([
+            'email' => 'dono@empresa.com',
+        ]);
+
+        $response = $this->actingAs($tenant)->post(route('admin.team.store'), [
+            'name' => 'Tentativa Membro',
+            'email' => 'dono@empresa.com',
+            'role_id' => 'professional',
+        ]);
+
+        $response->assertSessionHasErrors(['email' => 'Não é possível cadastrar um membro com o mesmo e-mail da conta principal da empresa.']);
+        $this->assertDatabaseMissing('team_members', [
+            'user_id' => $tenant->id,
+            'name' => 'Tentativa Membro',
+        ]);
+    }
+
+    public function test_tenant_cannot_update_team_member_to_owner_email(): void
+    {
+        $tenant = User::factory()->create([
+            'email' => 'dono@empresa.com',
+        ]);
+
+        $member = TeamMember::create([
+            'user_id' => $tenant->id,
+            'name' => 'Membro Existente',
+            'email' => 'membro@empresa.com',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($tenant)->put(route('admin.team.update', $member->id), [
+            'name' => 'Membro Existente',
+            'email' => 'DONO@EMPRESA.COM',
+        ]);
+
+        $response->assertSessionHasErrors(['email' => 'Não é possível cadastrar um membro com o mesmo e-mail da conta principal da empresa.']);
+        $this->assertDatabaseHas('team_members', [
+            'id' => $member->id,
+            'email' => 'membro@empresa.com',
+        ]);
+    }
 }
+

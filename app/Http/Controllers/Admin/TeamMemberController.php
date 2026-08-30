@@ -159,13 +159,18 @@ class TeamMemberController extends Controller
                     'nullable',
                     'email',
                     'max:255',
-                    function ($attribute, $value, $fail) use ($tenantId) {
+                    function ($attribute, $value, $fail) use ($tenantId, $owner) {
                         if ($value === null || $value === '') {
+                            return;
+                        }
+                        $normalized = strtolower(trim((string) $value));
+                        if ($owner && ! empty($owner->email) && strtolower(trim((string) $owner->email)) === $normalized) {
+                            $fail('Não é possível cadastrar um membro com o mesmo e-mail da conta principal da empresa.');
                             return;
                         }
                         $exists = TeamMember::query()
                             ->where('user_id', $tenantId)
-                            ->where('email', $value)
+                            ->whereRaw('LOWER(email) = ?', [$normalized])
                             ->exists();
                         if ($exists) {
                             $fail('Já existe um profissional cadastrado com este e-mail no seu estabelecimento.');
@@ -276,10 +281,32 @@ class TeamMemberController extends Controller
                     'nullable',
                     'email',
                     'max:255',
-                    Rule::unique('users', 'email')->ignore($linkedUser?->id),
-                    Rule::unique('team_members', 'email')
-                        ->where(fn ($query) => $query->where('user_id', $tenantId))
-                        ->ignore($teamMember->id),
+                    function ($attribute, $value, $fail) use ($tenantId, $owner, $teamMember, $linkedUser) {
+                        if ($value === null || $value === '') {
+                            return;
+                        }
+                        $normalized = strtolower(trim((string) $value));
+                        if ($owner && ! empty($owner->email) && strtolower(trim((string) $owner->email)) === $normalized) {
+                            $fail('Não é possível cadastrar um membro com o mesmo e-mail da conta principal da empresa.');
+                            return;
+                        }
+                        $existsInUsers = User::query()
+                            ->whereRaw('LOWER(email) = ?', [$normalized])
+                            ->when($linkedUser?->id, fn ($q) => $q->where('id', '!=', $linkedUser->id))
+                            ->exists();
+                        if ($existsInUsers) {
+                            $fail('Este e-mail já está em uso por outro usuário.');
+                            return;
+                        }
+                        $existsInMembers = TeamMember::query()
+                            ->where('user_id', $tenantId)
+                            ->whereRaw('LOWER(email) = ?', [$normalized])
+                            ->where('id', '!=', $teamMember->id)
+                            ->exists();
+                        if ($existsInMembers) {
+                            $fail('Já existe um profissional cadastrado com este e-mail no seu estabelecimento.');
+                        }
+                    },
                 ],
                 'phone' => ['nullable', 'string', 'max:50'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
