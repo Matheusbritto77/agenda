@@ -10,10 +10,9 @@ RUN apt-get update && apt-get install -y \
     git \
     sqlite3 \
     libsqlite3-dev \
-    libpq-dev \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql pdo_pgsql pdo_sqlite zip bcmath opcache pcntl
+    && docker-php-ext-install gd pdo pdo_mysql pdo_sqlite zip bcmath opcache pcntl
 
 # Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
