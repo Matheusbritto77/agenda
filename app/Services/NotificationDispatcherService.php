@@ -27,7 +27,7 @@ class NotificationDispatcherService
 
             $settings = NotificationSetting::forUser($company->id);
             $serviceName = $appointment->service?->name ?? 'Serviço';
-            $appointmentDateTime = Carbon::parse("{$appointment->appointment_date} {$appointment->appointment_time}");
+            $appointmentDateTime = $this->parseAppointmentDateTime($appointment);
             $formattedDate = $appointmentDateTime->format('d/m/Y');
             $formattedTime = $appointmentDateTime->format('H:i');
             $companyName = $company->name;
@@ -177,7 +177,7 @@ class NotificationDispatcherService
             }
 
             $serviceName = $appointment->service?->name ?? 'Serviço';
-            $appointmentDateTime = Carbon::parse("{$appointment->appointment_date} {$appointment->appointment_time}");
+            $appointmentDateTime = $this->parseAppointmentDateTime($appointment);
             $formattedDate = $appointmentDateTime->format('d/m/Y');
             $formattedTime = $appointmentDateTime->format('H:i');
             $companyName = $company->name;
@@ -217,7 +217,7 @@ class NotificationDispatcherService
             if (!$settings->notify_client_on_cancellation) return;
 
             $serviceName = $appointment->service?->name ?? 'Serviço';
-            $appointmentDateTime = Carbon::parse("{$appointment->appointment_date} {$appointment->appointment_time}");
+            $appointmentDateTime = $this->parseAppointmentDateTime($appointment);
             $formattedDate = $appointmentDateTime->format('d/m/Y');
             $formattedTime = $appointmentDateTime->format('H:i');
             $companyName = $company->name;
@@ -362,5 +362,19 @@ class NotificationDispatcherService
             'days' => $time->subDays($value),
             default => $time->subHours($value),
         };
+    }
+
+    /**
+     * Safely parse appointment date and time into a Carbon instance
+     */
+    private function parseAppointmentDateTime(Appointment $appointment): Carbon
+    {
+        $dateStr = $appointment->appointment_date instanceof Carbon
+            ? $appointment->appointment_date->format('Y-m-d')
+            : substr((string) $appointment->appointment_date, 0, 10);
+
+        $timeStr = substr((string) $appointment->appointment_time, 0, 5) ?: '00:00';
+
+        return Carbon::parse("{$dateStr} {$timeStr}");
     }
 }
