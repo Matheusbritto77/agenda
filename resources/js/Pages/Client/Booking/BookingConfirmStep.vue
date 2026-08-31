@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import PhoneInputWithCountry from '@/Components/PhoneInputWithCountry.vue';
 
 const props = defineProps({
     activeProfessional: {
@@ -228,16 +229,15 @@ const formatCurrency = (val) => Number(val || 0).toLocaleString('pt-BR', { minim
                 </div>
 
                 <div class="form-group mb-0 md:col-span-2">
-                    <label class="form-label text-xs font-bold block mb-1" for="form_client_phone" :style="{ color: 'var(--text-heading)' }">Telefone / WhatsApp *</label>
-                    <input
-                        type="tel"
+                    <PhoneInputWithCountry
                         id="form_client_phone"
+                        label="WhatsApp / Telefone *"
                         v-model="bookingForm.client_phone"
-                        class="form-control text-xs sm:text-sm rounded-xl"
-                        placeholder="(11) 99999-8888"
-                        required
+                        v-model:countryCode="bookingForm.country_code"
+                        :error="bookingForm.errors?.client_phone"
+                        placeholder="(00) 00000-0000"
+                        :required="true"
                     />
-                    <span v-if="bookingForm.errors?.client_phone" class="text-xs text-rose-500 mt-1 block">{{ bookingForm.errors.client_phone }}</span>
                 </div>
 
                 <div v-if="showNotes" class="form-group mb-0 md:col-span-2">

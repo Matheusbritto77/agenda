@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import PhoneInputWithCountry from '@/Components/PhoneInputWithCountry.vue';
 
 const props = defineProps({
     user: { type: Object, required: true },
@@ -22,6 +23,8 @@ const maxAvatarSizeBytes = 10 * 1024 * 1024;
 const profileForm = useForm({
     name: props.user.name || '',
     email: props.user.email || '',
+    phone: props.user.phone || '',
+    country_code: props.user.country_code || 'BR',
     avatar: null,
     avatar_url: props.accountContext.avatar_url || props.user.avatar_url || '',
 });
@@ -236,6 +239,17 @@ onUnmounted(() => {
                                 <label class="block text-xs font-bold mb-1.5 uppercase tracking-wider" style="color: var(--text-muted);" for="email">E-mail de Acesso *</label>
                                 <input id="email" v-model="profileForm.email" type="email" required autocomplete="username" class="form-control text-xs sm:text-sm rounded-xl block w-full" />
                                 <div v-if="profileForm.errors.email" class="text-rose-500 text-xs font-semibold mt-1">{{ profileForm.errors.email }}</div>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <PhoneInputWithCountry
+                                    id="profile-phone"
+                                    label="WhatsApp / Telefone para Notificações"
+                                    v-model="profileForm.phone"
+                                    v-model:countryCode="profileForm.country_code"
+                                    :error="profileForm.errors.phone"
+                                    placeholder="(00) 00000-0000"
+                                />
                             </div>
 
                             <div class="md:col-span-2">

@@ -58,7 +58,9 @@ class NotificationDispatcherService
             if ($settings->notify_staff_on_booking) {
                 $staffMember = $appointment->team_member_id ? TeamMember::find($appointment->team_member_id) : null;
                 $branding = \App\Models\BrandingSetting::where('user_id', $company->id)->first();
-                $staffPhone = $staffMember?->phone ?: ($branding?->settings['whatsapp_number'] ?? null);
+                $staffPhone = $staffMember?->phone 
+                    ?: ($branding?->settings['whatsapp_number'] ?? null)
+                    ?: $company->phone;
                 $staffEmail = $staffMember?->email ?: $company->email;
                 $staffName = $staffMember?->name ?: $companyName;
 
@@ -83,7 +85,8 @@ class NotificationDispatcherService
             }
 
             // 3. Schedule Advance Confirmation Reminder
-            if ($settings->reminder_enabled && $settings->whatsapp_enabled && $appointment->client_phone) {
+            $clientCleanPhone = \App\Support\PhoneHelper::normalize($appointment->client_phone);
+            if ($settings->reminder_enabled && $settings->whatsapp_enabled && $clientCleanPhone) {
                 $reminderTime = $this->calculateReminderTime(
                     $appointmentDateTime,
                     $settings->reminder_time_value,
@@ -96,7 +99,7 @@ class NotificationDispatcherService
                     WhatsAppNotificationQueue::create([
                         'user_id' => $company->id,
                         'appointment_id' => $appointment->id,
-                        'recipient_phone' => $appointment->client_phone,
+                        'recipient_phone' => $clientCleanPhone,
                         'recipient_name' => $appointment->client_name,
                         'message_type' => 'reminder',
                         'message_body' => $reminderBody,
@@ -199,17 +202,24 @@ class NotificationDispatcherService
         string $messageType
     ): void {
         // 1. Enqueue WhatsApp if enabled
-        if ($settings->whatsapp_enabled && $recipientPhone) {
-            WhatsAppNotificationQueue::create([
-                'user_id' => $appointment->user_id,
-                'appointment_id' => $appointment->id,
-                'recipient_phone' => $recipientPhone,
-                'recipient_name' => $recipientName,
-                'message_type' => $messageType,
-                'message_body' => $messageBody,
-                'status' => 'pending',
-                'scheduled_for' => Carbon::now(),
-            ]);
+        $cleanPhone = \App\Support\PhoneHelper::normalize($recipientPhone);
+        if ($settings->whatsapp_enabled && $cleanPhone) {
+            try {
+                $queueItem = WhatsAppNotificationQueue::create([
+                    'user_id' => $appointment->user_id,
+                    'appointment_id' => $appointment->id,
+                    'recipient_phone' => $cleanPhone,
+                    'recipient_name' => $recipientName,
+                    'message_type' => $messageType,
+                    'message_body' => $messageBody,
+                    'status' => 'pending',
+                    'scheduled_for' => Carbon::now(),
+                ]);
+
+                Log::info("[NotificationDispatcher] WhatsApp enqueued successfully [ID: {$queueItem->id}] to {$cleanPhone} ({$messageType})");
+            } catch (Throwable $queueErr) {
+                Log::error("[NotificationDispatcher] WhatsApp queue insert error: " . $queueErr->getMessage());
+            }
         }
 
         // 2. Send Email if enabled

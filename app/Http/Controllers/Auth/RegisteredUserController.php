@@ -47,6 +47,8 @@ class RegisteredUserController extends Controller
             $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+                'phone' => ['nullable', 'string', 'max:30'],
+                'country_code' => ['nullable', 'string', 'max:5'],
                 'password' => ['required', 'confirmed', Rules\Password::defaults()],
             ]);
 
@@ -54,6 +56,8 @@ class RegisteredUserController extends Controller
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
+                    'phone' => $request->phone,
+                    'country_code' => $request->country_code ?? 'BR',
                     'password' => Hash::make($request->password),
                     'must_reset_password' => false,
                     'subdomain' => $this->generateUniqueSubdomain($request->name, $request->email, $subdomainAvailability),

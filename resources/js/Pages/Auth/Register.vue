@@ -1,12 +1,15 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
+import PhoneInputWithCountry from '@/Components/PhoneInputWithCountry.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 
 const form = useForm({
     name: '',
     email: '',
+    phone: '',
+    country_code: 'BR',
     password: '',
     password_confirmation: '',
 });
@@ -214,6 +217,18 @@ const submit = () => {
                             />
                         </div>
                         <InputError class="mt-1" :message="form.errors.email" />
+                    </div>
+
+                    <!-- WhatsApp / Telefone Field with Country Selector -->
+                    <div class="space-y-1.5 md:col-span-2">
+                        <PhoneInputWithCountry
+                            id="phone"
+                            label="WhatsApp / Telefone de Notificação"
+                            v-model="form.phone"
+                            v-model:countryCode="form.country_code"
+                            :error="form.errors.phone"
+                            placeholder="(00) 00000-0000"
+                        />
                     </div>
 
                     <!-- Real-Time Subdomain Preview Banner -->

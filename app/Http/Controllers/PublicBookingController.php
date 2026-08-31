@@ -781,12 +781,16 @@ class PublicBookingController extends Controller
             $requiresManualConfirmation = (bool) $notificationSettings->require_manual_confirmation;
             $initialStatus = ($paymentEnabled || $requiresManualConfirmation) ? 'pending' : 'confirmed';
 
+            $rawPhone = $validated['client_phone'] ?? $validated['customer_phone'] ?? '';
+            $countryCode = $request->input('country_code', 'BR');
+            $normalizedPhone = \App\Support\PhoneHelper::normalize($rawPhone, $countryCode) ?: $rawPhone;
+
             $appointment = Appointment::create([
                 'service_id' => $service->id,
                 'team_member_id' => $resolvedTeamMemberId,
                 'client_name' => $validated['client_name'] ?? $validated['customer_name'],
                 'client_email' => $validated['client_email'] ?? $validated['customer_email'],
-                'client_phone' => $validated['client_phone'] ?? $validated['customer_phone'],
+                'client_phone' => $normalizedPhone,
                 'appointment_date' => $validated['appointment_date'],
                 'appointment_time' => $validated['appointment_time'],
                 'status' => $initialStatus,

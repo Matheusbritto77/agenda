@@ -125,6 +125,7 @@ const bookingForm = useForm({
     client_name: '',
     client_email: '',
     client_phone: '',
+    country_code: 'BR',
     notes: '',
     pay_now: false,
 });
