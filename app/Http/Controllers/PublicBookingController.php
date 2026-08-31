@@ -250,10 +250,10 @@ class PublicBookingController extends Controller
             ->orderBy('opens_at')
             ->get();
 
-        $now = Carbon::now();
+        $tz = config('app.timezone', 'America/Sao_Paulo');
+        $now = Carbon::now($tz);
         $todayHours = $hours
-            ->where('day_of_week', $now->dayOfWeek)
-            ->where('is_active', true);
+            ->filter(fn (BusinessHour $hour): bool => (int) $hour->day_of_week === (int) $now->dayOfWeek && (bool) $hour->is_active);
 
         $isOpenNow = $todayHours->contains(fn (BusinessHour $hour): bool => $this->businessHourContainsCurrentTime($hour, $now));
         $hoursSummary = $this->presentBusinessHoursSummary($hours);
@@ -388,12 +388,18 @@ class PublicBookingController extends Controller
 
     private function businessHourContainsCurrentTime(BusinessHour $hour, Carbon $now): bool
     {
-        if (! $hour->is_active || empty($hour->opens_at) || empty($hour->closes_at)) {
+        if (! (bool) $hour->is_active || empty($hour->opens_at) || empty($hour->closes_at)) {
             return false;
         }
 
-        $open = Carbon::parse($now->toDateString().' '.$hour->opens_at);
-        $close = Carbon::parse($now->toDateString().' '.$hour->closes_at);
+        $tz = $now->getTimezone();
+        $dateStr = $now->toDateString();
+
+        $openTime = substr((string) $hour->opens_at, 0, 5);
+        $closeTime = substr((string) $hour->closes_at, 0, 5);
+
+        $open = Carbon::parse($dateStr . ' ' . $openTime, $tz);
+        $close = Carbon::parse($dateStr . ' ' . $closeTime, $tz);
 
         if ($close->lessThanOrEqualTo($open)) {
             $close->addDay();
@@ -404,8 +410,11 @@ class PublicBookingController extends Controller
         }
 
         if (! empty($hour->break_opens_at) && ! empty($hour->break_closes_at)) {
-            $breakOpen = Carbon::parse($now->toDateString().' '.$hour->break_opens_at);
-            $breakClose = Carbon::parse($now->toDateString().' '.$hour->break_closes_at);
+            $breakOpenTime = substr((string) $hour->break_opens_at, 0, 5);
+            $breakCloseTime = substr((string) $hour->break_closes_at, 0, 5);
+
+            $breakOpen = Carbon::parse($dateStr . ' ' . $breakOpenTime, $tz);
+            $breakClose = Carbon::parse($dateStr . ' ' . $breakCloseTime, $tz);
 
             if ($breakClose->lessThanOrEqualTo($breakOpen)) {
                 $breakClose->addDay();
