@@ -2,11 +2,17 @@
 
 namespace App\Support;
 
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\PhoneNumberUtil;
+use Throwable;
+
 class PhoneHelper
 {
     /**
      * Normalize a phone number to international E.164 without leading plus
-     * e.g. "(34) 99944-2627" -> "553499442627"
+     * using Google's official libphonenumber.
+     * e.g. "(34) 99944-2627" (BR) -> "5534999442627"
      */
     public static function normalize(?string $phone, string $defaultCountry = 'BR'): ?string
     {
@@ -14,21 +20,32 @@ class PhoneHelper
             return null;
         }
 
-        // Remove all non-numeric characters
-        $digits = preg_replace('/\D+/', '', $phone);
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        $defaultRegion = strtoupper($defaultCountry ?: 'BR');
 
+        try {
+            $numberProto = $phoneUtil->parse($phone, $defaultRegion);
+
+            if ($phoneUtil->isValidNumber($numberProto) || $phoneUtil->isPossibleNumber($numberProto)) {
+                $e164 = $phoneUtil->format($numberProto, PhoneNumberFormat::E164);
+                return ltrim($e164, '+');
+            }
+        } catch (NumberParseException $e) {
+            // Segue para o fallback caso seja uma string com formatação incompleta
+        } catch (Throwable $e) {
+            // Ignore
+        }
+
+        // Fallback secundário
+        $digits = preg_replace('/\D+/', '', $phone);
         if (empty($digits)) {
             return null;
         }
 
-        // If Brazil (default)
-        if (strtoupper($defaultCountry) === 'BR') {
-            // Already has country code 55 (e.g. 5534999442627 or 553499442627)
+        if ($defaultRegion === 'BR') {
             if (str_starts_with($digits, '55') && (strlen($digits) === 12 || strlen($digits) === 13)) {
                 return $digits;
             }
-
-            // Local Brazilian number with DDD: 10 digits (fixed) or 11 digits (mobile with 9)
             if (strlen($digits) === 10 || strlen($digits) === 11) {
                 return '55' . $digits;
             }
@@ -38,38 +55,48 @@ class PhoneHelper
     }
 
     /**
-     * Format a phone number for display with country code
+     * Format a phone number for display using Google libphonenumber
      */
-    public static function format(?string $phone): string
+    public static function format(?string $phone, string $defaultCountry = 'BR', bool $international = true): string
     {
-        $normalized = self::normalize($phone);
-        if (!$normalized) {
-            return (string) $phone;
+        if (empty($phone)) {
+            return '';
         }
 
-        if (str_starts_with($normalized, '55') && strlen($normalized) === 13) {
-            // +55 (34) 99944-2627
-            return sprintf(
-                '+%s (%s) %s-%s',
-                substr($normalized, 0, 2),
-                substr($normalized, 2, 2),
-                substr($normalized, 4, 5),
-                substr($normalized, 9, 4)
-            );
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        $defaultRegion = strtoupper($defaultCountry ?: 'BR');
+
+        try {
+            $numberProto = $phoneUtil->parse($phone, $defaultRegion);
+            if ($phoneUtil->isValidNumber($numberProto) || $phoneUtil->isPossibleNumber($numberProto)) {
+                $format = $international ? PhoneNumberFormat::INTERNATIONAL : PhoneNumberFormat::NATIONAL;
+                return $phoneUtil->format($numberProto, $format);
+            }
+        } catch (Throwable $e) {
+            // Retorna a string original em caso de erro
         }
 
-        if (str_starts_with($normalized, '55') && strlen($normalized) === 12) {
-            // +55 (34) 9944-2627
-            return sprintf(
-                '+%s (%s) %s-%s',
-                substr($normalized, 0, 2),
-                substr($normalized, 2, 2),
-                substr($normalized, 4, 4),
-                substr($normalized, 8, 4)
-            );
+        return (string) $phone;
+    }
+
+    /**
+     * Validate if a phone number is valid using Google libphonenumber
+     */
+    public static function isValid(?string $phone, string $defaultCountry = 'BR'): bool
+    {
+        if (empty($phone)) {
+            return false;
         }
 
-        return '+' . $normalized;
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        $defaultRegion = strtoupper($defaultCountry ?: 'BR');
+
+        try {
+            $numberProto = $phoneUtil->parse($phone, $defaultRegion);
+            return $phoneUtil->isValidNumber($numberProto);
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     /**
