@@ -153,6 +153,7 @@ class RolePermissionController extends Controller
                 'reports.view', 'reports.view_all', 'reports.revenue', 'reports.revenue_all', 'reports.export',
                 'integrations.view', 'integrations.manage',
                 'branding.view', 'branding.manage',
+                'notifications.view', 'notifications.manage',
                 'settings.domain', 'settings.roles',
             ],
             'manager' => [
@@ -164,6 +165,7 @@ class RolePermissionController extends Controller
                 'reports.view', 'reports.view_all', 'reports.revenue', 'reports.export',
                 'integrations.view', 'integrations.manage',
                 'branding.view', 'branding.manage',
+                'notifications.view', 'notifications.manage',
             ],
             'professional' => [
                 'appointments.view', 'appointments.create', 'appointments.edit',
@@ -179,6 +181,7 @@ class RolePermissionController extends Controller
                 'services.view',
                 'schedules.view', 'schedules.manage', 'schedules.blocks',
                 'team.view',
+                'notifications.view',
             ],
         ];
 

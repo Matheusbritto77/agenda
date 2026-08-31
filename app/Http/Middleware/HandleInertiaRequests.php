@@ -59,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                 'reports.view', 'reports.view_all', 'reports.revenue', 'reports.revenue_all', 'reports.export',
                 'integrations.view', 'integrations.manage',
                 'branding.view', 'branding.manage',
+                'notifications.view', 'notifications.manage',
                 'settings.domain', 'settings.roles',
             ];
             foreach ($allPermissionsList as $perm) {
