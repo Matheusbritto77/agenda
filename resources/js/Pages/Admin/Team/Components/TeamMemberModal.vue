@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import PhoneInputWithCountry from '@/Components/PhoneInputWithCountry.vue';
 
 const props = defineProps({
     show: {
@@ -163,8 +164,13 @@ const isServiceSelected = (svcId) => {
                                 </p>
                             </div>
                             <div class="form-group mb-0">
-                                <label class="form-label text-xs">Telefone / WhatsApp</label>
-                                <input type="text" v-model="form.phone" class="form-control text-xs sm:text-sm rounded-xl" placeholder="(11) 99999-8888" />
+                                <PhoneInputWithCountry
+                                    id="team_member_phone"
+                                    label="Telefone / WhatsApp"
+                                    v-model="form.phone"
+                                    v-model:countryCode="form.country_code"
+                                    placeholder="(00) 00000-0000"
+                                />
                             </div>
                             <div class="form-group mb-0 sm:col-span-2">
                                 <label class="form-label text-xs">E-mail de Login *</label>

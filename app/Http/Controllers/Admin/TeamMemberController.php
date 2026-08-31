@@ -178,6 +178,7 @@ class TeamMemberController extends Controller
                     },
                 ],
                 'phone' => ['nullable', 'string', 'max:50'],
+                'country_code' => ['nullable', 'string', 'max:5'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
                 'avatar' => ['nullable', 'image', 'max:10240'],
                 'subdomain' => [
@@ -216,6 +217,10 @@ class TeamMemberController extends Controller
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;
             $this->assertGlobalSubdomainIsAvailable($subdomain);
 
+            $rawPhone = $validated['phone'] ?? null;
+            $countryCode = $validated['country_code'] ?? 'BR';
+            $normalizedPhone = $rawPhone ? (\App\Support\PhoneHelper::normalize($rawPhone, $countryCode) ?: $rawPhone) : null;
+
             $teamMember = TeamMember::create([
                 'user_id' => $tenantId,
                 'name' => $validated['name'],
@@ -224,7 +229,8 @@ class TeamMemberController extends Controller
                 'commission_rate' => $validated['commission_rate'] ?? 0.00,
                 'service_commissions' => $validated['service_commissions'] ?? null,
                 'email' => $validated['email'] ?? null,
-                'phone' => $validated['phone'] ?? null,
+                'phone' => $normalizedPhone,
+                'country_code' => $countryCode,
                 'avatar_url' => $avatarUrl,
                 'subdomain' => $subdomain,
                 'custom_domain' => $validated['custom_domain'] ?? null,
@@ -309,6 +315,7 @@ class TeamMemberController extends Controller
                     },
                 ],
                 'phone' => ['nullable', 'string', 'max:50'],
+                'country_code' => ['nullable', 'string', 'max:5'],
                 'avatar_url' => ['nullable', 'string', 'max:1000'],
                 'avatar' => ['nullable', 'image', 'max:10240'],
                 'subdomain' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9-]+$/i'],
@@ -338,12 +345,17 @@ class TeamMemberController extends Controller
             $subdomain = ! empty($validated['subdomain']) ? strtolower(trim($validated['subdomain'])) : null;
             $this->assertGlobalSubdomainIsAvailable($subdomain, $teamMember->id, $linkedUser?->id);
 
+            $rawPhone = $validated['phone'] ?? null;
+            $countryCode = $validated['country_code'] ?? ($teamMember->country_code ?: 'BR');
+            $normalizedPhone = $rawPhone ? (\App\Support\PhoneHelper::normalize($rawPhone, $countryCode) ?: $rawPhone) : null;
+
             $teamMember->update([
                 'name' => $validated['name'],
                 'job_title' => $this->resolveJobTitle($validated),
                 'role_id' => $validated['role_id'] ?? $request->input('role_id', $teamMember->role_id ?? 'professional'),
                 'email' => $validated['email'] ?? null,
-                'phone' => $validated['phone'] ?? null,
+                'phone' => $normalizedPhone,
+                'country_code' => $countryCode,
                 'avatar_url' => $avatarUrl,
                 'subdomain' => $subdomain,
                 'custom_domain' => $validated['custom_domain'] ?? null,

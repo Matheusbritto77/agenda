@@ -1,4 +1,6 @@
 <script setup>
+import PhoneInputWithCountry from '@/Components/PhoneInputWithCountry.vue';
+
 defineProps({
     form: {
         type: Object,
@@ -11,16 +13,12 @@ defineProps({
     <div class="space-y-5">
         <!-- WhatsApp -->
         <div class="form-group mb-0">
-            <label class="form-label text-xs font-bold block" for="whatsapp_number">
-                <i class="fa-brands fa-whatsapp text-emerald-500 mr-1.5"></i>
-                Número de WhatsApp para Atendimento
-            </label>
-            <input
-                type="text"
+            <PhoneInputWithCountry
                 id="whatsapp_number"
+                label="Número de WhatsApp da Empresa / Atendimento"
                 v-model="form.whatsapp_number"
-                class="form-control text-xs sm:text-sm rounded-xl"
-                placeholder="Ex: (11) 99999-8888 ou 5511999998888"
+                v-model:countryCode="form.country_code"
+                placeholder="(00) 00000-0000"
             />
             <p class="text-[11px] text-slate-400 mt-1">Utilizado para botão de contato e envio de confirmações aos clientes.</p>
         </div>

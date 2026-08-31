@@ -23,6 +23,7 @@ class TeamMember extends Model
         'service_commissions',
         'email',
         'phone',
+        'country_code',
         'avatar_url',
         'subdomain',
         'custom_domain',
