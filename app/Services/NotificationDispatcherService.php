@@ -52,6 +52,16 @@ class NotificationDispatcherService
                     messageBody: $clientMessage,
                     messageType: 'booking_created'
                 );
+            } else {
+                \App\Models\AppointmentFlowLog::record(
+                    $company->id,
+                    'notification_skipped',
+                    'Notificação do Cliente Ignorada',
+                    "Notificação para {$appointment->client_name} não enviada pois 'notify_client_on_booking' está desativado.",
+                    $appointment->id,
+                    'system',
+                    'info'
+                );
             }
 
             // 2. Notify Staff / Company
@@ -82,6 +92,16 @@ class NotificationDispatcherService
                         messageType: 'booking_created'
                     );
                 }
+            } else {
+                \App\Models\AppointmentFlowLog::record(
+                    $company->id,
+                    'notification_skipped',
+                    'Notificação da Equipe Ignorada',
+                    "Notificação para a equipe não enviada pois 'notify_staff_on_booking' está desativado.",
+                    $appointment->id,
+                    'system',
+                    'info'
+                );
             }
 
             // 3. Schedule Advance Confirmation Reminder
@@ -96,7 +116,7 @@ class NotificationDispatcherService
                 if ($reminderTime->isFuture()) {
                     $reminderBody = "⏰ *Lembrete de Agendamento - {$companyName}*\n\nOlá, {$appointment->client_name}! Lembramos que você tem um horário marcado:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\nPodemos confirmar sua presença?";
 
-                    WhatsAppNotificationQueue::create([
+                    $queueItem = WhatsAppNotificationQueue::create([
                         'user_id' => $company->id,
                         'appointment_id' => $appointment->id,
                         'recipient_phone' => $clientCleanPhone,
@@ -106,10 +126,30 @@ class NotificationDispatcherService
                         'status' => 'pending',
                         'scheduled_for' => $reminderTime,
                     ]);
+
+                    \App\Models\AppointmentFlowLog::record(
+                        $company->id,
+                        'reminder_scheduled',
+                        'Lembrete de WhatsApp Programado',
+                        "Lembrete para {$appointment->client_name} ({$clientCleanPhone}) agendado para {$reminderTime->format('d/m/Y H:i')}.",
+                        $appointment->id,
+                        'whatsapp',
+                        'info',
+                        ['queue_id' => $queueItem->id, 'scheduled_for' => $reminderTime->toIso8601String()]
+                    );
                 }
             }
         } catch (Throwable $e) {
             Log::error('[NotificationDispatcher] Error on booking created: ' . $e->getMessage());
+            \App\Models\AppointmentFlowLog::record(
+                $appointment->user_id,
+                'flow_error',
+                'Erro no Processamento de Notificações',
+                $e->getMessage(),
+                $appointment->id,
+                'system',
+                'error'
+            );
         }
     }
 
@@ -123,7 +163,18 @@ class NotificationDispatcherService
             if (!$company) return;
 
             $settings = NotificationSetting::forUser($company->id);
-            if (!$settings->notify_client_on_confirmation) return;
+            if (!$settings->notify_client_on_confirmation) {
+                \App\Models\AppointmentFlowLog::record(
+                    $company->id,
+                    'notification_skipped',
+                    'Notificação de Confirmação Ignorada',
+                    "Notificação de aprovação para {$appointment->client_name} não enviada pois 'notify_client_on_confirmation' está desativado.",
+                    $appointment->id,
+                    'system',
+                    'info'
+                );
+                return;
+            }
 
             $serviceName = $appointment->service?->name ?? 'Serviço';
             $appointmentDateTime = Carbon::parse("{$appointment->appointment_date} {$appointment->appointment_time}");
@@ -216,10 +267,45 @@ class NotificationDispatcherService
                     'scheduled_for' => Carbon::now(),
                 ]);
 
+                \App\Models\AppointmentFlowLog::record(
+                    $appointment->user_id,
+                    'whatsapp_enqueued',
+                    "Notificação WhatsApp Enfileirada ({$messageType})",
+                    "Mensagem para {$recipientName} ({$cleanPhone}) inserida na fila do WhatsApp com status pendente.",
+                    $appointment->id,
+                    'whatsapp',
+                    'success',
+                    [
+                        'queue_id' => $queueItem->id,
+                        'recipient_phone' => $cleanPhone,
+                        'message_type' => $messageType,
+                    ]
+                );
+
                 Log::info("[NotificationDispatcher] WhatsApp enqueued successfully [ID: {$queueItem->id}] to {$cleanPhone} ({$messageType})");
             } catch (Throwable $queueErr) {
                 Log::error("[NotificationDispatcher] WhatsApp queue insert error: " . $queueErr->getMessage());
+                \App\Models\AppointmentFlowLog::record(
+                    $appointment->user_id,
+                    'whatsapp_queue_error',
+                    'Erro ao Enfileirar WhatsApp',
+                    $queueErr->getMessage(),
+                    $appointment->id,
+                    'whatsapp',
+                    'error',
+                    ['recipient_phone' => $cleanPhone]
+                );
             }
+        } elseif (!$settings->whatsapp_enabled) {
+            \App\Models\AppointmentFlowLog::record(
+                $appointment->user_id,
+                'whatsapp_skipped',
+                'WhatsApp Desativado',
+                "Disparo para {$recipientName} ({$cleanPhone}) ignorado pois o canal WhatsApp está desativado nas configurações.",
+                $appointment->id,
+                'whatsapp',
+                'info'
+            );
         }
 
         // 2. Send Email if enabled
@@ -231,9 +317,40 @@ class NotificationDispatcherService
                     messageBody: $messageBody,
                     appointment: $appointment
                 ));
+
+                \App\Models\AppointmentFlowLog::record(
+                    $appointment->user_id,
+                    'email_dispatched',
+                    "E-mail Enfileirado ({$messageType})",
+                    "E-mail de notificação para {$recipientName} ({$recipientEmail}) enfileirado com assunto: {$subject}.",
+                    $appointment->id,
+                    'email',
+                    'success',
+                    ['recipient_email' => $recipientEmail, 'subject' => $subject]
+                );
             } catch (Throwable $mailErr) {
                 Log::warning('[NotificationDispatcher] Email dispatch error: ' . $mailErr->getMessage());
+                \App\Models\AppointmentFlowLog::record(
+                    $appointment->user_id,
+                    'email_error',
+                    'Erro no Envio de E-mail',
+                    $mailErr->getMessage(),
+                    $appointment->id,
+                    'email',
+                    'error',
+                    ['recipient_email' => $recipientEmail]
+                );
             }
+        } elseif (!$settings->email_enabled) {
+            \App\Models\AppointmentFlowLog::record(
+                $appointment->user_id,
+                'email_skipped',
+                'E-mail Desativado',
+                "Envio de e-mail para {$recipientName} ({$recipientEmail}) ignorado pois o canal E-mail está desativado.",
+                $appointment->id,
+                'email',
+                'info'
+            );
         }
     }
 

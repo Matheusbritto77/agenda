@@ -799,6 +799,22 @@ class PublicBookingController extends Controller
                 'user_id' => $company->id,
             ]);
 
+            \App\Models\AppointmentFlowLog::record(
+                $company->id,
+                'booking_created',
+                $requiresManualConfirmation ? 'Novo Agendamento (Requer Aprovação)' : 'Novo Agendamento Confirmado',
+                "Cliente: {$appointment->client_name} ({$appointment->client_phone}) | Serviço: {$service->name} | Data: {$appointment->appointment_date} {$appointment->appointment_time} | Status inicial: {$initialStatus}",
+                $appointment->id,
+                'system',
+                $requiresManualConfirmation ? 'warning' : 'success',
+                [
+                    'service_id' => $service->id,
+                    'service_name' => $service->name,
+                    'requires_manual_confirmation' => $requiresManualConfirmation,
+                    'payment_enabled' => $paymentEnabled,
+                ]
+            );
+
             $paymentDetails = null;
             if ($paymentEnabled) {
                 try {
@@ -830,6 +846,17 @@ class PublicBookingController extends Controller
                         'payment_id' => $paymentRecord->id,
                         'payment_status' => 'pending',
                     ]);
+
+                    \App\Models\AppointmentFlowLog::record(
+                        $company->id,
+                        'payment_pix_generated',
+                        'Cobrança PIX Gerada',
+                        "PIX no valor de R$ " . number_format($amount, 2, ',', '.') . " gerado para o cliente {$appointment->client_name}.",
+                        $appointment->id,
+                        'payment',
+                        'info',
+                        ['amount' => $amount, 'payment_id' => $paymentRecord->id]
+                    );
 
                     $paymentDetails = [
                         'payment_id' => $paymentRecord->id,

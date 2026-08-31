@@ -18,8 +18,24 @@ class NotificationController extends Controller
 
         $settings = NotificationSetting::forUser($tenantId);
 
+        $logs = \App\Models\AppointmentFlowLog::query()
+            ->where('user_id', $tenantId)
+            ->with(['appointment.service', 'appointment.teamMember'])
+            ->latest('id')
+            ->take(80)
+            ->get();
+
+        $queue = \App\Models\WhatsAppNotificationQueue::query()
+            ->where('user_id', $tenantId)
+            ->with(['appointment.service'])
+            ->latest('id')
+            ->take(40)
+            ->get();
+
         return Inertia::render('Admin/Notifications/Index', [
             'settings' => $settings,
+            'logs' => $logs,
+            'queue' => $queue,
         ]);
     }
 

@@ -197,6 +197,17 @@ class AppointmentController extends Controller
                 'status' => $validated['status'],
             ]);
 
+            \App\Models\AppointmentFlowLog::record(
+                $tenantId,
+                'status_changed',
+                "Status Alterado para " . ucfirst($validated['status']),
+                "Agendamento de {$appointment->client_name} teve o status alterado de '{$previousStatus}' para '{$validated['status']}' pelo painel administrativo.",
+                $appointment->id,
+                'system',
+                $validated['status'] === 'confirmed' ? 'success' : ($validated['status'] === 'cancelled' ? 'danger' : 'info'),
+                ['previous_status' => $previousStatus, 'new_status' => $validated['status']]
+            );
+
             if ($validated['status'] === 'confirmed' && $previousStatus !== 'confirmed') {
                 try {
                     $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->first();
