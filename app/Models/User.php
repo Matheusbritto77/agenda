@@ -56,6 +56,16 @@ class User extends Authenticatable
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    public function brandingSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(BrandingSetting::class);
+    }
+
+    public function notificationSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(NotificationSetting::class);
+    }
+
     public function publicBookingUrl(string $path = '/'): string
     {
         $scheme = parse_url((string) config('app.url', 'http://localhost'), PHP_URL_SCHEME) ?: 'http';
@@ -188,10 +198,5 @@ class User extends Authenticatable
         }
 
         return self::query()->find($this->parent_id);
-    }
-
-    public function brandingSetting(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(\App\Models\BrandingSetting::class);
     }
 }

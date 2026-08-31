@@ -57,12 +57,17 @@ class NotificationDispatcherService
             // 2. Notify Staff / Company
             if ($settings->notify_staff_on_booking) {
                 $staffMember = $appointment->team_member_id ? TeamMember::find($appointment->team_member_id) : null;
-                $staffPhone = $staffMember?->phone ?: ($company->brandingSetting?->settings['whatsapp_number'] ?? null);
+                $branding = \App\Models\BrandingSetting::where('user_id', $company->id)->first();
+                $staffPhone = $staffMember?->phone ?: ($branding?->settings['whatsapp_number'] ?? null);
                 $staffEmail = $staffMember?->email ?: $company->email;
                 $staffName = $staffMember?->name ?: $companyName;
 
                 if ($staffPhone || $staffEmail) {
-                    $staffMessage = "🚨 *Novo Agendamento Recebido!*\n\n🏢 *Empresa:* {$companyName}\n👤 *Cliente:* {$appointment->client_name} ({$appointment->client_phone})\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n" . ($requiresApproval ? "\n⚠️ *Ação necessária:* Acesse o painel para aprovar ou recusar este agendamento." : "");
+                    if ($requiresApproval) {
+                        $staffMessage = "🚨 *Novo Pedido de Agendamento Recebido!*\n\n🏢 *Empresa:* {$companyName}\n👤 *Cliente:* {$appointment->client_name} ({$appointment->client_phone})\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n⚠️ *Ação necessária para aprovação:*\n👉 Responda *SIM* para APROVAR\n👉 Responda *NAO* para RECUSAR\n_(Ou gerencie diretamente pelo painel administrativo do Agendae)_";
+                    } else {
+                        $staffMessage = "🚨 *Novo Agendamento Confirmado!*\n\n🏢 *Empresa:* {$companyName}\n👤 *Cliente:* {$appointment->client_name} ({$appointment->client_phone})\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}";
+                    }
 
                     $this->dispatchNotification(
                         settings: $settings,
@@ -70,7 +75,7 @@ class NotificationDispatcherService
                         recipientPhone: $staffPhone,
                         recipientEmail: $staffEmail,
                         recipientName: $staffName,
-                        subject: "Novo Agendamento: {$appointment->client_name} - {$serviceName}",
+                        subject: $requiresApproval ? "Novo Pedido de Agendamento: {$appointment->client_name} - {$serviceName}" : "Novo Agendamento: {$appointment->client_name} - {$serviceName}",
                         messageBody: $staffMessage,
                         messageType: 'booking_created'
                     );

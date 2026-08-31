@@ -280,14 +280,19 @@ const submitBooking = (withPayment) => {
     bookingForm.post(route('booking.store'), {
         preserveScroll: true,
         onSuccess: async (page) => {
-            submitNoticeType.value = 'success';
-            submitNotice.value = page?.props?.flash?.success || 'Seu agendamento foi enviado com sucesso.';
+            const isManualConfirmation = Boolean(
+                page?.props?.booking_success?.requires_manual_confirmation ||
+                page?.props?.flash?.booking_success?.requires_manual_confirmation ||
+                (page?.props?.booking_success?.status === 'pending')
+            );
+
             confirmedBooking.value = {
                 customerName: bookingForm.client_name,
                 serviceName: selectedService.value?.name || 'Serviço',
                 date: selectedDate.value,
                 time: selectedTime.value,
                 message: submitNotice.value,
+                requiresManualConfirmation: isManualConfirmation,
             };
 
             const details = page?.props?.paymentDetails || page?.props?.flash?.paymentDetails;
@@ -562,20 +567,32 @@ onMounted(() => {
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
 
-                    <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm" :style="{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }">
+                    <div v-if="confirmedBooking.requiresManualConfirmation" class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                        <i class="fa-solid fa-hourglass-half animate-pulse"></i>
+                    </div>
+                    <div v-else class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm" :style="{ backgroundColor: 'var(--primary-light)', color: 'var(--primary)' }">
                         <i class="fa-solid fa-circle-check"></i>
                     </div>
 
                     <div class="space-y-2">
                         <h2 class="text-xl font-black tracking-tight" :style="{ color: 'var(--text-heading, #0f172a)' }">
-                            {{ branding?.settings?.booking_step_success_title || 'Agendamento confirmado' }}
+                            {{ confirmedBooking.requiresManualConfirmation ? 'Solicitação Enviada!' : (branding?.settings?.booking_step_success_title || 'Agendamento confirmado') }}
                         </h2>
                         <p class="text-sm opacity-75 leading-relaxed" :style="{ color: 'var(--text-muted, #64748b)' }">
-                            {{ branding?.settings?.booking_step_success_message || ('Tudo certo, ' + confirmedBooking.customerName + '. Seu horário foi reservado com sucesso.') }}
+                            <template v-if="confirmedBooking.requiresManualConfirmation">
+                                Olá, <strong>{{ confirmedBooking.customerName }}</strong>! Sua solicitação foi recebida e está aguardando a aprovação do profissional. Você receberá um aviso no WhatsApp e E-mail assim que for aprovado!
+                            </template>
+                            <template v-else>
+                                {{ branding?.settings?.booking_step_success_message || ('Tudo certo, ' + confirmedBooking.customerName + '. Seu horário foi reservado com sucesso.') }}
+                            </template>
                         </p>
                     </div>
 
                     <div class="rounded-2xl border p-4 text-left space-y-2" :style="{ backgroundColor: 'var(--primary-light)', borderColor: 'var(--primary)' }">
+                        <div v-if="confirmedBooking.requiresManualConfirmation" class="flex items-center justify-between gap-3 pb-2 border-b border-amber-500/20">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Status</span>
+                            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">⏳ Aguardando Aprovação</span>
+                        </div>
                         <div class="flex items-center justify-between gap-3">
                             <span class="text-xs font-bold uppercase tracking-wider opacity-60" :style="{ color: 'var(--text-muted)' }">Serviço</span>
                             <span class="text-sm font-extrabold text-right" :style="{ color: 'var(--text-heading)' }">{{ confirmedBooking.serviceName }}</span>

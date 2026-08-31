@@ -51,7 +51,12 @@ class ClientPortalProvisioningService
         });
 
         $appointment->refresh();
-        $this->notifications->sendBookingConfirmation($appointment, $account, $temporaryPassword);
+        if ($appointment->status === 'confirmed') {
+            $this->notifications->sendBookingConfirmation($appointment, $account, $temporaryPassword);
+        } elseif ($account && $temporaryPassword !== null) {
+            // Only send account credentials if account was just created
+            $this->notifications->sendSafely($account, new \App\Notifications\ClientAccountCreated($temporaryPassword));
+        }
 
         return $account;
     }

@@ -61,7 +61,7 @@ class AppointmentNotificationService
         }
     }
 
-    private function sendSafely(object $notifiable, NotificationContract $notification): void
+    public function sendSafely(object $notifiable, NotificationContract $notification): void
     {
         try {
             $notifiable->notify($notification);

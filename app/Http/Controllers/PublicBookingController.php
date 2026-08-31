@@ -879,6 +879,8 @@ class PublicBookingController extends Controller
                     )['slots'],
                     'customer_name' => $appointment->client_name,
                     'paymentDetails' => $paymentDetails,
+                    'requires_manual_confirmation' => $requiresManualConfirmation,
+                    'status' => $appointment->status,
                 ], 201);
             }
 
@@ -889,6 +891,8 @@ class PublicBookingController extends Controller
                     'customer_name' => $appointment->client_name,
                     'service_name' => $service->name,
                     'datetime' => Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time,
+                    'requires_manual_confirmation' => $requiresManualConfirmation,
+                    'status' => $appointment->status,
                 ])
                 ->with('paymentDetails', $paymentDetails)
                 ->with('success', $message);
