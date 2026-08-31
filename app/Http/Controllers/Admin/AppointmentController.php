@@ -197,6 +197,23 @@ class AppointmentController extends Controller
                 'status' => $validated['status'],
             ]);
 
+            if ($validated['status'] === 'confirmed' && $previousStatus !== 'confirmed') {
+                try {
+                    $payment = \App\Models\Payment::where('appointment_id', $appointment->id)->first();
+                    app(\App\Services\NotificationDispatcherService::class)->onBookingApproved($appointment->fresh(['service']), $payment);
+                } catch (\Throwable $err) {
+                    \Illuminate\Support\Facades\Log::warning('Erro ao disparar notificação de aprovação: ' . $err->getMessage());
+                }
+            }
+
+            if ($validated['status'] === 'cancelled' && $previousStatus !== 'cancelled') {
+                try {
+                    app(\App\Services\NotificationDispatcherService::class)->onBookingCancelled($appointment->fresh(['service']));
+                } catch (\Throwable $err) {
+                    \Illuminate\Support\Facades\Log::warning('Erro ao disparar notificação de cancelamento: ' . $err->getMessage());
+                }
+            }
+
             if ($validated['status'] === 'completed' && $previousStatus !== 'completed') {
                 $notifications->sendCompletion($appointment->fresh(['service', 'tenant', 'teamMember']));
             }

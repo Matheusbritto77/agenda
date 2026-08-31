@@ -124,6 +124,14 @@ class RolePermissionController extends Controller
                     'branding.manage' => 'Gerenciar Personalização Visual',
                 ],
             ],
+            'notifications' => [
+                'title' => 'Notificações & Lembretes',
+                'icon' => 'fa-solid fa-bell',
+                'permissions' => [
+                    'notifications.view' => 'Visualizar Configurações de Notificações',
+                    'notifications.manage' => 'Gerenciar Canais (WhatsApp/Email) e Regras de Lembrete',
+                ],
+            ],
             'settings' => [
                 'title' => 'Configurações do Sistema',
                 'icon' => 'fa-solid fa-gear',

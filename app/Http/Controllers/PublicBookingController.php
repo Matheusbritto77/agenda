@@ -768,6 +768,10 @@ class PublicBookingController extends Controller
                 $notes = $notes ? ($notes . ' | ' . $couponNote) : $couponNote;
             }
 
+            $notificationSettings = \App\Models\NotificationSetting::forUser($company->id);
+            $requiresManualConfirmation = (bool) $notificationSettings->require_manual_confirmation;
+            $initialStatus = ($paymentEnabled || $requiresManualConfirmation) ? 'pending' : 'confirmed';
+
             $appointment = Appointment::create([
                 'service_id' => $service->id,
                 'team_member_id' => $resolvedTeamMemberId,
@@ -776,7 +780,7 @@ class PublicBookingController extends Controller
                 'client_phone' => $validated['client_phone'] ?? $validated['customer_phone'],
                 'appointment_date' => $validated['appointment_date'],
                 'appointment_time' => $validated['appointment_time'],
-                'status' => $paymentEnabled ? 'pending' : 'confirmed',
+                'status' => $initialStatus,
                 'payment_status' => $paymentEnabled ? 'pending' : ($payNow ? 'pending' : 'none'),
                 'notes' => $notes,
                 'user_id' => $company->id,
@@ -832,6 +836,13 @@ class PublicBookingController extends Controller
 
             $clientPortal->provisionFor($appointment);
 
+            // 📢 Dispatch notifications via WhatsApp queue & Email
+            try {
+                app(\App\Services\NotificationDispatcherService::class)->onBookingCreated($appointment);
+            } catch (\Throwable $notifErr) {
+                Log::warning('Erro ao disparar notificações do agendamento: ' . $notifErr->getMessage());
+            }
+
             Log::info('PublicBookingController::store: Appointment successfully created', [
                 'appointment_id' => $appointment->id,
                 'client_name' => $appointment->client_name,
@@ -841,12 +852,19 @@ class PublicBookingController extends Controller
                 'team_member_id' => $appointment->team_member_id,
             ]);
 
-            $message = sprintf(
-                'Agendamento confirmado para %s em %s às %s.',
-                $appointment->client_name,
-                $service->name,
-                Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time
-            );
+            $message = $requiresManualConfirmation
+                ? sprintf(
+                    'Solicitação de agendamento recebida para %s em %s às %s. O estabelecimento confirmará seu pedido em breve!',
+                    $appointment->client_name,
+                    $service->name,
+                    Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time
+                )
+                : sprintf(
+                    'Agendamento confirmado para %s em %s às %s.',
+                    $appointment->client_name,
+                    $service->name,
+                    Carbon::parse($appointment->appointment_date)->format('d/m/Y').' '.$appointment->appointment_time
+                );
 
             if ($request->expectsJson()) {
                 $availabilityService->clearCache();

@@ -201,6 +201,10 @@ Route::middleware(['auth', 'verified', 'ensure.password.changed'])->prefix('admi
     Route::middleware('permission:branding.view')->get('/branding', [BrandingController::class, 'index'])->name('branding.index');
     Route::middleware('permission:branding.manage')->post('/branding', [BrandingController::class, 'update'])->name('branding.update');
 
+    // Notifications & Reminders
+    Route::middleware('permission:notifications.view')->get('/notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'index'])->name('notifications.index');
+    Route::middleware('permission:notifications.manage')->post('/notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'update'])->name('notifications.update');
+
     // Roles & Permissions Settings
     Route::middleware('permission:settings.roles')->get('/roles', [RolePermissionController::class, 'index'])->name('roles.index');
     Route::middleware('permission:settings.roles')->post('/roles/custom', [RolePermissionController::class, 'storeCustomRole'])->name('roles.custom.store');

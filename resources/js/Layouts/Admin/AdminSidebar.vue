@@ -62,6 +62,10 @@ const navItems = computed(() => {
         items.push({ name: 'Personalização', icon: 'fa-solid fa-palette', route: 'admin.branding.index', pattern: 'admin.branding.*' });
     }
 
+    if (hasPermission('notifications.view')) {
+        items.push({ name: 'Notificações & Lembretes', icon: 'fa-solid fa-bell', route: 'admin.notifications.index', pattern: 'admin.notifications.*' });
+    }
+
     if (canManageRoles.value && hasPermission('settings.roles')) {
         items.push({ name: 'Cargos & Permissões', icon: 'fa-solid fa-user-shield', route: 'admin.roles.index', pattern: 'admin.roles.*' });
     }
