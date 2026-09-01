@@ -37,9 +37,9 @@ class NotificationDispatcherService
             // 1. Notify Client
             if ($settings->notify_client_on_booking) {
                 if ($requiresApproval) {
-                    $clientMessage = "Olá, {$appointment->client_name}! 👋\n\nRecebemos sua solicitação de agendamento em *{$companyName}*:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n⏳ *Status:* Aguardando confirmação do estabelecimento. Assim que for aprovado, avisaremos você por aqui!";
+                    $clientMessage = "{Olá|Oi|Como vai}, {$appointment->client_name}! {👋|✨}\n\nRecebemos sua solicitação de agendamento em *{$companyName}*:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n⏳ *Status:* Aguardando confirmação do estabelecimento. Assim que for aprovado, avisaremos você por aqui!";
                 } else {
-                    $clientMessage = "Olá, {$appointment->client_name}! ✅\n\nSeu agendamento em *{$companyName}* está confirmado com sucesso!\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\nEsperamos você! Se precisar reagendar, entre em contato.";
+                    $clientMessage = "{Olá|Oi|Como vai}, {$appointment->client_name}! {✅|✨}\n\nSeu agendamento em *{$companyName}* está confirmado com sucesso!\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\nEsperamos você! Se precisar reagendar, entre em contato.";
                 }
 
                 $this->dispatchNotification(
@@ -114,7 +114,7 @@ class NotificationDispatcherService
                 );
 
                 if ($reminderTime->isFuture()) {
-                    $reminderBody = "⏰ *Lembrete de Agendamento - {$companyName}*\n\nOlá, {$appointment->client_name}! Lembramos que você tem um horário marcado:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\nPodemos confirmar sua presença?";
+                    $reminderBody = "⏰ *Lembrete de Agendamento - {$companyName}*\n\n{Olá|Oi|Como vai}, {$appointment->client_name}! {Lembramos|Passando para lembrar} que você tem um horário marcado:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n{Podemos confirmar sua presença?|Esperamos por você!}";
 
                     $queueItem = WhatsAppNotificationQueue::create([
                         'user_id' => $company->id,
@@ -184,9 +184,9 @@ class NotificationDispatcherService
 
             // If payment is pending and PIX code is available
             if ($payment && $payment->status === 'pending' && $payment->pix_qr_code) {
-                $message = "🎉 *Agendamento Aprovado - Quase Concluído!*\n\nOlá, {$appointment->client_name}! Seu agendamento em *{$companyName}* foi aprovado pelo profissional:\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n💰 *Valor:* R$ " . number_format((float) $payment->amount, 2, ',', '.') . "\n\n🔑 *Pague via PIX para garantir seu horário:*\nCopie o código abaixo e cole no app do seu banco:\n\n`{$payment->pix_qr_code}`\n\nAssim que o pagamento for identificado, seu horário estará 100% garantido!";
+                $message = "{🎉|✨} *Agendamento Aprovado - Quase Concluído!*\n\n{Olá|Oi|Como vai}, {$appointment->client_name}! Seu agendamento em *{$companyName}* foi aprovado pelo profissional:\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n💰 *Valor:* R$ " . number_format((float) $payment->amount, 2, ',', '.') . "\n\n🔑 *Pague via PIX para garantir seu horário:*\nCopie o código abaixo e cole no app do seu banco:\n\n`{$payment->pix_qr_code}`\n\nAssim que o pagamento for identificado, seu horário estará 100% garantido!";
             } else {
-                $message = "🎉 *Agendamento Confirmado!*\n\nOlá, {$appointment->client_name}! O seu agendamento em *{$companyName}* foi aprovado com sucesso:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\nEsperamos você! Obrigado pela preferência.";
+                $message = "{🎉|✨} *Agendamento Confirmado!*\n\n{Olá|Oi|Como vai}, {$appointment->client_name}! O seu agendamento em *{$companyName}* foi aprovado com sucesso:\n📅 *Data:* {$formattedDate}\n⏰ *Horário:* {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n{Esperamos você! Obrigado pela preferência.|Contamos com você!}";
             }
 
             $this->dispatchNotification(
