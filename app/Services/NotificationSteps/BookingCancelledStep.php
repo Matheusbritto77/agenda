@@ -61,5 +61,13 @@ class BookingCancelledStep extends BaseNotificationStep implements NotificationS
                 messageType: 'cancelled'
             );
         }
+
+        // 3. Cancel any pending scheduled reminders for this appointment
+        try {
+            \App\Models\WhatsAppNotificationQueue::where('appointment_id', $appointment->id)
+                ->where('message_type', 'reminder')
+                ->where('status', 'pending')
+                ->update(['status' => 'cancelled']);
+        } catch (\Throwable) {}
     }
 }

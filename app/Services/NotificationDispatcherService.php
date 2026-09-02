@@ -41,12 +41,12 @@ class NotificationDispatcherService
             // 1. Dispatch Booking Creation Flow (Pending Approval or Auto-Confirmed)
             if ($requiresApproval) {
                 $this->pendingApprovalStep->handle($appointment, $settings, $company);
+                // ⚠️ Advance reminder will ONLY be scheduled after the appointment is confirmed/approved!
             } else {
                 $this->autoConfirmedStep->handle($appointment, $settings, $company);
+                // ⏰ Since it was automatically confirmed, schedule the advance reminder now:
+                $this->reminderStep->handle($appointment, $settings, $company);
             }
-
-            // 2. Schedule Future Advance Reminder
-            $this->reminderStep->handle($appointment, $settings, $company);
         } catch (Throwable $e) {
             Log::error('[NotificationDispatcher] Error on booking created: ' . $e->getMessage());
         }
@@ -63,6 +63,9 @@ class NotificationDispatcherService
 
             $settings = NotificationSetting::forUser($company->id);
             $this->approvedStep->handle($appointment, $settings, $company, ['payment' => $payment]);
+
+            // ⏰ Schedule Advance Reminder NOW that the appointment is confirmed / approved!
+            $this->reminderStep->handle($appointment, $settings, $company);
         } catch (Throwable $e) {
             Log::error('[NotificationDispatcher] Error on booking approved: ' . $e->getMessage());
         }
