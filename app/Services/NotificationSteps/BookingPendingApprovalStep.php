@@ -43,14 +43,14 @@ class BookingPendingApprovalStep extends BaseNotificationStep implements Notific
             $staff = $this->resolveStaffContact($appointment, $company);
 
             if ($staff['phone'] || $staff['email']) {
-                $staffMessage = "🚨 *Novo Pedido de Agendamento Recebido!*\n\n"
+                $staffMessage = "🚨 *Novo Pedido de Agendamento Recebido!* (#{$appointment->id})\n\n"
                     . "🏢 *Empresa:* {$companyName}\n"
                     . "👤 *Cliente:* {$appointment->client_name} ({$appointment->client_phone})\n"
                     . "📅 *Data:* {$formattedDate} às {$formattedTime}\n"
                     . "✂️ *Serviço:* {$serviceName}\n\n"
                     . "⚠️ *Ação necessária para aprovação:*\n"
-                    . "👉 Responda *SIM* para APROVAR\n"
-                    . "👉 Responda *NAO* para RECUSAR\n"
+                    . "👉 Responda *SIM {$appointment->id}* (ou apenas *SIM*) para APROVAR\n"
+                    . "👉 Responda *NAO {$appointment->id}* (ou apenas *NAO*) para RECUSAR\n"
                     . "_(Ou gerencie diretamente pelo painel administrativo do Agendae)_";
 
                 $this->dispatchNotification(
