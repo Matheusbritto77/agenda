@@ -199,6 +199,30 @@ class NotificationDispatcherService
                 messageBody: $message,
                 messageType: $payment ? 'pix_payment' : 'confirmed'
             );
+
+            // Also notify staff / team member about the confirmed appointment
+            $staffMember = $appointment->team_member_id ? TeamMember::find($appointment->team_member_id) : null;
+            $branding = \App\Models\BrandingSetting::where('user_id', $company->id)->first();
+            $staffPhone = $staffMember?->phone 
+                ?: ($branding?->settings['whatsapp_number'] ?? null)
+                ?: $company->phone;
+            $staffEmail = $staffMember?->email ?: $company->email;
+            $staffName = $staffMember?->name ?: $companyName;
+
+            if ($staffPhone || $staffEmail) {
+                $staffMessage = "✅ *Agendamento Confirmado!*\n\n🏢 *Empresa:* {$companyName}\n👤 *Cliente:* {$appointment->client_name} ({$appointment->client_phone})\n📅 *Data:* {$formattedDate} às {$formattedTime}\n✂️ *Serviço:* {$serviceName}\n\n✨ Horário aprovado e confirmado na sua agenda.";
+
+                $this->dispatchNotification(
+                    settings: $settings,
+                    appointment: $appointment,
+                    recipientPhone: $staffPhone,
+                    recipientEmail: $staffEmail,
+                    recipientName: $staffName,
+                    subject: "Agendamento Confirmado: {$appointment->client_name} - {$serviceName}",
+                    messageBody: $staffMessage,
+                    messageType: 'confirmed'
+                );
+            }
         } catch (Throwable $e) {
             Log::error('[NotificationDispatcher] Error on booking approved: ' . $e->getMessage());
         }
