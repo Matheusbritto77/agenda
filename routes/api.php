@@ -20,6 +20,3 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::get('/subdomains/availability', SubdomainAvailabilityController::class)->name('api.subdomains.availability');
-
-// WhatsApp Interactive Chat Webhook (SIM / NAO Approval)
-Route::post('/webhooks/whatsapp/inbound', [\App\Http\Controllers\Api\WhatsAppInboundWebhookController::class, 'handle'])->name('api.webhooks.whatsapp.inbound');
