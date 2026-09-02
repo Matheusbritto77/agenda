@@ -49,9 +49,9 @@ class BookingPendingApprovalStep extends BaseNotificationStep implements Notific
                     . "📅 *Data:* {$formattedDate} às {$formattedTime}\n"
                     . "✂️ *Serviço:* {$serviceName}\n\n"
                     . "⚠️ *Ação necessária para aprovação:*\n"
-                    . "👉 Responda *SIM {$appointment->id}* (ou apenas *SIM*) para APROVAR\n"
-                    . "👉 Responda *NAO {$appointment->id}* (ou apenas *NAO*) para RECUSAR\n"
-                    . "_(Ou gerencie diretamente pelo painel administrativo do Agendae)_";
+                    . "👉 Marque esta mensagem e responda *SIM* para APROVAR\n"
+                    . "👉 Marque esta mensagem e responda *NAO* para RECUSAR\n"
+                    . "_(Ou envie SIM {$appointment->id} / NAO {$appointment->id})_";
 
                 $this->dispatchNotification(
                     settings: $settings,
