@@ -51,7 +51,8 @@ class BookingPendingApprovalStep extends BaseNotificationStep implements Notific
                     . "⚠️ *Ação necessária para aprovação:*\n"
                     . "👉 Marque esta mensagem e responda *SIM* para APROVAR\n"
                     . "👉 Marque esta mensagem e responda *NAO* para RECUSAR\n"
-                    . "_(Ou envie SIM {$appointment->id} / NAO {$appointment->id})_";
+                    . "👉 Marque esta mensagem e responda *REMARCAR* para PEDIR NOVO HORÁRIO\n"
+                    . "_(Ou envie SIM {$appointment->id} / NAO {$appointment->id} / REMARCAR {$appointment->id})_";
 
                 $this->dispatchNotification(
                     settings: $settings,
